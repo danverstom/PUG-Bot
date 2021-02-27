@@ -2,7 +2,15 @@ import discord
 from discord.ext.commands import Bot
 from utils.config import bot_token
 
+# Importing files from the commands directory to be initialised
+from commands.BaseCommands import BaseCommands
+
+# Creating the bot object
 bot = Bot(command_prefix="-")
+
+
+# Adding commands to the bot
+bot.add_cog(BaseCommands(bot))
 
 
 @bot.event
