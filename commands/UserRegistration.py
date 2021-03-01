@@ -12,10 +12,14 @@ class UserRegistration(Cog, name="User Registration"):
         self.bot = bot
 
     @command()
-    async def register(self, ctx, minecraft_username):
+    async def register(self, ctx, minecraft_username=""):
         """
         Links Minecraft username to Discord
         """
+        if not minecraft_username:
+            await ctx.send("Missing argument <minecraft_username>.  Example: -register Ninsanity")
+            return
+
         uuid = MojangAPI.get_uuid(minecraft_username)
         if uuid:
             condition = add_player(uuid, ctx.message.author.id, minecraft_username)
