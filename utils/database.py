@@ -90,6 +90,7 @@ class Player:
         if isinstance(priority, int):
             if priority < 0:
                 return False
+            self.priority = priority
             c.execute("UPDATE players SET priority = ? WHERE minecraft_id = ?", (priority, self.minecraft_id))
             conn.commit()
             return True
@@ -112,6 +113,7 @@ class Player:
         if isinstance(elo, int):
             if elo < ELO_FLOOR:
                 return False
+            self.elo = elo
             c.execute("UPDATE players SET elo = ? WHERE minecraft_id = ?", (elo, self.minecraft_id))
             conn.commit()
             return True
