@@ -1,6 +1,7 @@
+from discord import Embed, Colour
 from discord.ext.commands import Cog, command
 from mojang.api import MojangAPI
-from utils.database import add_player
+from utils.database import add_player, PlayerDoesNotExistError, Player
 
 
 class UserRegistration(Cog, name="User Registration"):
@@ -14,22 +15,32 @@ class UserRegistration(Cog, name="User Registration"):
     @command()
     async def register(self, ctx, minecraft_username=""):
         """
-        Links Minecraft username to Discord
+        Links Minecraft username to Discord.  This is required to sign up for PUGs.
         """
         if not minecraft_username:
-            await ctx.send("Missing argument <minecraft_username>.  Example: -register Ninsanity")
+            embed = Embed(title="Error ❌", description="Missing argument <minecraft_username>",
+                          color=Colour.dark_red())
+            embed.add_field(name="Example", value="-register Ninsanity")
+            await ctx.send(embed=embed)
             return
 
         uuid = MojangAPI.get_uuid(minecraft_username)
         if uuid:
             condition = add_player(uuid, ctx.message.author.id, minecraft_username)
             if not condition:
-                await ctx.send("Successfully registered {} to {}".format(minecraft_username, ctx.message.author.mention))
+                await ctx.send(embed=Embed(title="Success ✅",
+                                           description=f"Successfully registered **{minecraft_username}** to {ctx.message.author.mention}",
+                                           color=Colour.green()))
             elif condition == 1:
-                await ctx.send("Failed to register {}: {} is already registered".format(minecraft_username,
-                                                                                        minecraft_username))
+                await ctx.send(embed=Embed(title="Error ❌",
+                                           description=f"**{minecraft_username}** is already registered",
+                                           color=Colour.dark_red()))
             else:
-                await ctx.send("Failed to register {}: {} is already registered".format(minecraft_username,
-                                                                                        ctx.message.author.mention))
+                await ctx.send(embed=Embed(title="Error ❌",
+                                           description=f"{ctx.message.author.mention} is already registered",
+                                           color=Colour.dark_red()))
         else:
-            await ctx.send("Failed to register {}: {} does not exist".format(minecraft_username, minecraft_username))
+            await ctx.send(embed=Embed(title="Error ❌",
+                                       description=f"**{minecraft_username}** does not exist",
+                                       color=Colour.dark_red()))
+
