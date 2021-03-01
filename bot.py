@@ -4,6 +4,7 @@ from utils.config import bot_token
 
 # Importing files from the commands directory to be initialised
 from commands.BaseCommands import BaseCommands
+from commands.UserRegistration import UserRegistration
 
 # Creating the bot object
 bot = Bot(command_prefix="-")
@@ -11,6 +12,7 @@ bot = Bot(command_prefix="-")
 
 # Adding commands to the bot
 bot.add_cog(BaseCommands(bot))
+bot.add_cog(UserRegistration(bot))
 
 
 @bot.event
