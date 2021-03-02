@@ -3,6 +3,7 @@ from discord.ext.commands import Cog, command, has_role
 from mojang.api import MojangAPI
 from utils.database import add_player, PlayerDoesNotExistError, Player
 from utils.utils import error_embed, success_embed, response_embed
+from utils.config import MOD_ROLE
 
 
 class UserRegistration(Cog, name="User Registration"):
@@ -46,7 +47,7 @@ class UserRegistration(Cog, name="User Registration"):
                                        color=Colour.dark_red()))
 
     @command()
-    @has_role("PUG Mod")
+    @has_role(MOD_ROLE)
     async def user(self, ctx, input_user: User, action_type="", variable_name=None, value=None):
         """
         Allows a PUG Mod to edit information about a user.
