@@ -19,7 +19,11 @@ async def response_embed(ctx, title, description):
     await ctx.send(embed=embed)
 
 
-async def create_list_pages(bot, ctx, title, info):
+async def create_list_pages(bot, ctx, title, info, if_empty="Empty List"):
+    if not info:
+        await ctx.send(embed=Embed(title=title, description=if_empty, colour=Colour.dark_red()))
+        return
+    
     contents = []
     num_pages = ceil(len(info) / ELEMENTS_PER_PAGE)
     page = ""

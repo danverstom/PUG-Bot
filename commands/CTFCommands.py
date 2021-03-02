@@ -52,7 +52,7 @@ class CTFCommands(Cog, name="CTF Commands"):
         for (map_name, map_id) in list_maps:
             map_str.append(f"{map_name} ({map_id})")
 
-        await create_list_pages(self.bot, ctx, "Maps Found:", map_str)
+        await create_list_pages(self.bot, ctx, "Maps Found:", map_str, "No Maps were found")
 
     @cog_slash(name="stats", description="Gets most recent stats from match 1 and 2",
                guild_ids=SLASH_COMMANDS_GUILDS, options=[])
