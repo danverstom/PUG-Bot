@@ -14,7 +14,7 @@ from discord_slash import SlashContext
 class CTFCommands(Cog, name="CTF Commands"):
     @cog_slash(name="rngmap", description="Picks a random map out of a preset map pool",
                guild_ids=SLASH_COMMANDS_GUILDS, options=[])
-    async def rngmap(self, ctx: SlashContext):
+    async def rngmap(self, ctx):
         """
         Picks a random map out of a preset map pool
         """
@@ -31,7 +31,7 @@ class CTFCommands(Cog, name="CTF Commands"):
 
     @cog_slash(name="stats", description="Gets most recent stats from match 1 and 2",
                guild_ids=SLASH_COMMANDS_GUILDS, options=[])
-    async def stats(self, ctx: SlashContext):
+    async def stats(self, ctx):
         """
         Gets most recent stats from match 1 and 2
         """

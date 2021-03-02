@@ -19,7 +19,7 @@ class BaseCommands(Cog, name="Base Commands"):
 
     @cog_slash(name="ping", description="Returns the latency of the bot",
                options=[], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def ping(self, ctx: SlashContext):
+    async def ping(self, ctx):
         """
         Returns the latency of the bot
         """
@@ -27,7 +27,7 @@ class BaseCommands(Cog, name="Base Commands"):
 
     @cog_slash(name="coinflip", description="a coinflip",
                options=[], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def coinflip(self, ctx: SlashContext):
+    async def coinflip(self, ctx):
         """
         Coinflip
         """
