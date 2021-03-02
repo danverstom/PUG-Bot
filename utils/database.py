@@ -21,6 +21,15 @@ def add_player(minecraft_id, discord_id, minecraft_username, priority=0, elo=100
     return 0
 
 
+def delete_player(minecraft_id):
+    if fetch_player_id(minecraft_id):
+        c.execute("DELETE FROM players WHERE minecraft_id = ?", (minecraft_id,))
+        conn.commit()
+        return True
+    else:
+        return False
+
+
 def fetch_player_id(minecraft_id):
     c.execute("SELECT * FROM players WHERE minecraft_id = ?", (minecraft_id,))
     result = c.fetchall()
