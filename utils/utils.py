@@ -43,7 +43,7 @@ async def create_list_pages(bot, ctx, title, info, if_empty="Empty List"):
     await message.add_reaction("▶")
 
     def check(reaction, user):
-        return user == ctx.author and str(reaction.emoji) in ["◀", "▶"]
+        return reaction.message.id == message.id and user == ctx.author and str(reaction.emoji) in ["◀", "▶"]
 
     while True:
         try:
