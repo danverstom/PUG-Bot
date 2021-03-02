@@ -1,9 +1,10 @@
 from discord import Embed, Colour, User, Member
 from discord.ext.commands import Cog, command, has_role
+from discord.ext import tasks
 from mojang.api import MojangAPI
-from utils.database import add_player, PlayerDoesNotExistError, Player
+from utils.database import add_player, PlayerDoesNotExistError, Player, fetch_players_list
 from utils.utils import error_embed, success_embed, response_embed
-from utils.config import MOD_ROLE
+from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS
 
 
 class UserRegistration(Cog, name="User Registration"):
@@ -13,6 +14,8 @@ class UserRegistration(Cog, name="User Registration"):
 
     def __init__(self, bot):
         self.bot = bot
+        self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
+        self.update_usernames.start()
 
     @command()
     async def register(self, ctx, minecraft_username=""):
@@ -90,3 +93,25 @@ class UserRegistration(Cog, name="User Registration"):
             await error_embed(ctx, "Player does not exist")
             return False
         await response_embed(ctx, f"{player.minecraft_username}'s ELO", player.get_elo())
+
+    @tasks.loop(hours=IGN_TRACKER_INTERVAL_HOURS)
+    async def update_usernames(self):
+        changes_list = []
+        for player in fetch_players_list():
+            old_username = player.minecraft_username
+            latest_username = player.update_minecraft_username()
+            if latest_username != old_username:
+                changes_list.append([player, old_username])
+        if len(changes_list) == 0:
+            await self.bot_channel.send(embed=Embed(title="IGN Tracker",
+                                                    description=f"No IGNs were updated in the last"
+                                                                f" {IGN_TRACKER_INTERVAL_HOURS} hours",
+                                                    color=Colour.dark_purple()))
+        else:
+            embed = Embed(title="IGNs Updated", color=Colour.dark_purple())
+            for change in changes_list:
+                player = change[0]
+                user = self.bot.get_user(player.discord_id)
+                old_username = change[1]
+                embed.add_field(name=f"{old_username} → {player.minecraft_username}", value=user.mention, inline=False)
+            await self.bot_channel.send(embed=embed)

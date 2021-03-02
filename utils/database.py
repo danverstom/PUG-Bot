@@ -48,6 +48,15 @@ def fetch_minecraft_username(minecraft_username):
         return False
 
 
+def fetch_players_list():
+    c.execute("SELECT discord_id FROM players")
+    result = c.fetchall()
+    player_list = []
+    for id_tuple in result:
+        player_list.append(Player(id_tuple[0]))
+    return player_list
+
+
 class PlayerDoesNotExistError(Exception):
     """Exception raised when player is not in the database"""
 
