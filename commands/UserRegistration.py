@@ -5,6 +5,7 @@ from mojang.api import MojangAPI
 from utils.database import add_player, delete_player, PlayerDoesNotExistError, Player, fetch_players_list
 from utils.utils import error_embed, success_embed, response_embed
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS
+from asyncio import sleep as async_sleep
 
 
 class UserRegistration(Cog, name="User Registration"):
@@ -16,6 +17,9 @@ class UserRegistration(Cog, name="User Registration"):
         self.bot = bot
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
         self.update_usernames.start()
+
+    def cog_unload(self):
+        self.update_usernames.cancel()
 
     @command()
     async def register(self, ctx, minecraft_username=""):
@@ -141,6 +145,7 @@ class UserRegistration(Cog, name="User Registration"):
             latest_username = player.update_minecraft_username()
             if latest_username != old_username:
                 changes_list.append([player, old_username])
+            await async_sleep(3)
         if len(changes_list) == 0:
             await self.bot_channel.send(embed=Embed(title="IGN Tracker",
                                                     description=f"No IGNs were updated in the last"
