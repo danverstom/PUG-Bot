@@ -39,17 +39,17 @@ async def create_list_pages(bot, ctx, title, info, if_empty="Empty List"):
     embed.set_footer(text=f"Page {current_page}/{num_pages}")
     message = await ctx.send(embed=embed)
 
-    await message.add_reaction("◀️")
-    await message.add_reaction("▶️")
+    await message.add_reaction("◀")
+    await message.add_reaction("▶")
 
     def check(reaction, user):
-        return user == ctx.author and str(reaction.emoji) in ["◀️", "▶️"]
+        return user == ctx.author and str(reaction.emoji) in ["◀", "▶"]
 
     while True:
         try:
             reaction, user = await bot.wait_for("reaction_add", timeout=60, check=check)
 
-            if str(reaction.emoji) == "▶️" and current_page != num_pages:
+            if str(reaction.emoji) == "▶" and current_page != num_pages:
                 current_page += 1
                 embed = Embed(title="Map List", description=contents[current_page - 1],
                               colour=Colour.dark_purple())
@@ -57,7 +57,7 @@ async def create_list_pages(bot, ctx, title, info, if_empty="Empty List"):
                 await message.edit(embed=embed)
                 await message.remove_reaction(reaction, user)
 
-            elif str(reaction.emoji) == "◀️" and current_page > 1:
+            elif str(reaction.emoji) == "◀" and current_page > 1:
                 current_page -= 1
                 embed = Embed(title="Map List", description=contents[current_page - 1],
                               colour=Colour.dark_purple())
