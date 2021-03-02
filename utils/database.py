@@ -7,8 +7,46 @@ conn = sql.connect("utils/database.db")
 conn.execute('''create table if not exists players
                 (minecraft_id text, discord_id integer, minecraft_username text, priority integer, elo integer)''')
 
+conn.execute(
+    '''create table if not exists register_requests (minecraft_id text, discord_id integer, minecraft_username text,
+    approval_embed_id integer)''')
+
 conn.commit()
 c = conn.cursor()
+
+
+def add_register_request(minecraft_id, discord_id, minecraft_username, approval_embed_id):
+    c.execute("INSERT INTO register_requests VALUES (?,?,?,?)", (minecraft_id, discord_id, minecraft_username,
+                                                                 approval_embed_id))
+    conn.commit()
+    return True
+
+
+def remove_register_request(approval_embed_id):
+    c.execute("DELETE FROM register_requests WHERE approval_embed_id = ?", (approval_embed_id,))
+    conn.commit()
+    return True
+
+
+def check_user_requests(discord_id):
+    c.execute('select discord_id from register_requests where discord_id = ?', (discord_id,))
+    result = c.fetchone()
+    return bool(result)
+
+
+def get_register_request(approval_embed_id):
+    c.execute('select * from register_requests where approval_embed_id = ?', (approval_embed_id,))
+    result = c.fetchone()
+    return result
+
+
+def player_check(minecraft_id, discord_id):
+    if fetch_player_id(minecraft_id):
+        return 1
+    elif fetch_discord_id(discord_id):
+        return 2
+    else:
+        return 0
 
 
 def add_player(minecraft_id, discord_id, minecraft_username, priority=0, elo=1000):

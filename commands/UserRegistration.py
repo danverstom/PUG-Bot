@@ -1,10 +1,11 @@
 from discord import Embed, Colour, User, Member
 from discord.ext.commands import Cog, command, has_role
 from discord.ext import tasks
+import discord.utils
 from mojang.api import MojangAPI
-from utils.database import add_player, delete_player, PlayerDoesNotExistError, Player, fetch_players_list
+from utils.database import *
 from utils.utils import error_embed, success_embed, response_embed
-from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS
+from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL
 from asyncio import sleep as async_sleep
 
 # Slash commands support
@@ -48,11 +49,27 @@ class UserRegistration(Cog, name="User Registration"):
 
         uuid = MojangAPI.get_uuid(minecraft_username)
         if uuid:
-            condition = add_player(uuid, ctx.author.id, minecraft_username)
+            print(ctx.author.id)
+            condition = player_check(uuid, ctx.author.id)
             if not condition:
-                await ctx.send(embed=Embed(title="Success ✅",
-                                           description=f"Successfully registered **{minecraft_username}** to {ctx.author.mention}",
-                                           color=Colour.green()))
+                if check_user_requests(ctx.author.id):
+                    await error_embed(ctx, "You have already submitted a register request")
+                else:
+                    request_channel = self.bot.get_channel(REGISTER_REQUESTS_CHANNEL)
+                    message = await request_channel.send(embed=Embed(title=f"Register Request: {minecraft_username}",
+                                                                     description=f"React below to verify {ctx.author.mention}",
+                                                                     colour=Colour.dark_purple()))
+                    await message.add_reaction("✅")
+                    await message.add_reaction("❌")
+                    # TODO: Add check to see if the register request already exists
+                    if add_register_request(uuid, ctx.author.id, minecraft_username, message.id):
+                        await ctx.send(embed=Embed(title="Registration Pending",
+                                                   description=f"Requested to register **{minecraft_username}**"
+                                                               f" to {ctx.author.mention}",
+                                                   color=Colour.dark_purple()))
+
+                    else:
+                        await error_embed(ctx, "There was an error storing your register request. Contact a PUG Dev")
             elif condition == 1:
                 await ctx.send(embed=Embed(title="Error ❌",
                                            description=f"**{minecraft_username}** is already registered",
@@ -65,6 +82,31 @@ class UserRegistration(Cog, name="User Registration"):
             await ctx.send(embed=Embed(title="Error ❌",
                                        description=f"**{minecraft_username}** does not exist",
                                        color=Colour.dark_red()))
+
+    @Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        request = get_register_request(payload.message_id)
+        if payload.channel_id == REGISTER_REQUESTS_CHANNEL and bool(request):
+            channel = await self.bot.fetch_channel(REGISTER_REQUESTS_CHANNEL)
+            message = await channel.fetch_message(payload.message_id)
+            server = self.bot.get_guild(payload.guild_id)
+            mod_member = server.get_member(payload.user_id)
+            player_member = server.get_member(request[1])
+            if str(payload.emoji) == "✅" and MOD_ROLE in [role.name for role in mod_member.roles]:
+                await message.clear_reactions()
+                await message.edit(content=f"✅ {mod_member.name} accepted {player_member.mention}'s request for IGN"
+                                           f" **{request[2]}**", embed=None)
+                await success_embed(player_member, f"Your IGN request for **{request[2]}** was approved")
+                add_player(request[0], request[1], request[2])
+                remove_register_request(payload.message_id)
+            elif str(payload.emoji) == "❌" and MOD_ROLE in [role.name for role in mod_member.roles]:
+                await message.clear_reactions()
+                await message.edit(content=f"❌ {mod_member.name} denied {player_member.mention}'s request for IGN"
+                                           f" **{request[2]}**", embed=None)
+                await player_member.send(embed=Embed(title="Denied IGN Request",
+                                                     description=f"Your request for IGN **{request[2]}** was denied.",
+                                                     color=Colour.dark_red()))
+                remove_register_request(payload.message_id)
 
     @cog_slash(name="unregister", description="Remove a user from the database",
                options=[manage_commands.create_option(name="discord_tag",
