@@ -1,4 +1,4 @@
-from discord import Embed, Colour, User
+from discord import Embed, Colour, User, Member
 from discord.ext.commands import Cog, command, has_role
 from mojang.api import MojangAPI
 from utils.database import add_player, PlayerDoesNotExistError, Player
@@ -74,4 +74,20 @@ class UserRegistration(Cog, name="User Registration"):
             pass
         else:
             await error_embed(ctx, "Invalid action argument. Use 'get' or 'set'")
+
+    @command()
+    async def elo(self, ctx, member: Member = None):
+        """
+        Allows you to check your (or someone else's) ELO
+        """
+        if member:
+            player_id = member.id
+        else:
+            player_id = ctx.message.author.id
+        try:
+            player = Player(player_id)
+        except PlayerDoesNotExistError:
+            await error_embed(ctx, "Player does not exist")
+            return False
+        await response_embed(ctx, f"{player.minecraft_username}'s ELO", player.get_elo())
 
