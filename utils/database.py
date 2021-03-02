@@ -138,12 +138,21 @@ class Player:
     def change_minecraft_username(self, minecraft_username):
         minecraft_id = MojangAPI.get_uuid(minecraft_username)
         if minecraft_id:
-            old_minecraft_id = self.minecraft_id
+            if fetch_player_id(minecraft_id):
+                return False
+            c.execute("UPDATE players SET minecraft_id = ?, minecraft_username = ? WHERE minecraft_id = ?",
+                      (minecraft_id, minecraft_username, self.minecraft_id))
+            conn.commit()
             self.minecraft_id = minecraft_id
             self.minecraft_username = minecraft_username
-            c.execute("UPDATE players SET minecraft_id = ?, minecraft_username = ? WHERE minecraft_id = ?",
-                      (self.minecraft_id, self.minecraft_username, old_minecraft_id))
-            conn.commit()
             return True
         else:
             return False
+
+    def change_discord_id(self, discord_id):
+        if fetch_discord_id(discord_id):
+            return False
+        c.execute("UPDATE players SET discord_id = ? WHERE discord_id = ?", (discord_id, self.discord_id))
+        conn.commit()
+        self.discord_id = discord_id
+        return True
