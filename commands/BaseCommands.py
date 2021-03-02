@@ -34,19 +34,3 @@ class BaseCommands(Cog, name="Base Commands"):
 
         await ctx.send(
             embed=Embed(title="Coinflip 🪙", description=f"You flipped {result}", color=Colour.dark_purple()))
-
-    @command()
-    async def rngmap(self, ctx):
-        """
-        Picks a random map out of a preset map pool
-        """
-        with open("utils/rng_maps.json") as file:
-            maps = load(file)
-        random_map = choice(list(maps.keys()))
-
-        file = File(f"assets/map_screenshots/{maps[random_map]}.jpg", filename=f"{maps[random_map]}.png")
-        embed = Embed(title="RNG Map",
-                      description=f"You will be playing [{random_map}](https://www.brawl.com/games/ctf/maps/{maps[random_map]}) ({maps[random_map]})",
-                      color=Colour.dark_purple())
-        embed.set_image(url=f"attachment://{maps[random_map]}.png")
-        await ctx.send(file=file, embed=embed)

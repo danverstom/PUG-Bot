@@ -5,6 +5,7 @@ from utils.config import bot_token
 # Importing files from the commands directory to be initialised
 from commands.BaseCommands import BaseCommands
 from commands.UserRegistration import UserRegistration
+from commands.CTFCommands import CTFCommands
 
 intents = discord.Intents.all()
 
@@ -21,5 +22,6 @@ async def on_ready():
     # Adding commands to the bot now that its ready
     bot.add_cog(BaseCommands(bot))
     bot.add_cog(UserRegistration(bot))
+    bot.add_cog(CTFCommands(bot))
 
 bot.run(bot_token)
