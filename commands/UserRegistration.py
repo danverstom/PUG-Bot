@@ -48,7 +48,7 @@ class UserRegistration(Cog, name="User Registration"):
 
     @command()
     @has_role(MOD_ROLE)
-    async def user(self, ctx, input_user: User, action_type="", variable_name=None, value=None):
+    async def user(self, ctx, input_user: User, action_type="get", variable_name=None, value=None):
         """
         Allows a PUG Mod to edit information about a user.
         Usage: user @Tom <get/set> <variable_name> <value>
@@ -90,4 +90,3 @@ class UserRegistration(Cog, name="User Registration"):
             await error_embed(ctx, "Player does not exist")
             return False
         await response_embed(ctx, f"{player.minecraft_username}'s ELO", player.get_elo())
-
