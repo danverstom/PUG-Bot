@@ -25,8 +25,11 @@ class CTFCommands(Cog, name="CTF Commands"):
 
     @command()
     async def stats(self, ctx):
-        match_1 = get_server_games("1.mcctf.com")
-        match_2 = get_server_games("3.mcctf.com")
+        """
+        Gets most recent stats from match 1 and 2
+        """
+        match_1 = get_server_games("1.ctfmatch.brawl.com")
+        match_2 = get_server_games("2.ctfmatch.brawl.com")
 
         embed = Embed(title="Match Stats", color=Colour.dark_purple())
         if match_1:
