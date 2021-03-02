@@ -7,6 +7,11 @@ from utils.utils import error_embed, success_embed, response_embed
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS
 from asyncio import sleep as async_sleep
 
+# Slash commands support
+from discord_slash.cog_ext import cog_slash, manage_commands
+from utils.config import SLASH_COMMANDS_GUILDS
+from discord_slash import SlashContext
+
 
 class UserRegistration(Cog, name="User Registration"):
     """
@@ -21,7 +26,11 @@ class UserRegistration(Cog, name="User Registration"):
     def cog_unload(self):
         self.update_usernames.cancel()
 
-    @command()
+    @cog_slash(name="register", description="Registers Minecraft username to Discord."
+                                            "  This is required to sign up for PUGs.",
+               options=[manage_commands.create_option(name="minecraft_username",
+                                                      description="Your current minecraft username",
+                                                      option_type=3, required=True)], guild_ids=SLASH_COMMANDS_GUILDS)
     async def register(self, ctx, minecraft_username=""):
         """
         Registers Minecraft username to Discord.  This is required to sign up for PUGs.
@@ -39,10 +48,10 @@ class UserRegistration(Cog, name="User Registration"):
 
         uuid = MojangAPI.get_uuid(minecraft_username)
         if uuid:
-            condition = add_player(uuid, ctx.message.author.id, minecraft_username)
+            condition = add_player(uuid, ctx.author.id, minecraft_username)
             if not condition:
                 await ctx.send(embed=Embed(title="Success ✅",
-                                           description=f"Successfully registered **{minecraft_username}** to {ctx.message.author.mention}",
+                                           description=f"Successfully registered **{minecraft_username}** to {ctx.author.mention}",
                                            color=Colour.green()))
             elif condition == 1:
                 await ctx.send(embed=Embed(title="Error ❌",
@@ -50,16 +59,19 @@ class UserRegistration(Cog, name="User Registration"):
                                            color=Colour.dark_red()))
             else:
                 await ctx.send(embed=Embed(title="Error ❌",
-                                           description=f"{ctx.message.author.mention} is already registered",
+                                           description=f"{ctx.author.mention} is already registered",
                                            color=Colour.dark_red()))
         else:
             await ctx.send(embed=Embed(title="Error ❌",
                                        description=f"**{minecraft_username}** does not exist",
                                        color=Colour.dark_red()))
 
-    @command()
+    @cog_slash(name="unregister", description="Remove a user from the database",
+               options=[manage_commands.create_option(name="discord_tag",
+                                                      description="The user's discord @",
+                                                      option_type=6, required=True)], guild_ids=SLASH_COMMANDS_GUILDS)
     @has_role(MOD_ROLE)
-    async def unregister(self, ctx, input_user: User=None):
+    async def unregister(self, ctx, input_user: User = None):
         """
         Allows a PUG Mod to unregister a discord user from the Minecraft account they registered to.
         Usage: unregister <user_mention>
@@ -80,7 +92,7 @@ class UserRegistration(Cog, name="User Registration"):
                                                 \nReply with yes or no.""")
 
         def check(m):
-            return m.author == ctx.message.author
+            return m.author == ctx.author
 
         response = await self.bot.wait_for('message', check=check)
         if response.content == "y" or response.content == "yes":
@@ -89,7 +101,14 @@ class UserRegistration(Cog, name="User Registration"):
         else:
             await response_embed(ctx, "Stopped Deletion", f"User {user.mention} will not be deleted from the database.")
 
-    @command()
+    @cog_slash(name="user", description="Get or change information about a user",
+               options=[manage_commands.create_option(name="discord_tag",
+                                                      description="The user's discord @",
+                                                      option_type=6, required=True),
+                        manage_commands.create_option(name="action_type",
+                                                      description="'get' or 'set'",
+                                                      option_type=3, required=False,
+                                                      choices=["get", "set"])], guild_ids=SLASH_COMMANDS_GUILDS)
     @has_role(MOD_ROLE)
     async def user(self, ctx, input_user: User = None, action_type="get", variable_name=None, value=None):
         """
@@ -121,21 +140,24 @@ class UserRegistration(Cog, name="User Registration"):
         else:
             await error_embed(ctx, "Invalid action argument. Use 'get' or 'set'")
 
-    @command()
-    async def elo(self, ctx, member: Member = None):
+    @cog_slash(name="elo", description="Returns your or someone else's ELO",
+               options=[manage_commands.create_option(name="discord_tag",
+                                                      description="The user's discord @",
+                                                      option_type=6, required=False)], guild_ids=SLASH_COMMANDS_GUILDS)
+    async def elo(self, ctx, user: User = None):
         """
         Allows you to check your (or someone else's) ELO
         """
-        if member:
-            player_id = member.id
+        if user:
+            player_id = user.id
         else:
-            player_id = ctx.message.author.id
+            player_id = ctx.author.id
         try:
             player = Player(player_id)
         except PlayerDoesNotExistError:
             await error_embed(ctx, "Player does not exist")
             return False
-        await response_embed(ctx, f"{player.minecraft_username}'s ELO", player.get_elo())
+        await response_embed(ctx, f"{player.minecraft_username}'s ELO", str(player.get_elo()))
 
     @tasks.loop(hours=IGN_TRACKER_INTERVAL_HOURS)
     async def update_usernames(self):

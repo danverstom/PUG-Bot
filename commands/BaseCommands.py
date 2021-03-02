@@ -4,6 +4,9 @@ from json import load
 from discord.embeds import Embed
 from discord import Colour
 from discord import File
+from discord_slash.cog_ext import cog_slash
+from discord_slash import SlashContext
+from utils.config import SLASH_COMMANDS_GUILDS
 
 
 class BaseCommands(Cog, name="Base Commands"):
@@ -14,15 +17,17 @@ class BaseCommands(Cog, name="Base Commands"):
     def __init__(self, bot):
         self.bot = bot
 
-    @command()
-    async def ping(self, ctx):
+    @cog_slash(name="ping", description="Returns the latency of the bot",
+               options=[], guild_ids=SLASH_COMMANDS_GUILDS)
+    async def ping(self, ctx: SlashContext):
         """
         Returns the latency of the bot
         """
         await ctx.send("Pong! Bot latency: {}ms".format(round(self.bot.latency * 1000, 1)))
 
-    @command()
-    async def coinflip(self, ctx):
+    @cog_slash(name="coinflip", description="a coinflip",
+               options=[], guild_ids=SLASH_COMMANDS_GUILDS)
+    async def coinflip(self, ctx: SlashContext):
         """
         Coinflip
         """

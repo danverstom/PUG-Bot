@@ -5,10 +5,16 @@ from utils.utils import response_embed
 from random import choice
 from json import load
 
+# Slash commands support
+from discord_slash.cog_ext import cog_slash, manage_commands
+from utils.config import SLASH_COMMANDS_GUILDS
+from discord_slash import SlashContext
+
 
 class CTFCommands(Cog, name="CTF Commands"):
-    @command()
-    async def rngmap(self, ctx):
+    @cog_slash(name="rngmap", description="Picks a random map out of a preset map pool",
+               guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def rngmap(self, ctx: SlashContext):
         """
         Picks a random map out of a preset map pool
         """
@@ -23,8 +29,9 @@ class CTFCommands(Cog, name="CTF Commands"):
         embed.set_image(url=f"attachment://{maps[random_map]}.png")
         await ctx.send(file=file, embed=embed)
 
-    @command()
-    async def stats(self, ctx):
+    @cog_slash(name="stats", description="Gets most recent stats from match 1 and 2",
+               guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def stats(self, ctx: SlashContext):
         """
         Gets most recent stats from match 1 and 2
         """
