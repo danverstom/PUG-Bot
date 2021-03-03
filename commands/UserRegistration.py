@@ -3,6 +3,7 @@ from discord.ext.commands import Cog, command, has_role
 from discord.ext import tasks
 import discord.utils
 from mojang.api import MojangAPI
+from typing import Union
 from utils.database import *
 from utils.utils import error_embed, success_embed, response_embed
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL
@@ -151,9 +152,17 @@ class UserRegistration(Cog, name="User Registration"):
                         manage_commands.create_option(name="action_type",
                                                       description="'get' or 'set'",
                                                       option_type=3, required=False,
-                                                      choices=["get", "set"])], guild_ids=SLASH_COMMANDS_GUILDS)
+                                                      choices=["get", "set"]),
+                        manage_commands.create_option(name="variable_name",
+                                                      description="Variable to change",
+                                                      option_type=3, required=False,
+                                                      choices=["username", "discord", "elo", "priority"]),
+                        manage_commands.create_option(name="value",
+                                                      description="Value to set",
+                                                      option_type=3, required=False)],
+               guild_ids=SLASH_COMMANDS_GUILDS)
     @has_role(MOD_ROLE)
-    async def user(self, ctx, input_user: User = None, action_type="get", variable_name=None, value=None):
+    async def user(self, ctx, discord_tag: User = None, action_type="get", variable_name=None, value=None):
         """
         Allows a PUG Mod to edit information about a user.
         Usage: user @Tom <get/set> <variable_name> <value>
@@ -162,10 +171,7 @@ class UserRegistration(Cog, name="User Registration"):
             user @Tom get                       returns user profile
             user @Tom set elo [elo]             sets user ELO
         """
-        if not input_user:
-            await error_embed(ctx, "Missing Argument <input_user>")
-            return
-        user = self.bot.get_user(input_user.id)
+        user = self.bot.get_user(discord_tag.id)
         if action_type == "get":
             try:
                 player = Player(user.id)
@@ -178,8 +184,59 @@ class UserRegistration(Cog, name="User Registration"):
             await ctx.send(embed=embed)
 
         elif action_type == "set":
-            # TODO: implement set command
-            pass
+            try:
+                player = Player(user.id)
+            except PlayerDoesNotExistError:
+                await error_embed(ctx, "Player does not exist")
+                return
+            if variable_name:
+                if value:
+                    if variable_name == "username":
+                        old_username = player.update_minecraft_username()
+                        condition = player.change_minecraft_username(value)
+                        if not condition:
+                            await success_embed(ctx, f"Changed username: {old_username} -> {value}")
+                        elif condition == 1:
+                            await error_embed(ctx, f"Username {value} is already in the database")
+                        else:
+                            await error_embed(ctx, f"Username {value} is not a valid username")
+                    elif variable_name == "discord":
+                        value = value[3:-1]
+                        if value.isdigit():
+                            user = self.bot.get_user(int(value))
+                            if user:
+                                if player.change_discord_id(user.id):
+                                    await success_embed(ctx, f"Changed discord user: {discord_tag.mention} -> {user.mention}")
+                                else:
+                                    await error_embed(ctx, f"User {user.mention} is already in the database")
+                            else:
+                                await error_embed(ctx, "Value must be a User")
+                        else:
+                            await error_embed(ctx, "Value must be a User")
+                    elif variable_name == "elo":
+                        old_elo = player.get_elo()
+                        if value.isdigit():
+                            value = int(value)
+                            if player.set_elo(value):
+                                await success_embed(ctx, f"Set elo: {old_elo} -> {value}")
+                            else:
+                                await error_embed(ctx, f"Elo given ({value}) is below Elo floor ({ELO_FLOOR})")
+                        else:
+                            await error_embed(ctx, "Value must be an int")
+                    else:
+                        old_priority = player.get_priority()
+                        if value.isdigit():
+                            value = int(value)
+                            if player.set_priority(value):
+                                await success_embed(ctx, f"Set priority: {old_priority} -> {value}")
+                            else:
+                                await error_embed(ctx, f"Priority given ({value}) is negative")
+                        else:
+                            await error_embed(ctx, "Value must be an int")
+                else:
+                    await error_embed(ctx, "No value inputted")
+            else:
+                await error_embed(ctx, "No variable name inputted")
         else:
             await error_embed(ctx, "Invalid action argument. Use 'get' or 'set'")
 
