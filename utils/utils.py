@@ -1,5 +1,4 @@
 from discord import Embed, Colour
-from utils.config import ELEMENTS_PER_PAGE
 from math import ceil
 from asyncio import TimeoutError
 
@@ -19,18 +18,18 @@ async def response_embed(ctx, title, description):
     await ctx.send(embed=embed)
 
 
-async def create_list_pages(bot, ctx, title, info: list, if_empty="Empty List"):
+async def create_list_pages(bot, ctx, title, info: list, if_empty="Empty List", elements_per_page: int = 10):
     if not info:
         await ctx.send(embed=Embed(title=title, description=if_empty, colour=Colour.dark_red()))
         return
-    
+
     contents = []
-    num_pages = ceil(len(info) / ELEMENTS_PER_PAGE)
+    num_pages = ceil(len(info) / elements_per_page)
     page = ""
     current_page = 1
     for index, value in enumerate(info):
         page = page + str(value + "\n")
-        if not (index + 1) % ELEMENTS_PER_PAGE:
+        if not (index + 1) % elements_per_page:
             contents.append(page)
             page = ""
     contents.append(page)
