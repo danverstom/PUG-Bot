@@ -11,6 +11,9 @@ from utils.config import SLASH_COMMANDS_GUILDS
 
 
 class CTFCommands(Cog, name="CTF Commands"):
+    """
+    This category contains ctf commands that can be used by anyone
+    """
     def __init__(self, bot):
         self.bot = bot
 

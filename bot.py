@@ -7,6 +7,7 @@ from discord_slash import SlashCommand
 from commands.BaseCommands import BaseCommands
 from commands.RegistrationCommands import RegistrationCommands
 from commands.CTFCommands import CTFCommands
+from commands.EventCommands import EventCommands
 
 intents = discord.Intents.all()
 
@@ -26,6 +27,7 @@ async def on_ready():
     bot.add_cog(BaseCommands(bot))
     bot.add_cog(RegistrationCommands(bot))
     bot.add_cog(CTFCommands(bot))
+    bot.add_cog(EventCommands(bot))
 
 
 bot.run(bot_token)

@@ -10,6 +10,7 @@ conn.execute('''create table if not exists players
 conn.execute(
     '''create table if not exists register_requests (minecraft_id text, discord_id integer, minecraft_username text,
     approval_embed_id integer)''')
+conn.execute('''create table if not exists events (event_id integer, discord_id integer, title text, is_pug bool)''')
 
 conn.commit()
 c = conn.cursor()
@@ -40,19 +41,43 @@ def get_register_request(approval_embed_id):
     return result
 
 
+def add_event(event_id, discord_id, title, is_pug):
+    if fetch_events_event_id(event_id):
+        return False
+    c.execute("INSERT INTO events VALUES (?, ?, ?, ?)", (event_id, discord_id, title, is_pug))
+
+
+def fetch_events_event_id(event_id):
+    c.execute("SELECT * FROM events WHERE event_id = ?", (event_id,))
+    result = c.fetchall()
+    try:
+        return result[0]
+    except IndexError:
+        return False
+
+
+def fetch_events_discord_id(discord_id):
+    c.execute("SELECT * FROM events WHERE discord_id = ?", (discord_id,))
+    result = c.fetchall()
+    try:
+        return result[0]
+    except IndexError:
+        return False
+
+
 def player_check(minecraft_id, discord_id):
-    if fetch_player_id(minecraft_id):
+    if fetch_players_minecraft_id(minecraft_id):
         return 1
-    elif fetch_discord_id(discord_id):
+    elif fetch_players_discord_id(discord_id):
         return 2
     else:
         return 0
 
 
 def add_player(minecraft_id, discord_id, minecraft_username, priority=0, elo=1000):
-    if fetch_player_id(minecraft_id):
+    if fetch_players_minecraft_id(minecraft_id):
         return 1
-    elif fetch_discord_id(discord_id):
+    elif fetch_players_discord_id(discord_id):
         return 2
     c.execute("INSERT INTO players VALUES (?,?,?,?,?)", (minecraft_id, discord_id, minecraft_username, priority, elo))
     conn.commit()
@@ -60,7 +85,7 @@ def add_player(minecraft_id, discord_id, minecraft_username, priority=0, elo=100
 
 
 def delete_player(minecraft_id):
-    if fetch_player_id(minecraft_id):
+    if fetch_players_minecraft_id(minecraft_id):
         c.execute("DELETE FROM players WHERE minecraft_id = ?", (minecraft_id,))
         conn.commit()
         return True
@@ -68,7 +93,7 @@ def delete_player(minecraft_id):
         return False
 
 
-def fetch_player_id(minecraft_id):
+def fetch_players_minecraft_id(minecraft_id):
     c.execute("SELECT * FROM players WHERE minecraft_id = ?", (minecraft_id,))
     result = c.fetchall()
     try:
@@ -77,7 +102,7 @@ def fetch_player_id(minecraft_id):
         return False
 
 
-def fetch_discord_id(discord_id):
+def fetch_players_discord_id(discord_id):
     c.execute("SELECT * FROM players WHERE discord_id = ?", (discord_id,))
     result = c.fetchall()
     try:
@@ -86,7 +111,7 @@ def fetch_discord_id(discord_id):
         return False
 
 
-def fetch_minecraft_username(minecraft_username):
+def fetch_players_minecraft_username(minecraft_username):
     c.execute("SELECT * FROM players WHERE minecraft_username = ?", (minecraft_username,))
     result = c.fetchall()
     try:
@@ -117,11 +142,11 @@ class Player:
         data = ()
         if isinstance(identifier, str):
             if len(identifier) > 30:
-                data = fetch_player_id(identifier)
+                data = fetch_players_minecraft_id(identifier)
             else:
-                data = fetch_minecraft_username(identifier)
+                data = fetch_players_minecraft_username(identifier)
         elif isinstance(identifier, int):
-            data = fetch_discord_id(identifier)
+            data = fetch_players_discord_id(identifier)
 
         if data:
             self.minecraft_id = data[0]
@@ -133,7 +158,7 @@ class Player:
             raise PlayerDoesNotExistError()
 
     def update(self):
-        data = fetch_player_id(self.minecraft_id)
+        data = fetch_players_minecraft_id(self.minecraft_id)
         self.minecraft_username = data[2]
         self.priority = data[3]
         self.elo = data[4]
@@ -194,7 +219,7 @@ class Player:
     def change_minecraft_username(self, minecraft_username):
         minecraft_id = MojangAPI.get_uuid(minecraft_username)
         if minecraft_id:
-            if fetch_player_id(minecraft_id):
+            if fetch_players_minecraft_id(minecraft_id):
                 return 1
             c.execute("UPDATE players SET minecraft_id = ?, minecraft_username = ? WHERE minecraft_id = ?",
                       (minecraft_id, minecraft_username, self.minecraft_id))
@@ -206,7 +231,7 @@ class Player:
             return 2
 
     def change_discord_id(self, discord_id):
-        if fetch_discord_id(discord_id):
+        if fetch_players_discord_id(discord_id):
             return False
         c.execute("UPDATE players SET discord_id = ? WHERE discord_id = ?", (discord_id, self.discord_id))
         conn.commit()
