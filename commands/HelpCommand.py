@@ -35,18 +35,12 @@ class HelpCommand(Cog, name="Help Command"):
             if options and command_name:
                 options_string = ""
                 for option in options:
-                    options_string += f"\t{option['name']} {'[REQUIRED]' if option['required'] else ''}\n" \
-                                      f"\t\t*{option['description']}*\n"
+                    options_string += f"`{option['name']}` {'[REQUIRED]' if option['required'] else ''}\n" \
+                                      f"> *{option['description']}*\n"
                 options_string = options_string[:-1]
-                options_formatted = f"\n{options_string}\n\nServers: {guilds}"
+                options_formatted = f"\n{options_string}\n\n*Servers: {guilds}*"
             else:
                 options_formatted = ''
-            '''
-            print(f"Name: {command}\n"
-                  f"Description: {commands[command].description}\n"
-                  f"{options_formatted}"
-                  f"Guilds: {[bot.get_guild(guild_id).name for guild_id in commands[command].allowed_guild_ids]}")
-            '''
             field_value = f"{commands[command].description}\n{options_formatted}"
             embed.add_field(name=f"/{command}", value=field_value)
         await ctx.send(embed=embed)
