@@ -56,9 +56,11 @@ class UserRegistration(Cog, name="User Registration"):
                     await error_embed(ctx, "You have already submitted a register request")
                 else:
                     request_channel = self.bot.get_channel(REGISTER_REQUESTS_CHANNEL)
-                    message = await request_channel.send(embed=Embed(title=f"Register Request: {minecraft_username}",
-                                                                     description=f"React below to verify {ctx.author.mention}",
-                                                                     colour=Colour.dark_purple()))
+                    embed = Embed(title=f"Register Request: {minecraft_username}",
+                                  description=f"React below to verify {ctx.author.mention}",
+                                  colour=Colour.dark_purple())
+                    embed.set_image(url=f"https://cravatar.eu/helmhead/{minecraft_username}/128.png")
+                    message = await request_channel.send(embed=embed)
                     await message.add_reaction("✅")
                     await message.add_reaction("❌")
                     # TODO: Add check to see if the register request already exists
