@@ -19,7 +19,7 @@ async def response_embed(ctx, title, description):
     await ctx.send(embed=embed)
 
 
-async def create_list_pages(bot, ctx, title, info, if_empty="Empty List"):
+async def create_list_pages(bot, ctx, title, info: list, if_empty="Empty List"):
     if not info:
         await ctx.send(embed=Embed(title=title, description=if_empty, colour=Colour.dark_red()))
         return
@@ -43,7 +43,7 @@ async def create_list_pages(bot, ctx, title, info, if_empty="Empty List"):
     await message.add_reaction("▶")
 
     def check(r, u):
-        return r.message.id == message.id and u == ctx.author and str(reaction.emoji) in ["◀", "▶"]
+        return r.message.id == message.id and u == ctx.author and str(r.emoji) in ["◀", "▶"]
 
     while True:
         try:

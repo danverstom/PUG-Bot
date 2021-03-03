@@ -66,6 +66,18 @@ class EventCommands(Cog, name="Event Commands"):
         description = response.content
         await response.delete()
 
+        embed.clear_fields()
+        embed.description = f"Set description to:\n\"{description}\""
+        embed.set_footer(text="Type \"cancel\" to cancel the event")
+        embed.add_field(name="Time:", value="Enter the time of the event, in EST.  Use the format HH:MM")
+        await message.delete()
+        message = await ctx.send(embed=embed)
+        response = await self.bot.wait_for("message", check=check)
+        if await check_if_cancel(ctx, response):
+            return
+        description = response.content
+        await response.delete()
+
         announcement_channel = ""
         embed.clear_fields()
         embed.description = f"Set description to:\n\"{description}\""
