@@ -18,7 +18,8 @@ async def response_embed(ctx, title, description):
     await ctx.send(embed=embed)
 
 
-async def create_list_pages(bot, ctx, title, info: list, if_empty="Empty List", elements_per_page: int = 10):
+async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "Empty List", sep: str = "\n",
+                            elements_per_page: int = 10):
     if not info:
         await ctx.send(embed=Embed(title=title, description=if_empty, colour=Colour.dark_red()))
         return
@@ -28,7 +29,7 @@ async def create_list_pages(bot, ctx, title, info: list, if_empty="Empty List", 
     page = ""
     current_page = 1
     for index, value in enumerate(info):
-        page = page + str(value + "\n")
+        page = page + str(value + sep)
         if not (index + 1) % elements_per_page:
             contents.append(page)
             page = ""

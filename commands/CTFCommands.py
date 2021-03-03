@@ -34,11 +34,11 @@ class CTFCommands(Cog, name="CTF Commands"):
         embed.set_image(url=f"attachment://{maps[random_map]}.png")
         await ctx.send(file=file, embed=embed)
 
-    @cog_slash(name="maplist", description="Lists all maps in rotation that contains the given search",
+    @cog_slash(name="maps", description="Lists all maps in rotation that contains the given search",
                options=[manage_commands.create_option(name="search",
                                                       description="The string to search with",
                                                       option_type=3, required=False)], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def maplist(self, ctx, search=""):
+    async def maps(self, ctx, search=""):
         """
         Finds all maps in rotation that contains the input
         """
