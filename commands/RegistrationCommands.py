@@ -11,7 +11,7 @@ from discord_slash.cog_ext import cog_slash, manage_commands
 from utils.config import SLASH_COMMANDS_GUILDS
 
 
-class UserRegistration(Cog, name="User Registration"):
+class RegistrationCommands(Cog, name="User Registration"):
     """
     This category contains commands related to user registration
     """
