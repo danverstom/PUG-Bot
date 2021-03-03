@@ -67,3 +67,28 @@ async def get_event_time(ctx, event_time, event_date):
 
     return [event_datetime,
             f"{event_hour}{event_minute}{hour_suffix} EST, {event_month} {event_datetime.day}, {event_datetime.year}"]
+
+
+async def announce_event(title, description, announcement_channel, signup_list_channel, mention_role, event_time):
+    embed_description = f"{title}\n\n**Time:**\n{event_time}\n\n{description}\n\nReact with ✅ to play\nReact with ❌ " \
+                        f"if you can't play\nReact with :mute: if you cannot speak\nReact with :elevator: if you are " \
+                        f"able to sub "
+    embed = Embed(title=title, description=embed_description, color=Colour.light_grey())
+    if mention_role.lower() == "none":
+        mention_role = ""
+    announcement_message = await announcement_channel.send(content=f"{mention_role}", embed=embed)
+
+    embed_description = f"{title}\n\n**Time:**\n{event_time}\n\n{description}"
+    embed = Embed(title="Signups", description=embed_description, color=Colour.light_grey())
+    embed.add_field(name="✅ Players: 0", value="No one :(", inline=False)
+    # embed.add_field(name="❌ Can't Play: 0", value="No one :)", inline=False)
+    embed.add_field(name="🔇 Mutes: 0", value="No one :)", inline=False)
+    embed.add_field(name="🛗 Subs: 0", value="No one :(", inline=False)
+    signup_list_message = await signup_list_channel.send(embed=embed)
+
+    await announcement_message.add_reaction("✅")
+    await announcement_message.add_reaction("❌")
+    await announcement_message.add_reaction("🔇")
+    await announcement_message.add_reaction("🛗")
+
+    return [announcement_message.id, signup_list_message.id]

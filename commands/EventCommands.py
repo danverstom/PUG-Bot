@@ -1,11 +1,12 @@
 from discord import Embed, Colour
+from discord.channel import TextChannel
 from discord.ext.commands import Cog, has_role
 from discord_slash.cog_ext import cog_slash
 from discord_slash.utils import manage_commands as mc
 
 from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE
-from utils.event_util import get_event_time, check_if_cancel
-from utils.utils import response_embed
+from utils.event_util import get_event_time, check_if_cancel, announce_event
+from utils.utils import response_embed, error_embed
 
 
 class EventCommands(Cog, name="Event Commands"):
@@ -24,8 +25,9 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="Channel to announce the event",
                                          option_type=7, required=True),
                         mc.create_option(name="mention_role",
-                                         description="Role to mention when event is announced",
-                                         option_type=8, required=True),
+                                         description="Role to mention when event is announced.  Use everyone for "
+                                                     "@everyone and None to not mention anyone",
+                                         option_type=3, required=True),
                         mc.create_option(name="signup_list_channel",
                                          description="Channel to list the signups of the event",
                                          option_type=7, required=True),
@@ -42,6 +44,26 @@ class EventCommands(Cog, name="Event Commands"):
     @has_role(MOD_ROLE)
     async def event(self, ctx, title, announcement_channel, mention_role, signup_list_channel, signup_role, event_time,
                     event_date=""):
+        if not isinstance(announcement_channel, TextChannel):
+            await error_embed(ctx, f"Announcement channel {announcement_channel.mention} is not a text channel")
+            return
+
+        if not isinstance(signup_list_channel, TextChannel):
+            await error_embed(ctx, f"Signups list channel {signup_list_channel.mention} is not a text channel")
+            return
+
+        if mention_role.lower() == "everyone":
+            mention_role = "@everyone"
+        elif mention_role.lower() == "none":
+            mention_role = "None"
+        else:
+            mention_roles = [role for role in ctx.guild.roles if role.mention == mention_role]
+            if mention_roles:
+                mention_role = mention_roles[0].mention
+            else:
+                await error_embed(ctx, f"Given mention role {mention_role} is not a valid role")
+                return
+
         event_datetime = await get_event_time(ctx, event_time, event_date)
         if not event_datetime:
             return
@@ -60,18 +82,19 @@ class EventCommands(Cog, name="Event Commands"):
         await message.delete()
         await response.delete()
 
-        embed_description = f"**Title:** {title}\n**Time:** {event_datetime[1]}\n**Description:**\n{description}\n"
-        embed_description = embed_description + f"**Announcement Channel:** {announcement_channel}\n**Mention Role:**"
-        embed_description = embed_description + f": {mention_role}\n**Signups List Channel:** {signup_list_channel}\n"
-        embed_description = embed_description + f"**Signup Role:** {signup_role}"
+        embed_description = f"**Title:** {title}\n**Time:** {event_datetime[1]}\n**Description:**\n{description}\n" \
+                            f"**Announcement Channel:** {announcement_channel}\n**Mention Role:**: {mention_role}\n" \
+                            f"**Signups List Channel:** {signup_list_channel}\n**Signup Role:** {signup_role.mention} "
         message = await ctx.send(embed=Embed(title="Is everything correct? (y/n):", description=embed_description,
                                              color=Colour.dark_purple()))
         response = await self.bot.wait_for("message", check=check)
         is_correct = response.content.lower() == "y" or response.content.lower() == "yes"
         await message.delete()
         await response.delete()
-        if is_correct:
-            await response_embed(ctx, "Confirmed", "✅ Creating event now")
-            # TODO: Do more event stuff
-        else:
-            await ctx.send(embed=Embed(description="❌ Event Creation Cancelled", color=Colour.green()))
+        if not is_correct:
+            await ctx.send(embed=Embed(description="❌ Event Creation Cancelled", color=Colour.dark_red()))
+            return
+        await response_embed(ctx, "Confirmed", "✅ Creating event")
+        event_message_ids = await announce_event(title, description, announcement_channel, signup_list_channel,
+                                                 mention_role, event_datetime[1])
+        # TODO: Add event to db

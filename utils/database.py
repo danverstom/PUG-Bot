@@ -4,13 +4,20 @@ from utils.config import ELO_FLOOR
 
 conn = sql.connect("utils/database.db")
 
-conn.execute('''create table if not exists players
-                (minecraft_id text, discord_id integer, minecraft_username text, priority integer, elo integer)''')
+conn.execute(
+    '''create table if not exists players (
+    minecraft_id text,
+    discord_id integer,
+    minecraft_username text, 
+    priority integer,
+    elo integer)''')
 
 conn.execute(
-    '''create table if not exists register_requests (minecraft_id text, discord_id integer, minecraft_username text,
+    '''create table if not exists register_requests (
+    minecraft_id text,
+    discord_id integer,
+    minecraft_username text,
     approval_embed_id integer)''')
-conn.execute('''create table if not exists events (event_id integer, discord_id integer, title text, is_pug bool)''')
 
 conn.commit()
 c = conn.cursor()
@@ -39,30 +46,6 @@ def get_register_request(approval_embed_id):
     c.execute('select * from register_requests where approval_embed_id = ?', (approval_embed_id,))
     result = c.fetchone()
     return result
-
-
-def add_event(event_id, discord_id, title, is_pug):
-    if fetch_events_event_id(event_id):
-        return False
-    c.execute("INSERT INTO events VALUES (?, ?, ?, ?)", (event_id, discord_id, title, is_pug))
-
-
-def fetch_events_event_id(event_id):
-    c.execute("SELECT * FROM events WHERE event_id = ?", (event_id,))
-    result = c.fetchall()
-    try:
-        return result[0]
-    except IndexError:
-        return False
-
-
-def fetch_events_discord_id(discord_id):
-    c.execute("SELECT * FROM events WHERE discord_id = ?", (discord_id,))
-    result = c.fetchall()
-    try:
-        return result[0]
-    except IndexError:
-        return False
 
 
 def player_check(minecraft_id, discord_id):
