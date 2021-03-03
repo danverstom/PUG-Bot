@@ -18,11 +18,15 @@ class RegistrationCommands(Cog, name="User Registration"):
 
     def __init__(self, bot):
         self.bot = bot
-        self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
-        self.update_usernames.start()
+        self.bot_channel = None
 
     def cog_unload(self):
         self.update_usernames.cancel()
+
+    @Cog.listener()
+    async def on_ready(self):
+        self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
+        self.update_usernames.start()
 
     @cog_slash(name="register", description="Registers Minecraft username to Discord."
                                             "  This is required to sign up for PUGs.",

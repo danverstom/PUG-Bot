@@ -1,6 +1,18 @@
 from discord import Embed, Colour
 from math import ceil
 from asyncio import TimeoutError
+from json import load, dump
+
+
+def save_json_file(file, content):
+    with open(file, "w") as file:
+        dump(content, file)
+
+
+def get_json_data(file):
+    with open(file, "r") as file:
+        data = load(file)
+    return data
 
 
 async def error_embed(ctx, description):
