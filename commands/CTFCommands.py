@@ -63,6 +63,9 @@ class CTFCommands(Cog, name="CTF Commands"):
         match_1 = get_server_games("1.ctfmatch.brawl.com")
         match_2 = get_server_games("2.ctfmatch.brawl.com")
 
+        with open("utils/maps.json") as file:
+            maps = load(file)
+
         embed = Embed(title="Match Stats", color=Colour.dark_purple())
         if match_1:
             embed_1_value = []
@@ -71,9 +74,9 @@ class CTFCommands(Cog, name="CTF Commands"):
                 game = CTFGame(match_1[i])
                 if game.mvp:
                     embed_1_value.append(
-                        f":map: **{game.map_name}** | :trophy: [{game.mvp}](https://www.brawl.com/players/{game.mvp})")
+                        f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: [{game.mvp}](https://www.brawl.com/players/{game.mvp})")
                 else:
-                    embed_1_value.append(f":map: **{game.map_name}** | :trophy: **No One :(**")
+                    embed_1_value.append(f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: **No One :(**")
                 embed_1_value.append(
                     f":chart_with_upwards_trend: [Stats](https://www.brawl.com/games/ctf/lookup/{game.game_id})")
                 embed_1_value.append("")
@@ -85,9 +88,9 @@ class CTFCommands(Cog, name="CTF Commands"):
                 game = CTFGame(match_2[i])
                 if game.mvp:
                     embed_2_value.append(
-                        f":map: **{game.map_name}** | :trophy: [{game.mvp}](https://www.brawl.com/players/{game.mvp})")
+                        f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: [{game.mvp}](https://www.brawl.com/players/{game.mvp})")
                 else:
-                    embed_2_value.append(f":map: **{game.map_name}** | :trophy: **No One :(**")
+                    embed_2_value.append(f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: **No One :(**")
                 embed_2_value.append(
                     f":chart_with_upwards_trend: [Stats](https://www.brawl.com/games/ctf/lookup/{game.game_id})")
                 embed_2_value.append("")

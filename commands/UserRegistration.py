@@ -49,7 +49,6 @@ class UserRegistration(Cog, name="User Registration"):
 
         uuid = MojangAPI.get_uuid(minecraft_username)
         if uuid:
-            print(ctx.author.id)
             condition = player_check(uuid, ctx.author.id)
             if not condition:
                 if check_user_requests(ctx.author.id):
@@ -59,7 +58,7 @@ class UserRegistration(Cog, name="User Registration"):
                     embed = Embed(title=f"Register Request: {minecraft_username}",
                                   description=f"React below to verify {ctx.author.mention}",
                                   colour=Colour.dark_purple())
-                    embed.set_image(url=f"https://cravatar.eu/helmhead/{minecraft_username}/128.png")
+                    embed.set_thumbnail(url=f"https://cravatar.eu/helmavatar/{minecraft_username}/128.png")
                     message = await request_channel.send(embed=embed)
                     await message.add_reaction("✅")
                     await message.add_reaction("❌")
@@ -139,7 +138,7 @@ class UserRegistration(Cog, name="User Registration"):
             return m.author == ctx.author
 
         response = await self.bot.wait_for('message', check=check)
-        if response.content == "y" or response.content == "yes":
+        if response.content.lower() == "y" or response.content.lower() == "yes":
             delete_player(player.minecraft_id)
             await success_embed(ctx, f"User {user.mention} has been unregistered.")
         else:
