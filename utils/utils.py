@@ -1,7 +1,7 @@
 from discord import Embed, Colour
 from utils.config import ELEMENTS_PER_PAGE
 from math import ceil
-from asyncio import sleep as async_sleep, TimeoutError
+from asyncio import TimeoutError
 
 
 async def error_embed(ctx, description):

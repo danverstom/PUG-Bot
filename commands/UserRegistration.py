@@ -1,9 +1,6 @@
-from discord import Embed, Colour, User, Member
-from discord.ext.commands import Cog, command, has_role
+from discord import Embed, Colour, User
+from discord.ext.commands import Cog, has_role
 from discord.ext import tasks
-import discord.utils
-from mojang.api import MojangAPI
-from typing import Union
 from utils.database import *
 from utils.utils import error_embed, success_embed, response_embed
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL
@@ -12,7 +9,6 @@ from asyncio import sleep as async_sleep
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
 from utils.config import SLASH_COMMANDS_GUILDS
-from discord_slash import SlashContext
 
 
 class UserRegistration(Cog, name="User Registration"):

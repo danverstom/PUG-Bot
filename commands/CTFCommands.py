@@ -1,4 +1,4 @@
-from discord.ext.commands import Cog, command
+from discord.ext.commands import Cog
 from discord import File, Embed, Colour
 from utils.ctf_stats import get_server_games, CTFGame
 from utils.utils import response_embed, create_list_pages

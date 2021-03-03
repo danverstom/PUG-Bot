@@ -2,7 +2,6 @@ import discord
 from discord.ext.commands import Bot
 from utils.config import bot_token
 from discord_slash import SlashCommand
-from discord_slash.utils import manage_commands
 
 # Importing files from the commands directory to be initialised
 from commands.BaseCommands import BaseCommands

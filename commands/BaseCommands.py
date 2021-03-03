@@ -1,11 +1,8 @@
-from discord.ext.commands import Cog, command
-from random import randint, choice
-from json import load
+from discord.ext.commands import Cog
+from random import randint
 from discord.embeds import Embed
 from discord import Colour
-from discord import File
 from discord_slash.cog_ext import cog_slash
-from discord_slash import SlashContext
 from utils.config import SLASH_COMMANDS_GUILDS
 
 
