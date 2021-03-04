@@ -48,6 +48,12 @@ def get_register_request(approval_embed_id):
     return result
 
 
+def get_all_register_requests():
+    c.execute('select * from register_requests')
+    result = c.fetchall()
+    return result
+
+
 def player_check(minecraft_id, discord_id):
     if fetch_players_minecraft_id(minecraft_id):
         return 1

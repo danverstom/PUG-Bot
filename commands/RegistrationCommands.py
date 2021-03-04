@@ -2,7 +2,7 @@ from discord import Embed, Colour, User
 from discord.ext.commands import Cog, has_role
 from discord.ext import tasks
 from utils.database import *
-from utils.utils import error_embed, success_embed, response_embed
+from utils.utils import error_embed, success_embed, response_embed, create_list_pages
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL
 from asyncio import sleep as async_sleep
 from discord.errors import Forbidden
@@ -28,6 +28,29 @@ class RegistrationCommands(Cog, name="User Registration"):
     async def on_ready(self):
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
         self.update_usernames.start()
+
+    @cog_slash(name="list", description="Lists data",
+               options=[manage_commands.create_option(name="object_type",
+                                                      description="The object you want to list",
+                                                      option_type=3, required=True,
+                                                      choices=["players", "register_requests"])],
+               guild_ids=SLASH_COMMANDS_GUILDS)
+    @has_role(MOD_ROLE)
+    async def list(self, ctx, data_type):
+        # TODO: Make this work lol
+        info = []
+        if data_type == "players":
+            players = sorted(fetch_players_list(), key=lambda item: item.minecraft_username)
+            title = "Registered Users"
+            for player in players:
+                info.append(f"**{player.minecraft_username}** ({self.bot.get_user(player.discord_id).mention})\n"
+                            f"> ELO: `{player.elo}`\n")
+        elif data_type == "register_requests":
+            title = "IGN Registration Requests"
+            requests = sorted(get_all_register_requests(), key=lambda item: item[2])
+            for request in requests:
+                info.append(f"**{request[2]}** ({self.bot.get_user(request[1]).mention})")
+        await create_list_pages(bot=self.bot, ctx=ctx, title=title, info=info, elements_per_page=5)
 
     @cog_slash(name="register", description="Registers Minecraft username to Discord."
                                             "  This is required to sign up for PUGs.",
@@ -215,7 +238,8 @@ class RegistrationCommands(Cog, name="User Registration"):
                             user = self.bot.get_user(int(value))
                             if user:
                                 if player.change_discord_id(user.id):
-                                    await success_embed(ctx, f"Changed discord user: {discord_tag.mention} -> {user.mention}")
+                                    await success_embed(ctx,
+                                                        f"Changed discord user: {discord_tag.mention} -> {user.mention}")
                                 else:
                                     await error_embed(ctx, f"User {user.mention} is already in the database")
                             else:
