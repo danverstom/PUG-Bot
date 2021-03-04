@@ -5,6 +5,7 @@ from utils.database import *
 from utils.utils import error_embed, success_embed, response_embed
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL
 from asyncio import sleep as async_sleep
+from discord.errors import Forbidden
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
@@ -97,7 +98,11 @@ class RegistrationCommands(Cog, name="User Registration"):
                 await message.clear_reactions()
                 await message.edit(content=f"✅ {mod_member.name} accepted {player_member.mention}'s request for IGN"
                                            f" **{request[2]}**", embed=None)
-                await success_embed(player_member, f"Your IGN request for **{request[2]}** was approved")
+                try:
+                    await success_embed(player_member, f"Your IGN request for **{request[2]}** was approved")
+                except Forbidden:
+                    # This means the bot can't DM the user
+                    await channel.send("This user has PMs off, failed to send DM.")
                 add_player(request[0], request[1], request[2])
                 remove_register_request(payload.message_id)
             elif str(payload.emoji) == "❌" and MOD_ROLE in [role.name for role in mod_member.roles]:
