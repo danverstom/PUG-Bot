@@ -182,7 +182,7 @@ class RegistrationCommands(Cog, name="User Registration"):
                                                       description="The user's discord @",
                                                       option_type=6, required=True),
                         manage_commands.create_option(name="action_type",
-                                                      description="'get' or 'set'",
+                                                      description="How you would like to interact with the user's data",
                                                       option_type=3, required=False,
                                                       choices=["get", "set"]),
                         manage_commands.create_option(name="variable_name",

@@ -35,12 +35,15 @@ class HelpCommand(Cog, name="Help Command"):
             if options and command_name:
                 options_string = ""
                 for option in options:
+                    choices = ""
+                    if option["choices"]:
+                        choices = f"\n> {', '.join('`' + c['name'] + '`' for c in option['choices'])}"
                     options_string += f"`{option['name']}` {'[REQUIRED]' if option['required'] else ''}\n" \
-                                      f"> *{option['description']}*\n"
+                                      f"> *{option['description']}*{choices}\n"
                 options_string = options_string[:-1]
-                options_formatted = f"\n{options_string}\n\n*Servers: {guilds}*"
+                details_formatted = f"\n{options_string}\n\n*Servers: {guilds}*"
             else:
-                options_formatted = ''
-            field_value = f"{commands[command].description}\n{options_formatted}"
+                details_formatted = ''
+            field_value = f"{commands[command].description}\n{details_formatted}"
             embed.add_field(name=f"/{command}", value=field_value)
         await ctx.send(embed=embed)
