@@ -63,7 +63,6 @@ class RegistrationCommands(Cog, name="User Registration"):
                     message = await request_channel.send(embed=embed)
                     await message.add_reaction("✅")
                     await message.add_reaction("❌")
-                    # TODO: Add check to see if the register request already exists
                     if add_register_request(uuid, ctx.author.id, minecraft_username, message.id):
                         await ctx.send(embed=Embed(title="Registration Pending",
                                                    description=f"Requested to register **{minecraft_username}**"

@@ -70,7 +70,7 @@ async def get_event_time(ctx, event_time, event_date):
 
 
 async def announce_event(title, description, announcement_channel, signup_list_channel, mention_role, event_time):
-    embed_description = f"{title}\n\n**Time:**\n{event_time}\n\n{description}\n\nReact with ✅ to play\nReact with ❌ " \
+    embed_description = f"**Time:**\n{event_time}\n\n{description}\n\nReact with ✅ to play\nReact with ❌ " \
                         f"if you can't play\nReact with :mute: if you cannot speak\nReact with :elevator: if you are " \
                         f"able to sub "
     embed = Embed(title=title, description=embed_description, color=Colour.light_grey())
