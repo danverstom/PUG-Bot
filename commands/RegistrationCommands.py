@@ -95,6 +95,8 @@ class RegistrationCommands(Cog, name="User Registration"):
             mod_member = server.get_member(payload.user_id)
             player_member = server.get_member(request[1])
             if str(payload.emoji) == "✅" and MOD_ROLE in [role.name for role in mod_member.roles]:
+                add_player(request[0], request[1], request[2])
+                remove_register_request(payload.message_id)
                 await message.clear_reactions()
                 await message.edit(content=f"✅ {mod_member.name} accepted {player_member.mention}'s request for IGN"
                                            f" **{request[2]}**", embed=None)
@@ -103,16 +105,19 @@ class RegistrationCommands(Cog, name="User Registration"):
                 except Forbidden:
                     # This means the bot can't DM the user
                     await channel.send("This user has PMs off, failed to send DM.")
-                add_player(request[0], request[1], request[2])
-                remove_register_request(payload.message_id)
             elif str(payload.emoji) == "❌" and MOD_ROLE in [role.name for role in mod_member.roles]:
+                remove_register_request(payload.message_id)
                 await message.clear_reactions()
                 await message.edit(content=f"❌ {mod_member.name} denied {player_member.mention}'s request for IGN"
                                            f" **{request[2]}**", embed=None)
-                await player_member.send(embed=Embed(title="Denied IGN Request",
-                                                     description=f"Your request for IGN **{request[2]}** was denied.",
-                                                     color=Colour.dark_red()))
-                remove_register_request(payload.message_id)
+                try:
+                    await player_member.send(embed=Embed(title="Denied IGN Request",
+                                                         description=f"Your request for IGN **{request[2]}** was denied.",
+                                                         color=Colour.dark_red()))
+                except Forbidden:
+                    # This means the bot can't DM the user
+                    await channel.send("This user has PMs off, failed to send DM.")
+                add_player(request[0], request[1], request[2])
 
     @cog_slash(name="unregister", description="Remove a user from the database",
                options=[manage_commands.create_option(name="discord_tag",
