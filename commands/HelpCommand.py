@@ -1,9 +1,6 @@
 from discord.ext.commands import Cog
 from discord import File, Embed, Colour
-from utils.ctf_stats import get_server_games, CTFGame
-from utils.utils import response_embed, create_list_pages, get_json_data
-from random import choice
-from json import load
+from utils.utils import get_json_data
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands

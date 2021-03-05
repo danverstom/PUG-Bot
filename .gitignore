@@ -1,5 +1,5 @@
 .idea/
 __pycache__
 utils/token.json
-utils/database.db
+database/database.db
 IDs/

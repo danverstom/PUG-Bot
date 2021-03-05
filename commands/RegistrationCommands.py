@@ -1,9 +1,13 @@
 from discord import Embed, Colour, User
 from discord.ext.commands import Cog, has_role
 from discord.ext import tasks
-from utils.database import *
+from database.Player import Player, PlayerDoesNotExistError, UsernameAlreadyExistsError, UsernameDoesNotExistError, \
+    DiscordAlreadyExistsError
+from database.database import check_user_requests, add_register_request, get_register_request, \
+    remove_register_request, get_all_register_requests
 from utils.utils import error_embed, success_embed, response_embed, create_list_pages
-from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL
+from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL, ELO_FLOOR
+from mojang import MojangAPI
 from asyncio import sleep as async_sleep
 from discord.errors import Forbidden
 
@@ -40,7 +44,7 @@ class RegistrationCommands(Cog, name="User Registration"):
         # TODO: Make this work lol
         info = []
         if data_type == "players":
-            players = sorted(fetch_players_list(), key=lambda item: item.minecraft_username)
+            players = sorted(Player.fetch_players_list(), key=lambda item: item.minecraft_username)
             title = "Registered Users"
             for player in players:
                 info.append(f"**{player.minecraft_username}** ({self.bot.get_user(player.discord_id).mention})\n"
@@ -50,7 +54,8 @@ class RegistrationCommands(Cog, name="User Registration"):
             requests = sorted(get_all_register_requests(), key=lambda item: item[2])
             for request in requests:
                 info.append(f"**{request[2]}** ({self.bot.get_user(request[1]).mention})")
-        await create_list_pages(bot=self.bot, ctx=ctx, title=title, info=info, elements_per_page=5)
+        await create_list_pages(bot=self.bot, ctx=ctx, title=title, info=info,
+                                if_empty="There are no Registestration Requests", elements_per_page=5)
 
     @cog_slash(name="register", description="Registers Minecraft username to Discord."
                                             "  This is required to sign up for PUGs.",
@@ -74,7 +79,7 @@ class RegistrationCommands(Cog, name="User Registration"):
 
         uuid = MojangAPI.get_uuid(minecraft_username)
         if uuid:
-            condition = player_check(uuid, ctx.author.id)
+            condition = Player.player_check(uuid, ctx.author.id)
             if not condition:
                 if check_user_requests(ctx.author.id):
                     await error_embed(ctx, "You have already submitted a register request")
@@ -118,7 +123,7 @@ class RegistrationCommands(Cog, name="User Registration"):
             mod_member = server.get_member(payload.user_id)
             player_member = server.get_member(request[1])
             if str(payload.emoji) == "✅" and MOD_ROLE in [role.name for role in mod_member.roles]:
-                add_player(request[0], request[1], request[2])
+                Player.add_player(request[0], request[1])
                 remove_register_request(payload.message_id)
                 await message.clear_reactions()
                 await message.edit(content=f"✅ {mod_member.name} accepted {player_member.mention}'s request for IGN"
@@ -140,7 +145,6 @@ class RegistrationCommands(Cog, name="User Registration"):
                 except Forbidden:
                     # This means the bot can't DM the user
                     await channel.send("This user has PMs off, failed to send DM.")
-                add_player(request[0], request[1], request[2])
 
     @cog_slash(name="unregister", description="Remove a user from the database",
                options=[manage_commands.create_option(name="discord_tag",
@@ -159,7 +163,7 @@ class RegistrationCommands(Cog, name="User Registration"):
             await error_embed(ctx, "Missing Argument <input_user>")
         user = self.bot.get_user(input_user.id)
         try:
-            player = Player(user.id)
+            player = Player.from_discord_id(user.id)
         except PlayerDoesNotExistError:
             await error_embed(ctx, "Player is not registered in the database.")
             return
@@ -172,7 +176,7 @@ class RegistrationCommands(Cog, name="User Registration"):
 
         response = await self.bot.wait_for('message', check=check)
         if response.content.lower() == "y" or response.content.lower() == "yes":
-            delete_player(player.minecraft_id)
+            player.delete()
             await success_embed(ctx, f"User {user.mention} has been unregistered.")
         else:
             await response_embed(ctx, "Stopped Deletion", f"User {user.mention} will not be deleted from the database.")
@@ -206,7 +210,7 @@ class RegistrationCommands(Cog, name="User Registration"):
         user = self.bot.get_user(discord_tag.id)
         if action_type == "get":
             try:
-                player = Player(user.id)
+                player = Player.from_discord_id(user.id)
             except PlayerDoesNotExistError:
                 await error_embed(ctx, "Player does not exist")
                 return
@@ -217,7 +221,7 @@ class RegistrationCommands(Cog, name="User Registration"):
 
         elif action_type == "set":
             try:
-                player = Player(user.id)
+                player = Player.from_discord_id(user.id)
             except PlayerDoesNotExistError:
                 await error_embed(ctx, "Player does not exist")
                 return
@@ -225,22 +229,23 @@ class RegistrationCommands(Cog, name="User Registration"):
                 if value:
                     if variable_name == "username":
                         old_username = player.update_minecraft_username()
-                        condition = player.change_minecraft_username(value)
-                        if not condition:
-                            await success_embed(ctx, f"Changed username: {old_username} -> {value}")
-                        elif condition == 1:
-                            await error_embed(ctx, f"Username {value} is already in the database")
-                        else:
-                            await error_embed(ctx, f"Username {value} is not a valid username")
+                        try:
+                            player.change_minecraft_username(value)
+                            await success_embed(ctx, f"Changed username: **{old_username}** -> **{value}**")
+                        except UsernameAlreadyExistsError:
+                            await error_embed(ctx, f"Username **{value}** is already in the database")
+                        except UsernameDoesNotExistError:
+                            await error_embed(ctx, f"Username **{value}** is not a valid username")
                     elif variable_name == "discord":
                         value = value[3:-1]
                         if value.isdigit():
                             user = self.bot.get_user(int(value))
                             if user:
-                                if player.change_discord_id(user.id):
+                                try:
+                                    player.change_discord_id(user.id)
                                     await success_embed(ctx,
                                                         f"Changed discord user: {discord_tag.mention} -> {user.mention}")
-                                else:
+                                except DiscordAlreadyExistsError:
                                     await error_embed(ctx, f"User {user.mention} is already in the database")
                             else:
                                 await error_embed(ctx, "Value must be a User")
@@ -251,9 +256,9 @@ class RegistrationCommands(Cog, name="User Registration"):
                         if value.isdigit():
                             value = int(value)
                             if player.set_elo(value):
-                                await success_embed(ctx, f"Set elo: {old_elo} -> {value}")
+                                await success_embed(ctx, f"Set elo: **{old_elo}** -> **{value}**")
                             else:
-                                await error_embed(ctx, f"Elo given ({value}) is below Elo floor ({ELO_FLOOR})")
+                                await error_embed(ctx, f"Elo given (**{value}**) is below Elo floor (**{ELO_FLOOR}**)")
                         else:
                             await error_embed(ctx, "Value must be an int")
                     else:
@@ -261,9 +266,9 @@ class RegistrationCommands(Cog, name="User Registration"):
                         if value.isdigit():
                             value = int(value)
                             if player.set_priority(value):
-                                await success_embed(ctx, f"Set priority: {old_priority} -> {value}")
+                                await success_embed(ctx, f"Set priority: **{old_priority}** -> **{value}**")
                             else:
-                                await error_embed(ctx, f"Priority given ({value}) is negative")
+                                await error_embed(ctx, f"Priority given (**{value}**) is negative")
                         else:
                             await error_embed(ctx, "Value must be an int")
                 else:
@@ -286,27 +291,22 @@ class RegistrationCommands(Cog, name="User Registration"):
         else:
             player_id = ctx.author.id
         try:
-            player = Player(player_id)
+            player = Player.from_discord_id(player_id)
         except PlayerDoesNotExistError:
             await error_embed(ctx, "Player does not exist")
-            return False
+            return
         await response_embed(ctx, f"{player.minecraft_username}'s ELO", str(player.get_elo()))
 
     @tasks.loop(hours=IGN_TRACKER_INTERVAL_HOURS)
     async def update_usernames(self):
         changes_list = []
-        for player in fetch_players_list():
+        for player in Player.fetch_players_list():
             old_username = player.minecraft_username
             latest_username = player.update_minecraft_username()
             if latest_username != old_username:
                 changes_list.append([player, old_username])
             await async_sleep(3)
-        if len(changes_list) == 0:
-            await self.bot_channel.send(embed=Embed(title="IGN Tracker",
-                                                    description=f"No IGNs were updated in the last"
-                                                                f" {IGN_TRACKER_INTERVAL_HOURS} hours",
-                                                    color=Colour.dark_purple()))
-        else:
+        if len(changes_list) > 0:
             embed = Embed(title="IGNs Updated", color=Colour.dark_purple())
             for change in changes_list:
                 player = change[0]
