@@ -61,7 +61,7 @@ class CTFCommands(Cog, name="CTF Commands"):
         map_str = list()
 
         for (map_name, map_id) in list_maps:
-            map_str.append(f"{map_name} ({map_id})")
+            map_str.append(f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})")
 
         if search_2:
             map_str.append(f"\n*For match server:*\n`{' '.join(str(item[1]) for item in list_maps)}`")
