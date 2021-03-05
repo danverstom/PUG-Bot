@@ -43,12 +43,11 @@ class Player:
     def __init__(self, data):
         if not data or not isinstance(data, tuple):
             raise ValueError
-        else:
-            self.minecraft_id = data[0]
-            self.discord_id = data[1]
-            self.minecraft_username = data[2]
-            self.priority = data[3]
-            self.elo = data[4]
+        self.minecraft_id = data[0]
+        self.discord_id = data[1]
+        self.minecraft_username = data[2]
+        self.priority = data[3]
+        self.elo = data[4]
 
     def delete(self):
         return delete_player(self.minecraft_id)
@@ -122,8 +121,7 @@ class Player:
             elif check_players_discord_id(discord_id):
                 raise DiscordAlreadyExistsError()
             add_player(minecraft_id, discord_id, minecraft_username, priority, elo)
-            player = cls((minecraft_id, discord_id, minecraft_username, priority, elo))
-            return player
+            return cls((minecraft_id, discord_id, minecraft_username, priority, elo))
         else:
             raise UsernameDoesNotExistError()
 

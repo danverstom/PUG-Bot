@@ -20,11 +20,11 @@ conn.execute(
 conn.execute(
     '''create table if not exists events (
     event_id integer,
-    event_title text,
-    event_description text,
-    event_time_est blob,
-    event_created_est blob,
-    event_creator integer,
+    title text,
+    description text,
+    time_est blob,
+    created_est blob,
+    creator integer,
     guild_id integer,
     announcement_channel integer,
     signup_channel integer,
@@ -172,47 +172,77 @@ def get_all_register_requests():
     return result
 
 
+"""
+Functions that interact with the Events database.
+"""
+
+
+def add_event(event_id, title, description, time_est, created_est, creator, guild_id, announcement_channel,
+              signup_channel, signup_message, num_can_play=0, num_cant_play=0, num_is_muted=0, num_can_sub=0):
+    if check_event_id(event_id):
+        return False
+    c.execute("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              (event_id, title, description, time_est, created_est, creator, guild_id, announcement_channel,
+               signup_channel, signup_message, num_can_play, num_cant_play, num_is_muted, num_can_sub))
+    conn.commit()
+    return True
+
+
+def delete_event(event_id):
+    if check_event_id(event_id):
+        c.execute("DELETE FROM events WHERE event_id = ?", (event_id,))
+        conn.commit()
+        return True
+    else:
+        return False
+
+
 def check_event_id(event_id):
-    c.execute('select event_id from events where event_id = ?', (event_id,))
-    result = c.fetchone()
-    return bool(result)
+    c.execute('SELECT event_id FROM events WHERE event_id = ?', (event_id,))
+    return bool(c.fetchone())
 
 
-def get_event_id(event_id):
-    c.execute('select * from events where event_id = ?', (event_id,))
+def fetch_events_event_id(event_id):
+    c.execute('SELECT * FROM events WHERE event_id = ?', (event_id,))
     return c.fetchone()
 
 
-class EventDoesNotExist(Exception):
-    """Exception raised when event is not in the database"""
-
-    def __init__(self, message="Event does not exist in the database"):
-        self.message = message
-        super().__init__(self.message)
+def fetch_events_list_event_id():
+    c.execute("SELECT event_id FROM events")
+    return c.fetchall()
 
 
-class Event:
-    def __init__(self, event_id):
-        if not check_event_id(event_id):
-            raise EventDoesNotExist()
+def update_events_title(title, event_id):
+    c.execute("UPDATE events SET title = ? WHERE event_id = ?", (title, event_id))
+    conn.commit()
 
-        event = get_event_id(event_id)
-        self.event_id = event_id
-        self.event_title = event[1]
-        self.event_description = event[2]
-        self.event_time_est = event[3]
-        self.event_created_est = event[4]
-        self.event_creator = event[5]
-        self.guild_id = event[6]
-        self.announcement_channel = event[7]
-        self.signup_channel = event[8]
-        self.signup_message = event[9]
-        self.num_can_play = event[10]
-        self.num_cant_play = event[11]
-        self.num_is_muted = event[12]
-        self.num_can_sub = event[13]
 
-    @staticmethod
-    def get_events():
-        c.execute("SELECT * FROM events")
-        return c.fetchall()
+def update_events_description(description, event_id):
+    c.execute("UPDATE events SET description = ? WHERE event_id = ?", (description, event_id))
+    conn.commit()
+
+
+def update_events_time_est(time_est, event_id):
+    c.execute("UPDATE events SET time_est = ? WHERE event_id = ?", (time_est, event_id))
+    conn.commit()
+
+
+def update_events_num_can_play(num_can_play, event_id):
+    c.execute("UPDATE events SET num_can_play = ? WHERE event_id = ?", (num_can_play, event_id))
+    conn.commit()
+
+
+def update_events_num_cant_play(num_cant_play, event_id):
+    c.execute("UPDATE events SET num_cant_play = ? WHERE event_id = ?", (num_cant_play, event_id))
+    conn.commit()
+
+
+def update_events_num_is_muted(num_is_muted, event_id):
+    c.execute("UPDATE events SET num_is_muted = ? WHERE event_id = ?", (num_is_muted, event_id))
+    conn.commit()
+
+
+def update_events_num_can_sub(num_can_sub, event_id):
+    c.execute("UPDATE events SET num_can_sub = ? WHERE event_id = ?", (num_can_sub, event_id))
+    conn.commit()
+
