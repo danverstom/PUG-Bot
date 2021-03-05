@@ -39,7 +39,7 @@ conn.execute(
     '''create table if not exists signups (
     user_id integer,
     event_id integer,
-    is_playing bool,
+    can_play bool,
     is_muted bool,
     can_sub bool)'''
 )
@@ -179,7 +179,7 @@ Functions that interact with the Events database.
 
 def add_event(event_id, title, description, time_est, created_est, creator, guild_id, announcement_channel,
               signup_channel, signup_message, num_can_play=0, num_cant_play=0, num_is_muted=0, num_can_sub=0):
-    if check_event_id(event_id):
+    if check_events_event_id(event_id):
         return False
     c.execute("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
               (event_id, title, description, time_est, created_est, creator, guild_id, announcement_channel,
@@ -189,7 +189,7 @@ def add_event(event_id, title, description, time_est, created_est, creator, guil
 
 
 def delete_event(event_id):
-    if check_event_id(event_id):
+    if check_events_event_id(event_id):
         c.execute("DELETE FROM events WHERE event_id = ?", (event_id,))
         conn.commit()
         return True
@@ -197,7 +197,7 @@ def delete_event(event_id):
         return False
 
 
-def check_event_id(event_id):
+def check_events_event_id(event_id):
     c.execute('SELECT event_id FROM events WHERE event_id = ?', (event_id,))
     return bool(c.fetchone())
 
@@ -246,3 +246,54 @@ def update_events_num_can_sub(num_can_sub, event_id):
     c.execute("UPDATE events SET num_can_sub = ? WHERE event_id = ?", (num_can_sub, event_id))
     conn.commit()
 
+
+"""
+Functions that interact with the Events database.
+"""
+
+
+def add_signup(user_id, event_id, can_play=0, is_muted=0, can_sub=0):
+    if check_signups_user_event(user_id, event_id):
+        return False
+    c.execute("INSERT INTO signups VALUES (?, ?, ?, ?, ?)", (user_id, event_id, can_play, is_muted, can_sub))
+    conn.commit()
+    return True
+
+
+def delete_signup(user_id, event_id):
+    if check_signups_user_event(user_id, event_id):
+        c.execute("DELETE FROM signups WHERE user_id = ? AND event_id = ?", (user_id, event_id))
+        conn.commit()
+        return True
+    else:
+        return False
+
+
+def check_signups_user_event(user_id, event_id):
+    c.execute("SELECT user_id FROM signups WHERE user_id = ? AND event_id = ?", (user_id, event_id))
+    return bool(c.fetchone())
+
+
+def fetch_signups_user_event(user_id, event_id):
+    c.execute("SELECT * FROM signups WHERE user_id = ? AND event_id = ?", (user_id, event_id))
+    return c.fetchone()
+
+
+def fetch_signups_list_event_id(event_id):
+    c.execute("SELECT user_id, event_id FROM signups WHERE event_id = ?", (event_id,))
+    return c.fetchall()
+
+
+def update_signups_can_play(can_play, user_id, event_id):
+    c.execute("UPDATE signups SET can_play = ? WHERE user_id = ? AND event_id = ?", (can_play, user_id, event_id))
+    conn.commit()
+
+
+def update_signups_is_muted(is_muted, user_id, event_id):
+    c.execute("UPDATE signups SET is_muted = ? WHERE user_id = ? AND event_id = ?", (is_muted, user_id, event_id))
+    conn.commit()
+
+
+def update_signups_can_sub(can_sub, user_id, event_id):
+    c.execute("UPDATE signups SET can_sub = ? WHERE user_id = ? AND event_id = ?", (can_sub, user_id, event_id))
+    conn.commit()

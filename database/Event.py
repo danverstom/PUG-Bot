@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from pytz import timezone
 
-from database.database import check_event_id, fetch_events_event_id, add_event, fetch_events_list_event_id, \
+from database.database import check_events_event_id, fetch_events_event_id, add_event, fetch_events_list_event_id, \
     delete_event, update_events_title, update_events_description, update_events_time_est, update_events_num_can_play, \
     update_events_num_is_muted, update_events_num_can_sub, update_events_num_cant_play
 
@@ -160,7 +160,7 @@ class Event:
     @classmethod
     def add_event(cls, event_id, title, description, time_est, created_est, creator, guild, announcement_channel,
                   signup_channel, signup_message):
-        if check_event_id(event_id):
+        if check_events_event_id(event_id):
             raise EventAlreadyExistsError()
         add_event(event_id, title, description, time_est, created_est, creator, guild, announcement_channel,
                   signup_channel, signup_message)
@@ -185,4 +185,4 @@ class Event:
 
     @staticmethod
     def event_check(event_id):
-        return check_event_id(event_id)
+        return check_events_event_id(event_id)

@@ -1,0 +1,80 @@
+from database.database import add_signup, check_signups_user_event, fetch_signups_user_event, \
+    fetch_signups_list_event_id, delete_signup, update_signups_can_play, update_signups_is_muted, update_signups_can_sub
+
+
+class SignupAlreadyExistsError(Exception):
+    """Exception raised when signup is already in the database"""
+
+    def __init__(self, message="Signup already exists in the database"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class SignupDoesNotExistError(Exception):
+    """Exception raised when signup is not in the database"""
+
+    def __init__(self, message="Signup does not exist in the database"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class Signup:
+    def __init__(self, data):
+        if not data or not isinstance(data, tuple):
+            raise ValueError
+        self.user_id = data[0]
+        self.event_id = data[1]
+        self.can_play = bool(data[2])
+        self.is_muted = bool(data[3])
+        self.can_sub = bool(data[4])
+
+    def delete(self):
+        return delete_signup(self.user_id, self.event_id)
+
+    def update(self):
+        data = fetch_signups_user_event(self.user_id, self.event_id)
+        self.can_play = bool(data[2])
+        self.is_muted = bool(data[3])
+        self.can_sub = bool(data[4])
+
+    def set_can_play(self, can_play):
+        self.can_play = can_play
+        update_signups_can_play(int(can_play), self.user_id, self.event_id)
+        return True
+
+    def set_is_muted(self, is_muted):
+        self.is_muted = is_muted
+        update_signups_is_muted(int(is_muted), self.user_id, self.event_id)
+        return True
+
+    def set_can_sub(self, can_sub):
+        self.can_sub = can_sub
+        update_signups_can_sub(int(can_sub), self.user_id, self.event_id)
+        return True
+
+    @classmethod
+    def add_signup(cls, user_id, event_id, can_play=False, is_muted=False, can_sub=False):
+        if check_signups_user_event(user_id, event_id):
+            raise SignupAlreadyExistsError()
+        add_signup(user_id, event_id, int(can_play), int(is_muted), int(can_sub))
+        return cls((user_id, event_id, can_play, is_muted, can_sub))
+
+    @classmethod
+    def from_user_event(cls, user_id, event_id):
+        data = fetch_signups_user_event(user_id, event_id)
+        if data:
+            return cls(data)
+        else:
+            raise SignupDoesNotExistError()
+
+    @classmethod
+    def fetch_signups_list(cls, event_id):
+        result = fetch_signups_list_event_id(event_id)
+        signup_list = []
+        for id_tuple in result:
+            signup_list.append(cls.from_user_event(id_tuple[0], id_tuple[1]))
+        return signup_list
+
+    @staticmethod
+    def signup_check(user_id, event_id):
+        return check_signups_user_event(user_id, event_id)
