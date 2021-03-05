@@ -48,24 +48,25 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
     contents.append(page)
 
     embed = Embed(title=title, description=contents[current_page - 1], colour=Colour.dark_purple())
-    embed.set_footer(text=f"Page {current_page}/{num_pages}")
+    embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
     message = await ctx.send(embed=embed)
 
     await message.add_reaction("◀")
     await message.add_reaction("▶")
+    await message.add_reaction("✅")
+    await message.add_reaction("❌")
 
     def check(r, u):
-        return r.message.id == message.id and u == ctx.author and str(r.emoji) in ["◀", "▶"]
+        return r.message.id == message.id and u == ctx.author and str(r.emoji) in ["◀", "▶", "✅", "❌"]
 
     while True:
         try:
             reaction, user = await bot.wait_for("reaction_add", timeout=60, check=check)
-
             if str(reaction.emoji) == "▶" and current_page != num_pages:
                 current_page += 1
                 embed = Embed(title="Map List", description=contents[current_page - 1],
                               colour=Colour.dark_purple())
-                embed.set_footer(text=f"Page {current_page}/{num_pages}")
+                embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
                 await message.edit(embed=embed)
                 await message.remove_reaction(reaction, user)
 
@@ -73,9 +74,17 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                 current_page -= 1
                 embed = Embed(title="Map List", description=contents[current_page - 1],
                               colour=Colour.dark_purple())
-                embed.set_footer(text=f"Page {current_page}/{num_pages}")
+                embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
                 await message.edit(embed=embed)
                 await message.remove_reaction(reaction, user)
+            elif str(reaction.emoji) == "✅":
+                await message.clear_reactions()
+                embed.title = embed.title + " (Saved)"
+                embed.set_footer(text=f"Page {current_page}/{num_pages} (Saved)")
+                await message.edit(embed=embed)
+                break
+            elif str(reaction.emoji) == "❌":
+                raise TimeoutError
 
             else:
                 await message.remove_reaction(reaction, user)

@@ -37,8 +37,15 @@ class CTFCommands(Cog, name="CTF Commands"):
     @cog_slash(name="maps", description="Lists all maps in rotation that contains the given search",
                options=[manage_commands.create_option(name="search",
                                                       description="The string to search with",
-                                                      option_type=3, required=False)], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def maps(self, ctx, search=""):
+                                                      option_type=3, required=False),
+                        manage_commands.create_option(name="search_2",
+                                                      description="A second map to search for",
+                                                      option_type=3, required=False),
+                        manage_commands.create_option(name="search_3",
+                                                      description="A third map to search for",
+                                                      option_type=3, required=False)
+                        ], guild_ids=SLASH_COMMANDS_GUILDS)
+    async def maps(self, ctx, search="", search_2="", search_3=""):
         """
         Finds all maps in rotation that contains the input
         """
@@ -46,7 +53,8 @@ class CTFCommands(Cog, name="CTF Commands"):
             maps = load(file)
         if search:
             list_maps = [(map_name, maps[map_name]) for map_name in list(maps.keys()) if
-                         search.lower() in map_name.lower()]
+                         search.lower() in map_name.lower() or search_2.lower() in map_name.lower()
+                         or search_3.lower() in map_name.lower()]
         else:
             list_maps = list(maps.items())
 
