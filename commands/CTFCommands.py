@@ -63,6 +63,9 @@ class CTFCommands(Cog, name="CTF Commands"):
         for (map_name, map_id) in list_maps:
             map_str.append(f"{map_name} ({map_id})")
 
+        if search_2:
+            map_str.append(f"\n*For match server:*\n`{' '.join(str(item[1]) for item in list_maps)}`")
+
         await create_list_pages(self.bot, ctx, "Maps Found:", map_str, "No Maps were found")
 
     @cog_slash(name="stats", description="Gets most recent stats from match 1 and 2",
