@@ -81,13 +81,11 @@ async def announce_event(title, description, announcement_channel, signup_list_c
     embed_description = f"{title}\n\n**Time:**\n{event_time}\n\n{description}"
     embed = Embed(title="Signups", description=embed_description, color=Colour.light_grey())
     embed.add_field(name="✅ Players: 0", value="No one :(", inline=False)
-    # embed.add_field(name="❌ Can't Play: 0", value="No one :)", inline=False)
     embed.add_field(name="🔇 Mutes: 0", value="No one :)", inline=False)
     embed.add_field(name="🛗 Subs: 0", value="No one :(", inline=False)
     signup_list_message = await signup_list_channel.send(embed=embed)
 
     await announcement_message.add_reaction("✅")
-    await announcement_message.add_reaction("❌")
     await announcement_message.add_reaction("🔇")
     await announcement_message.add_reaction("🛗")
 

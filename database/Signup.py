@@ -52,6 +52,9 @@ class Signup:
         update_signups_can_sub(int(can_sub), self.user_id, self.event_id)
         return True
 
+    def is_unsigned(self):
+        return not self.can_play and not self.is_muted and not self.can_sub
+
     @classmethod
     def add_signup(cls, user_id, event_id, can_play=False, is_muted=False, can_sub=False):
         if check_signups_user_event(user_id, event_id):

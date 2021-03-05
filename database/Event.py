@@ -3,7 +3,7 @@ from pytz import timezone
 
 from database.database import check_events_event_id, fetch_events_event_id, add_event, fetch_events_list_event_id, \
     delete_event, update_events_title, update_events_description, update_events_time_est, update_events_num_can_play, \
-    update_events_num_is_muted, update_events_num_can_sub, update_events_num_cant_play
+    update_events_num_is_muted, update_events_num_can_sub
 
 
 class EventDoesNotExistError(Exception):
@@ -45,9 +45,8 @@ class Event:
         self.signup_channel = data[8]
         self.signup_message = data[9]
         self.num_can_play = data[10]
-        self.num_cant_play = data[11]
-        self.num_is_muted = data[12]
-        self.num_can_sub = data[13]
+        self.num_is_muted = data[11]
+        self.num_can_sub = data[12]
 
     def delete(self):
         return delete_event(self.event_id)
@@ -58,9 +57,8 @@ class Event:
         self.description = data[2]
         self.time_est = data[3]
         self.num_can_play = data[10]
-        self.num_cant_play = data[11]
-        self.num_is_muted = data[12]
-        self.num_can_sub = data[13]
+        self.num_is_muted = data[11]
+        self.num_can_sub = data[12]
 
     def get_title(self):
         self.update()
@@ -111,21 +109,6 @@ class Event:
         self.update()
         num_can_play = self.num_can_play + amount
         self.set_num_can_play(num_can_play if num_can_play >= 0 else 0)
-
-    def get_num_cant_play(self):
-        self.update()
-        return self.num_cant_play
-
-    def set_num_cant_play(self, num_cant_play):
-        if num_cant_play < 0:
-            return False
-        update_events_num_cant_play(num_cant_play, self.event_id)
-        return True
-
-    def change_num_cant_play(self, amount):
-        self.update()
-        num_cant_play = self.num_cant_play + amount
-        self.set_num_cant_play(num_cant_play if num_cant_play >= 0 else 0)
 
     def get_num_is_muted(self):
         self.update()

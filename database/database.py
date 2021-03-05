@@ -30,7 +30,6 @@ conn.execute(
     signup_channel integer,
     signup_message integer,
     num_can_play integer,
-    num_cant_play integer,
     num_is_muted integer,
     num_can_sub integer)'''
 )
@@ -178,12 +177,12 @@ Functions that interact with the Events database.
 
 
 def add_event(event_id, title, description, time_est, created_est, creator, guild_id, announcement_channel,
-              signup_channel, signup_message, num_can_play=0, num_cant_play=0, num_is_muted=0, num_can_sub=0):
+              signup_channel, signup_message, num_can_play=0, num_is_muted=0, num_can_sub=0):
     if check_events_event_id(event_id):
         return False
-    c.execute("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    c.execute("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
               (event_id, title, description, time_est, created_est, creator, guild_id, announcement_channel,
-               signup_channel, signup_message, num_can_play, num_cant_play, num_is_muted, num_can_sub))
+               signup_channel, signup_message, num_can_play, num_is_muted, num_can_sub))
     conn.commit()
     return True
 
@@ -229,11 +228,6 @@ def update_events_time_est(time_est, event_id):
 
 def update_events_num_can_play(num_can_play, event_id):
     c.execute("UPDATE events SET num_can_play = ? WHERE event_id = ?", (num_can_play, event_id))
-    conn.commit()
-
-
-def update_events_num_cant_play(num_cant_play, event_id):
-    c.execute("UPDATE events SET num_cant_play = ? WHERE event_id = ?", (num_cant_play, event_id))
     conn.commit()
 
 
