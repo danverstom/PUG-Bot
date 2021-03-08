@@ -29,6 +29,7 @@ conn.execute(
     announcement_channel integer,
     signup_channel integer,
     signup_message integer,
+    signup_deadline integer,
     num_can_play integer,
     num_is_muted integer,
     num_can_sub integer)'''
@@ -177,12 +178,12 @@ Functions that interact with the Events database.
 
 
 def add_event(event_id, title, description, time_est, created_est, creator, guild_id, announcement_channel,
-              signup_channel, signup_message, num_can_play=0, num_is_muted=0, num_can_sub=0):
+              signup_channel, signup_message, signup_deadline, num_can_play=0, num_is_muted=0, num_can_sub=0):
     if check_events_event_id(event_id):
         return False
-    c.execute("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    c.execute("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
               (event_id, title, description, time_est, created_est, creator, guild_id, announcement_channel,
-               signup_channel, signup_message, num_can_play, num_is_muted, num_can_sub))
+               signup_channel, signup_message, signup_deadline, num_can_play, num_is_muted, num_can_sub))
     conn.commit()
     return True
 

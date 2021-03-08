@@ -11,7 +11,7 @@ from utils.utils import response_embed, error_embed
 from database.Event import Event
 from database.Signup import Signup, SignupDoesNotExistError
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from pytz import timezone
 
 
@@ -48,15 +48,18 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="Role to give users that signed up",
                                          option_type=8, required=True),
                         mc.create_option(name="event_time",
-                                         description="Time (in EST) of the event.  Must be in 24 hour HH:MM format",
+                                         description="Time (in EST) of the event.",
                                          option_type=3, required=True),
                         mc.create_option(name="event_date",
                                          description="Date of the event.  Must be in YYYY-MM-DD format",
-                                         option_type=3, required=False)],
+                                         option_type=3, required=False),
+                        mc.create_option(name="signup_deadline",
+                                         description="Amount of time (in minutes) before the event for signup deadline",
+                                         option_type=4, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
     @has_role(MOD_ROLE)
     async def event(self, ctx, title, announcement_channel, mention_role, signup_channel, signup_role, event_time,
-                    event_date=""):
+                    event_date="", signup_deadline=20):
         if not isinstance(announcement_channel, TextChannel):
             await error_embed(ctx, f"Announcement channel {announcement_channel.mention} is not a text channel")
             return
@@ -77,8 +80,8 @@ class EventCommands(Cog, name="Event Commands"):
                 await error_embed(ctx, f"Given mention role {mention_role} is not a valid role")
                 return
 
-        event_datetime = await get_event_time(ctx, event_time, event_date)
-        if not event_datetime:
+        event_time_package = await get_event_time(ctx, event_time, event_date, signup_deadline)
+        if not event_time_package:
             return
 
         def check(m):
@@ -95,9 +98,10 @@ class EventCommands(Cog, name="Event Commands"):
         await message.delete()
         await response.delete()
 
-        embed_description = f"**Title:** {title}\n**Time:** {event_datetime[1]}\n**Description:**\n{description}\n" \
-                            f"**Announcement Channel:** {announcement_channel.mention}\n**Mention Role:**: {mention_role}\n" \
-                            f"**Signups List Channel:** {signup_channel.mention}\n**Signup Role:** {signup_role.mention} "
+        embed_description = f"**Title:** {title}\n**Time:** {event_time_package[0][1]}\n**Signup Deadline:** " \
+                            f"{event_time_package[1][1]}\n**Description:**\n{description}\n**Announcement Channel:** " \
+                            f"{announcement_channel.mention}\n**Mention Role:**: {mention_role}\n" \
+                            f"**Signups List Channel:** {signup_channel.mention}\n**Signup Role:** {signup_role.mention}"
         message = await ctx.send(embed=Embed(title="Is everything correct? (y/n):", description=embed_description,
                                              color=Colour.dark_purple()))
         response = await self.bot.wait_for("message", check=check)
@@ -109,11 +113,11 @@ class EventCommands(Cog, name="Event Commands"):
             return
         await response_embed(ctx, "Confirmed", "✅ Creating event")
         event_message_ids = await announce_event(title, description, announcement_channel, signup_channel,
-                                                 mention_role, event_datetime[1])
+                                                 mention_role, event_time_package[0][1], event_time_package[1][1])
 
-        Event.add_event(event_message_ids[0], title, description, event_datetime[0].isoformat(),
+        Event.add_event(event_message_ids[0], title, description, event_time_package[0][0].isoformat(),
                         datetime.now(timezone('EST')).isoformat(), ctx.author.id, ctx.guild.id, announcement_channel.id,
-                        signup_channel.id, event_message_ids[1])
+                        signup_channel.id, event_message_ids[1], event_time_package[1][0].isoformat())
 
     @tasks.loop(seconds=SIGNUPS_TRACKER_INTERVAL_SECONDS)
     async def check_signups(self):
