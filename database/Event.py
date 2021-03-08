@@ -2,8 +2,7 @@ from datetime import datetime, timedelta
 from pytz import timezone
 
 from database.database import check_events_event_id, fetch_events_event_id, add_event, fetch_events_list_event_id, \
-    delete_event, update_events_title, update_events_description, update_events_time_est, update_events_num_can_play, \
-    update_events_num_is_muted, update_events_num_can_sub
+    delete_event, update_events_title, update_events_description, update_events_time_est, update_events_signup_deadline
 
 
 class EventDoesNotExistError(Exception):
@@ -45,9 +44,9 @@ class Event:
         self.signup_channel = data[8]
         self.signup_message = data[9]
         self.signup_deadline = data[10]
-        self.num_can_play = data[11]
-        self.num_is_muted = data[12]
-        self.num_can_sub = data[13]
+        self.can_play = []
+        self.is_muted = []
+        self.can_sub = []
 
     def delete(self):
         return delete_event(self.event_id)
@@ -58,9 +57,6 @@ class Event:
         self.description = data[2]
         self.time_est = data[3]
         self.signup_deadline = data[10]
-        self.num_can_play = data[11]
-        self.num_is_muted = data[12]
-        self.num_can_sub = data[13]
 
     def get_title(self):
         self.update()
@@ -86,61 +82,38 @@ class Event:
 
     def set_event_time_est(self, time_est):
         try:
-            time_est = datetime.fromisoformat(time_est)
+            datetime_est = datetime.fromisoformat(time_est)
         except ValueError:
             raise ValueError
         current_date = datetime.now(timezone('EST'))
-        td = time_est - current_date
-        if td < timedelta(0):
+        if datetime_est < current_date:
             raise TimeBeforeCurrentTimeError()
         self.time_est = time_est
         update_events_time_est(time_est, self.event_id)
         return True
 
-    def get_num_can_play(self):
+    def get_signup_deadline(self):
         self.update()
-        return self.num_can_play
+        return self.signup_deadline
 
-    def set_num_can_play(self, num_can_play):
-        if num_can_play < 0:
-            return False
-        update_events_num_can_play(num_can_play, self.event_id)
+    def set_signup_deadline(self, signup_deadline):
+        try:
+            datetime_signup_deadline = datetime.fromisoformat(signup_deadline)
+        except ValueError:
+            raise ValueError
+        current_date = datetime.now(timezone('EST'))
+        if datetime_signup_deadline < current_date:
+            raise TimeBeforeCurrentTimeError()
+        self.signup_deadline = signup_deadline
+        update_events_signup_deadline(signup_deadline, self.event_id)
         return True
 
-    def change_num_can_play(self, amount):
-        self.update()
-        num_can_play = self.num_can_play + amount
-        self.set_num_can_play(num_can_play if num_can_play >= 0 else 0)
-
-    def get_num_is_muted(self):
-        self.update()
-        return self.num_is_muted
-
-    def set_num_is_muted(self, num_is_muted):
-        if num_is_muted < 0:
-            return False
-        update_events_num_is_muted(num_is_muted, self.event_id)
-        return True
-
-    def change_num_is_muted(self, amount):
-        self.update()
-        num_is_muted = self.num_is_muted + amount
-        self.set_num_is_muted(num_is_muted if num_is_muted >= 0 else 0)
-
-    def get_num_can_sub(self):
-        self.update()
-        return self.num_can_sub
-
-    def set_num_can_sub(self, num_can_sub):
-        if num_can_sub < 0:
-            return False
-        update_events_num_can_sub(num_can_sub, self.event_id)
-        return True
-
-    def change_num_can_sub(self, amount):
-        self.update()
-        num_can_sub = self.num_can_sub + amount
-        self.set_num_can_sub(num_can_sub if num_can_sub >= 0 else 0)
+    def postpone(self, amount):
+        event_time = datetime.fromisoformat(self.time_est)
+        signup_deadline = datetime.fromisoformat(self.signup_deadline)
+        change_amount = timedelta(minutes=amount)
+        self.set_event_time_est((event_time + change_amount).isoformat())
+        self.set_signup_deadline((signup_deadline + change_amount).isoformat())
 
     @classmethod
     def add_event(cls, event_id, title, description, time_est, created_est, creator, guild, announcement_channel,
@@ -150,7 +123,7 @@ class Event:
         add_event(event_id, title, description, time_est, created_est, creator, guild, announcement_channel,
                   signup_channel, signup_message, signup_deadline)
         return cls((event_id, title, description, time_est, created_est, creator, guild, announcement_channel,
-                    signup_channel, signup_message, signup_deadline, 0, 0, 0, 0))
+                    signup_channel, signup_message, signup_deadline))
 
     @classmethod
     def from_event_id(cls, event_id):
@@ -167,6 +140,14 @@ class Event:
         for id_tuple in result:
             event_list.append(cls.from_event_id(id_tuple[0]))
         return event_list
+
+    @classmethod
+    def fetch_events_dict(cls):
+        result = fetch_events_list_event_id()
+        event_dict = dict()
+        for id_tuple in result:
+            event_dict[id_tuple[0]] = cls.from_event_id(id_tuple[0])
+        return event_dict
 
     @staticmethod
     def event_check(event_id):

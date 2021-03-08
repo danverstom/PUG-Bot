@@ -150,7 +150,7 @@ async def get_event_time(ctx, event_time, event_date, deadline):
 
 async def announce_event(title, description, announcement_channel, signup_list_channel, mention_role, event_time,
                          signup_deadline):
-    embed_description = f"**Time:**\n{event_time}\n\n**Signup Deadline:**:\n{signup_deadline}\n\n{description}\n\n" \
+    embed_description = f"**Time:**\n{event_time}\n\n**Signup Deadline:**\n{signup_deadline}\n\n{description}\n\n" \
                         f"React with ✅ to play\nReact with ❌ if you can't play\nReact with :mute: if you cannot " \
                         f"speak\nReact with :elevator: if you are able to sub"
     embed = Embed(title=title, description=embed_description, color=Colour.light_grey())
@@ -158,10 +158,9 @@ async def announce_event(title, description, announcement_channel, signup_list_c
         mention_role = ""
     announcement_message = await announcement_channel.send(content=f"{mention_role}", embed=embed)
 
-    embed_description = f"{title}\n\n**Time:**\n{event_time}\n\n{description}"
-    embed = Embed(title="Signups", description=embed_description, color=Colour.light_grey())
+    description = f"{title}\n\n**Time:**\n{event_time}\n\n**Signup Deadline:**\n{signup_deadline}\n\n{description}"
+    embed = Embed(title="Signups", description=description, color=Colour.light_grey())
     embed.add_field(name="✅ Players: 0", value="No one :(", inline=False)
-    embed.add_field(name="🔇 Mutes: 0", value="No one :)", inline=False)
     embed.add_field(name="🛗 Subs: 0", value="No one :(", inline=False)
     signup_list_message = await signup_list_channel.send(embed=embed)
 

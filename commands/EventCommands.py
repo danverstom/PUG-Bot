@@ -11,7 +11,7 @@ from utils.utils import response_embed, error_embed
 from database.Event import Event
 from database.Signup import Signup, SignupDoesNotExistError
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from pytz import timezone
 
 
@@ -22,6 +22,7 @@ class EventCommands(Cog, name="Event Commands"):
 
     def __init__(self, bot):
         self.bot = bot
+        self.events = Event.fetch_events_dict()
 
     def cog_unload(self):
         self.check_signups.cancel()
@@ -54,7 +55,8 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="Date of the event.  Must be in YYYY-MM-DD format",
                                          option_type=3, required=False),
                         mc.create_option(name="signup_deadline",
-                                         description="Amount of time (in minutes) before the event for signup deadline",
+                                         description="Amount of time (in minutes) before the event for signup "
+                                                     "deadline.  Default is 20 minutes",
                                          option_type=4, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
     @has_role(MOD_ROLE)
@@ -115,104 +117,68 @@ class EventCommands(Cog, name="Event Commands"):
         event_message_ids = await announce_event(title, description, announcement_channel, signup_channel,
                                                  mention_role, event_time_package[0][1], event_time_package[1][1])
 
-        Event.add_event(event_message_ids[0], title, description, event_time_package[0][0].isoformat(),
-                        datetime.now(timezone('EST')).isoformat(), ctx.author.id, ctx.guild.id, announcement_channel.id,
-                        signup_channel.id, event_message_ids[1], event_time_package[1][0].isoformat())
+        new_event = Event.add_event(event_message_ids[0], title, description, event_time_package[0][0].isoformat(),
+                                    datetime.now(timezone('EST')).isoformat(), ctx.author.id, ctx.guild.id,
+                                    announcement_channel.id,
+                                    signup_channel.id, event_message_ids[1], event_time_package[1][0].isoformat())
+        self.events[event_message_ids[0]] = new_event
 
     @tasks.loop(seconds=SIGNUPS_TRACKER_INTERVAL_SECONDS)
     async def check_signups(self):
-        for event in Event.fetch_events_list():
-            can_play_users = []
-            can_play_true = []
-            can_play_false = []
-            is_muted_users = []
-            is_muted_true = []
-            is_muted_false = []
-            can_sub_users = []
-            can_sub_true = []
-            can_sub_false = []
+        for event in self.events.values():
+            if datetime.now(timezone('EST')) >= datetime.fromisoformat(event.signup_deadline):
+                continue
 
-            current_signups = Signup.fetch_signups_list(event.event_id)
-            current_can_play = [user.user_id for user in current_signups if user.can_play]
-            current_is_muted = [user.user_id for user in current_signups if user.is_muted]
-            current_can_sub = [user.user_id for user in current_signups if user.can_sub]
             announcement_channel = self.bot.get_channel(event.announcement_channel)
             announcement_message = await announcement_channel.fetch_message(event.event_id)
             reactions = announcement_message.reactions
+            can_play_users = []
+            is_muted_users = []
+            can_sub_users = []
+            bot_id = self.bot.user.id
 
             # Get reactions and changes from last check
             for reaction in reactions:
                 if reaction.emoji == "✅":
-                    can_play_users = [user for user in await reaction.users().flatten() if user.id != self.bot.user.id]
+                    users = await reaction.users().flatten()
+                    users = [user for user in users if user.id != bot_id]
+                    users_id = [user.id for user in users]
+                    can_play_users = [user for user in event.can_play if user.id in users_id]
                     can_play_users_id = [user.id for user in can_play_users]
-                    can_play_true = [user for user in can_play_users_id if user not in current_can_play]
-                    can_play_false = [user for user in current_can_play if user not in can_play_users_id]
+                    can_play_users.extend([user for user in users if user.id not in can_play_users_id])
+                    event.can_play = can_play_users
                 elif reaction.emoji == "🔇":
-                    is_muted_users = [user for user in await reaction.users().flatten() if user.id != self.bot.user.id]
-                    is_muted_users_id = [user.id for user in is_muted_users]
-                    is_muted_true = [user for user in is_muted_users_id if user not in current_is_muted]
-                    is_muted_false = [user for user in current_is_muted if user not in is_muted_users_id]
+                    users = await reaction.users().flatten()
+                    users = [user for user in users if user.id != bot_id]
+                    users_id = [user.id for user in users]
+                    is_muted_users = [user for user in event.is_muted if user in users_id]
+                    is_muted_users.extend([user.id for user in users if user.id not in is_muted_users])
+                    event.is_muted = is_muted_users
                 elif reaction.emoji == "🛗":
-                    can_sub_users = [user for user in await reaction.users().flatten() if user.id != self.bot.user.id]
+                    users = await reaction.users().flatten()
+                    users = [user for user in users if user.id != bot_id]
+                    users_id = [user.id for user in users]
+                    can_sub_users = [user for user in event.can_sub if user.id in users_id]
                     can_sub_users_id = [user.id for user in can_sub_users]
-                    can_sub_true = [user for user in can_sub_users_id if user not in current_can_sub]
-                    can_sub_false = [user for user in current_can_sub if user not in can_sub_users_id]
-
-            # Update database according to changes
-            for user in can_play_true:
-                try:
-                    signups = Signup.from_user_event(user, event.event_id)
-                    signups.set_can_play(True)
-                except SignupDoesNotExistError:
-                    Signup.add_signup(user, event.event_id, can_play=True)
-            for user in is_muted_true:
-                try:
-                    signups = Signup.from_user_event(user, event.event_id)
-                    signups.set_is_muted(True)
-                except SignupDoesNotExistError:
-                    Signup.add_signup(user, event.event_id, is_muted=True)
-            for user in can_sub_true:
-                try:
-                    signups = Signup.from_user_event(user, event.event_id)
-                    signups.set_can_sub(True)
-                except SignupDoesNotExistError:
-                    Signup.add_signup(user, event.event_id, can_sub=True)
-            for user in can_play_false:
-                signups = Signup.from_user_event(user, event.event_id)
-                signups.set_can_play(False)
-                if signups.is_unsigned():
-                    signups.delete()
-            for user in is_muted_false:
-                signups = Signup.from_user_event(user, event.event_id)
-                signups.set_is_muted(False)
-                if signups.is_unsigned():
-                    signups.delete()
-            for user in can_sub_false:
-                signups = Signup.from_user_event(user, event.event_id)
-                signups.set_can_sub(False)
-                if signups.is_unsigned():
-                    signups.delete()
+                    can_sub_users.extend([user for user in users if user.id not in can_sub_users_id])
+                    event.can_sub = can_sub_users
+            self.events[event.event_id] = event
 
             # Update signup message
             signup_channel = self.bot.get_channel(event.signup_channel)
             signup_message = await signup_channel.fetch_message(event.signup_message)
             embed = signup_message.embeds[0]
             if can_play_users:
-                value = [f"{index+1}: {user.mention}" for index, user in enumerate(can_play_users)]
+                value = [f"{index + 1}: {user.mention} {'🔇' if user.id in is_muted_users else ''}" for index, user in
+                         enumerate(can_play_users)]
                 embed.set_field_at(index=0, name=f"✅ Players: {len(can_play_users)}", value="\n".join(value),
                                    inline=False)
             else:
                 embed.set_field_at(index=0, name="✅ Players: 0", value="No one :(", inline=False)
-            if is_muted_users:
-                value = [f"{index+1}: {user.mention}" for index, user in enumerate(is_muted_users)]
-                embed.set_field_at(index=1, name=f"🔇 Mutes: {len(is_muted_users)}", value="\n".join(value),
-                                   inline=False)
-            else:
-                embed.set_field_at(index=1, name="🔇 Mutes: 0", value="No one :)", inline=False)
             if can_sub_users:
-                value = [f"{index+1}: {user.mention}" for index, user in enumerate(can_sub_users)]
-                embed.set_field_at(index=2, name=f"🛗 Subs: {len(can_sub_users)}", value="\n".join(value), inline=False)
+                value = [f"{index + 1}: {user.mention}" for index, user in enumerate(can_sub_users)]
+                embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub_users)}", value="\n".join(value), inline=False)
             else:
-                embed.set_field_at(index=2, name="🛗 Subs: 0", value="No one :(", inline=False)
+                embed.set_field_at(index=1, name="🛗 Subs: 0", value="No one :(", inline=False)
 
             await signup_message.edit(embed=embed)
