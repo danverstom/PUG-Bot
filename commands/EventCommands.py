@@ -136,6 +136,7 @@ class EventCommands(Cog, name="Event Commands"):
             is_muted_users = []
             can_sub_users = []
             bot_id = self.bot.user.id
+            no_changes = True
 
             # Get reactions and changes from last check
             for reaction in reactions:
@@ -145,24 +146,32 @@ class EventCommands(Cog, name="Event Commands"):
                     users_id = [user.id for user in users]
                     can_play_users = [user for user in event.can_play if user.id in users_id]
                     can_play_users_id = [user.id for user in can_play_users]
-                    can_play_users.extend([user for user in users if user.id not in can_play_users_id])
-                    event.can_play = can_play_users
+                    if len(can_play_users) != len(users) or len(can_play_users) != len(event.can_play):
+                        no_changes = False
+                        can_play_users.extend([user for user in users if user.id not in can_play_users_id])
+                        event.can_play = can_play_users
                 elif reaction.emoji == "🔇":
                     users = await reaction.users().flatten()
                     users = [user for user in users if user.id != bot_id]
                     users_id = [user.id for user in users]
                     is_muted_users = [user for user in event.is_muted if user in users_id]
-                    is_muted_users.extend([user.id for user in users if user.id not in is_muted_users])
-                    event.is_muted = is_muted_users
+                    if len(is_muted_users) != len(users) or len(is_muted_users) != len(event.is_muted):
+                        no_changes = False
+                        is_muted_users.extend([user.id for user in users if user.id not in is_muted_users])
+                        event.is_muted = is_muted_users
                 elif reaction.emoji == "🛗":
                     users = await reaction.users().flatten()
                     users = [user for user in users if user.id != bot_id]
                     users_id = [user.id for user in users]
                     can_sub_users = [user for user in event.can_sub if user.id in users_id]
                     can_sub_users_id = [user.id for user in can_sub_users]
-                    can_sub_users.extend([user for user in users if user.id not in can_sub_users_id])
-                    event.can_sub = can_sub_users
+                    if len(can_sub_users) != len(users) or len(can_sub_users) != len(event.can_sub):
+                        no_changes = False
+                        can_sub_users.extend([user for user in users if user.id not in can_sub_users_id])
+                        event.can_sub = can_sub_users
             self.events[event.event_id] = event
+            if no_changes:
+                continue
 
             # Update signup message
             signup_channel = self.bot.get_channel(event.signup_channel)
