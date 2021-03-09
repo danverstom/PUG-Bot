@@ -3,7 +3,12 @@ from discord import File, Embed, Colour
 from utils.CTFGame import get_server_games, CTFGame
 from utils.utils import response_embed, create_list_pages
 from random import choice
-from json import load
+from json import load, dump
+from re import split
+from requests import get
+from discord.ext import tasks
+from bs4 import BeautifulSoup
+from utils.config import FORUM_THREADS_INTERVAL_HOURS
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
@@ -114,3 +119,59 @@ class CTFCommands(Cog, name="CTF Commands"):
             await response_embed(ctx, "No Games Found", "There are no match games in the past 10 games played.")
         else:
             await ctx.send(embed=embed)
+
+    @tasks.loop(hours=FORUM_THREADS_INTERVAL_HOURS)
+    async def threads_update(self):
+        url = get('https://www.brawl.com/forums/299/')
+        page = BeautifulSoup(url.content, features="html.parser")
+
+        teams_threads = {}
+
+        for thread in page.find_all("ol", class_="discussionListItems"):
+            for thread in thread.find_all("li"):
+                team_titles = thread.find("div", class_="titleText")
+                info = team_titles.find('a', class_="PreviewTooltip")
+                author = team_titles.find('a', class_="username")
+                img_loc = thread.find('img')  # needs if statement bc some avatars are weird aka "if "cravatar" in im_log.get('scr'): but i get weird bug so fuck it
+                author_avatar = f"https://www.brawl.com/{img_loc.get('src')}" #!!!!!!!!!!!!!!
+                thread_link = f"https://www.brawl.com/{info.get('href')}"
+                team_title = split("((\[|\()?[0-9][0-9]/25(\]|\))?)", info.text, 1)
+                team_size = split("([0-9][0-9]/25)", info.text, 1)
+                try: #this try/except could be optimized but it's only because team_title raises an error since oly does not have member count in title (will do some day)
+                    print(
+                        f"{team_title[0]}\nLink: {thread_link}\nMembers: {team_size[1]}\nAuthor: {author.text}\nImage: {author_avatar} \n")
+                    teams_threads[team_title[0].rstrip()] = {
+                        "link": thread_link,
+                        "members": team_size[1],
+                        "author": author.text,
+                        "image": author_avatar
+                    }
+                except:
+                    print(
+                        f"{team_title[0]}\nLink: {thread_link}\nMembers: NaN\nAuthor: {author.text}\nImage: {author_avatar} \n")
+                    teams_threads[team_title[0].rstrip()] = {
+                        "link": thread_link,
+                        "members": "NaN",
+                        "author": author.text,
+                        "image": author_avatar
+                    }
+
+        with open('utils/team_threads.json', 'w') as file:
+            dump(teams_threads, file, indent=4)
+
+    @cog_slash(name="threads", description="Shows team threads from the forums",
+               guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def threads(self, ctx):
+
+        with open('utils/team_threads.json') as file:
+            threads = load(file)
+
+        teams_info = []
+        for thread in threads:
+            info = f"**{thread}**\n\n" \
+                   f"**Author**: {threads[thread]['author']}\n" \
+                   f"**Members**: {threads[thread]['members']}\n" \
+                   f"**Link**: {threads[thread]['link']}\n"
+            teams_info.append(info)
+
+        await create_list_pages(self.bot, ctx, "Team threads", teams_info, "Empty :(", "\n", 1)

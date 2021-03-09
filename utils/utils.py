@@ -64,7 +64,7 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
             reaction, user = await bot.wait_for("reaction_add", timeout=60, check=check)
             if str(reaction.emoji) == "▶" and current_page != num_pages:
                 current_page += 1
-                embed = Embed(title="Map List", description=contents[current_page - 1],
+                embed = Embed(title=title, description=contents[current_page - 1],
                               colour=Colour.dark_purple())
                 embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
                 await message.edit(embed=embed)
@@ -72,7 +72,7 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
 
             elif str(reaction.emoji) == "◀" and current_page > 1:
                 current_page -= 1
-                embed = Embed(title="Map List", description=contents[current_page - 1],
+                embed = Embed(title=title, description=contents[current_page - 1],
                               colour=Colour.dark_purple())
                 embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
                 await message.edit(embed=embed)
