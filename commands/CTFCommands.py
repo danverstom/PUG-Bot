@@ -132,8 +132,11 @@ class CTFCommands(Cog, name="CTF Commands"):
                 team_titles = thread.find("div", class_="titleText")
                 info = team_titles.find('a', class_="PreviewTooltip")
                 author = team_titles.find('a', class_="username")
-                img_loc = thread.find('img')  # needs if statement bc some avatars are weird aka "if "cravatar" in im_log.get('scr'): but i get weird bug so fuck it
-                author_avatar = f"https://www.brawl.com/{img_loc.get('src')}" #!!!!!!!!!!!!!!
+                img_loc = thread.find('img')
+                if "cravatar" in img_loc.get('src'):
+                    author_avatar = f"https:{img_loc.get('src')}"
+                else:
+                    author_avatar = f"https://www.brawl.com/{img_loc.get('src')}"
                 thread_link = f"https://www.brawl.com/{info.get('href')}"
                 team_title = split("((\[|\()?[0-9][0-9]/25(\]|\))?)", info.text, 1)
                 team_size = split("([0-9][0-9]/25)", info.text, 1)
