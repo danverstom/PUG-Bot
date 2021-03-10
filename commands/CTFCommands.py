@@ -8,7 +8,7 @@ from re import split
 from requests import get
 from discord.ext import tasks
 from bs4 import BeautifulSoup
-from utils.config import FORUM_THREADS_INTERVAL_HOURS
+from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
@@ -21,6 +21,16 @@ class CTFCommands(Cog, name="CTF Commands"):
     """
     def __init__(self, bot):
         self.bot = bot
+        self.bot_channel = None
+
+    def cog_unload(self):
+        self.threads_update.cancel()
+
+    @Cog.listener()
+    async def on_ready(self):
+        self.threads_update.start()
+        self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
+
 
     @cog_slash(name="rngmap", description="Picks a random map out of a preset map pool",
                guild_ids=SLASH_COMMANDS_GUILDS, options=[])
@@ -122,6 +132,7 @@ class CTFCommands(Cog, name="CTF Commands"):
 
     @tasks.loop(hours=FORUM_THREADS_INTERVAL_HOURS)
     async def threads_update(self):
+        #await self.bot_channel.send("hi jus checking if it works bye") #TODO: Have an announcement when team sizes change (scuffed roster moves)
         url = get('https://www.brawl.com/forums/299/')
         page = BeautifulSoup(url.content, features="html.parser")
 
