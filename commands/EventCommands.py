@@ -1,13 +1,15 @@
 from discord import Embed, Colour
+import re
 from discord.channel import TextChannel
 from discord.ext import tasks
+from discord.utils import get
 from discord.ext.commands import Cog, has_role
 from discord_slash.cog_ext import cog_slash
 from discord_slash.utils import manage_commands as mc
 
 from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS
 from utils.event_util import get_event_time, check_if_cancel, announce_event
-from utils.utils import response_embed, error_embed
+from utils.utils import response_embed, error_embed, success_embed
 from database.Event import Event
 from database.Signup import Signup, SignupDoesNotExistError
 
@@ -191,3 +193,75 @@ class EventCommands(Cog, name="Event Commands"):
                 embed.set_field_at(index=1, name="🛗 Subs: 0", value="No one :(", inline=False)
 
             await signup_message.edit(embed=embed)
+    
+    @has_role(MOD_ROLE)
+    @cog_slash(name="setroles", options=[mc.create_option(name="role1",
+                                         description="The role you would like to set",
+                                         option_type=8, required=True),
+                               mc.create_option(name="users1",
+                                         description="Users to give role",
+                                         option_type=3, required=True),
+                             mc.create_option(name="role2",
+                                         description="Another role you would like to set ",
+                                         option_type=8, required=False),    
+                             mc.create_option(name="users2",
+                                         description="Users to give role ",
+                                         option_type=3, required=False)], guild_ids=SLASH_COMMANDS_GUILDS)    
+    async def setroles(self, ctx, role1, users1, roles2=None, users2=None, *args):
+        """Give multiple roles"""
+        message = await response_embed(ctx, "Giving roles...", "")
+        count = 0
+        skipped = []
+        
+        dict = {} 
+        dict[role1] = users1
+        
+        if (not users2 == None and not roles2 == None):
+            dict[roles2] = users2
+        
+        for role in list(dict.keys()):
+            expr = "\<(.*?)\>" #Match between <>
+            for users in re.findall(expr, str(dict[role])):
+            
+                if users.startswith("@"):
+                    user_id = int(users.strip(" <@!>"))
+                    member = await ctx.guild.fetch_member(user_id)
+                    await member.add_roles(role, reason="setroles command issued by " + str(ctx.message.author))
+                    count += 1
+                    
+            not_matched = re.sub(expr, "", str(dict[role])).strip()
+            if not_matched:
+                skipped.append(not_matched)
+            
+        stats = "set {} roles!".format(count)
+        if skipped:
+            stats += "\nskipped {} lines: \n{}".format(len(skipped), "\n".join(skipped))
+            
+        embed = await success_embed(ctx, stats)
+
+    @has_role(MOD_ROLE)
+    @cog_slash(name="removeroles", options=[mc.create_option(name="roles",
+                                         description="Tag roles to remove from all members",
+                                         option_type=3, required=True)], guild_ids=SLASH_COMMANDS_GUILDS)  
+
+    async def removeroles(self, ctx, *args):
+        """Remove multiple roles"""
+        await response_embed(ctx, "Removing roles...", "")
+        
+        counter = {}
+        expr = "\<(.*?)\>" #Match between <>
+        for role_id in re.findall(expr, args[0]):
+            role_id = role_id.strip(" <@&!>")
+            role = ctx.guild.get_role(int(role_id))
+            if role:
+                counter[role.name] = len(role.members)
+                for member in role.members:
+                        await member.remove_roles(role)
+            
+        stats = ""
+        for roles in list(counter.keys()):
+            stats += "{} `{}` roles were removed\n".format(counter[roles], roles)
+        if stats:
+            return await success_embed(ctx, stats)
+        await response_embed(ctx, "No roles removed", "Check your usage")
+        
