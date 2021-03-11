@@ -4,3 +4,4 @@ utils/token.json
 database/database.db
 IDs/
 utils/command_names.json
+utils/team_threads.json

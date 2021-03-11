@@ -153,7 +153,12 @@ class CTFCommands(Cog, name="CTF Commands"):
                 thread_link = f"https://www.brawl.com/{info.get('href')}"
                 team_title = split("((\[|\()?[0-9][0-9]/25(\]|\))?)", info.text, 1)
                 team_size = split("([0-9][0-9]/25)", info.text, 1)
-
+                teams_threads[team_title[0].rstrip()] = {
+                    "link": thread_link,
+                    "members": "NaN",
+                    "author": author.text,
+                    "image": author_avatar
+                }
         with open('utils/team_threads.json', 'w') as file:
             dump(teams_threads, file, indent=4)
 
