@@ -36,11 +36,11 @@ class AdminCommands(Cog, name="Admin Commands"):
                guild_ids=SLASH_COMMANDS_GUILDS,
                options=[manage_commands.create_option(name="remove_commands",
                                                       option_type=5,
-                                                      description="if true, removes commands before restart",
+                                                      description="if true, remove commands before restart",
                                                       required=False),
                manage_commands.create_option(name="pull_changes",
                                              option_type=5,
-                                             description="if true, pull the latest changes from github?",
+                                             description="if true, pull the latest changes from github",
                                              required=False)])
     async def restart(self, ctx, remove_commands=False, pull_changes=False):
         if ADMIN_ROLE.lower() not in [role.name.lower() for role in ctx.author.roles]:
@@ -51,7 +51,7 @@ class AdminCommands(Cog, name="Admin Commands"):
             await manage_commands.remove_all_commands(self.bot.user.id, self.token, guild_ids=SLASH_COMMANDS_GUILDS)
             await message.delete()
             await success_embed(ctx, "Removed all commands from this bot")
-        await ctx.send("Restarting.....")
+        await response_embed(ctx, "Info", "Bot is restarting")
         if pull_changes:
             output = subprocess.check_output("git pull", shell=True)
             await response_embed(ctx, "Update Summary", output.decode("utf8"))
