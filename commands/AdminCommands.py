@@ -4,6 +4,7 @@ from utils.utils import get_json_data, error_embed, success_embed, response_embe
 import os
 import sys
 import platform
+import subprocess
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
@@ -31,13 +32,17 @@ class AdminCommands(Cog, name="Admin Commands"):
         await message.delete()
         await success_embed(ctx, "Removed all commands from this bot")
 
-    @cog_slash(name="update", description="restarts the bot",
+    @cog_slash(name="restart", description="Restarts the bot",
                guild_ids=SLASH_COMMANDS_GUILDS,
                options=[manage_commands.create_option(name="remove_commands",
                                                       option_type=5,
-                                                      description="whether or not to remove commands before restart",
-                                                      required=False)])
-    async def update(self, ctx, remove_commands=False):
+                                                      description="if true, removes commands before restart",
+                                                      required=False),
+               manage_commands.create_option(name="pull_changes",
+                                             option_type=5,
+                                             description="if true, pull the latest changes from github?",
+                                             required=False)])
+    async def restart(self, ctx, remove_commands=False, pull_changes=False):
         if ADMIN_ROLE.lower() not in [role.name.lower() for role in ctx.author.roles]:
             await error_embed(ctx, "You do not have sufficient permissions to do this")
             return
@@ -47,10 +52,17 @@ class AdminCommands(Cog, name="Admin Commands"):
             await message.delete()
             await success_embed(ctx, "Removed all commands from this bot")
         await ctx.send("Restarting.....")
-        os.system("git pull")
+        if pull_changes:
+            output = subprocess.check_output("git pull", shell=True)
+            await response_embed(ctx, "Update Summary", output.decode("utf8"))
         await self.bot.logout()
-        print("argv was", sys.argv)
-        print("sys.executable was", sys.executable)
-        print("restart now")
-        print(platform.system())
-        os.execv(sys.executable, ['python3'] + sys.argv)
+
+        # Checks for operating system
+        operating_system = platform.system()
+        if operating_system == "Windows":
+            os.execv(sys.executable, ['python'] + sys.argv)
+        elif operating_system == "Linux":
+            os.execv(sys.executable, ['python3'] + sys.argv)
+        else:
+            await error_embed("Bot is not running on Windows or Linux, failed to restart")
+        quit()
