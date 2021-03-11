@@ -3,6 +3,7 @@ from discord import File, Embed, Colour
 from utils.utils import get_json_data, error_embed, success_embed, response_embed
 import os
 import sys
+import platform
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
@@ -51,4 +52,5 @@ class AdminCommands(Cog, name="Admin Commands"):
         print("argv was", sys.argv)
         print("sys.executable was", sys.executable)
         print("restart now")
-        os.execv(sys.executable, ['python'] + sys.argv)
+        print(platform.system())
+        os.execv(sys.executable, ['python3'] + sys.argv)
