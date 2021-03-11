@@ -5,3 +5,4 @@ database/database.db
 IDs/
 utils/command_names.json
 utils/team_threads.json
+utils/pug_settings.json
