@@ -133,6 +133,11 @@ def player_check(minecraft_id, discord_id):
         return 0
 
 
+def get_sorted_elo():
+    c.execute("SELECT minecraft_username, elo, discord_id FROM players ORDER BY elo DESC")
+    return c.fetchall()
+
+
 """
 Functions that interact with the Register Requests database.
 """

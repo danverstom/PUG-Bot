@@ -64,5 +64,5 @@ class AdminCommands(Cog, name="Admin Commands"):
         elif operating_system == "Linux":
             os.execv(sys.executable, ['python3'] + sys.argv)
         else:
-            await error_embed("Bot is not running on Windows or Linux, failed to restart")
+            await error_embed(ctx, "Bot is not running on Windows or Linux, failed to restart")
         quit()
