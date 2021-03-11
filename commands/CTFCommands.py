@@ -19,6 +19,7 @@ class CTFCommands(Cog, name="CTF Commands"):
     """
     This category contains ctf commands that can be used by anyone
     """
+
     def __init__(self, bot):
         self.bot = bot
         self.bot_channel = None
@@ -30,7 +31,6 @@ class CTFCommands(Cog, name="CTF Commands"):
     async def on_ready(self):
         self.threads_update.start()
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
-
 
     @cog_slash(name="rngmap", description="Picks a random map out of a preset map pool",
                guild_ids=SLASH_COMMANDS_GUILDS, options=[])
@@ -105,7 +105,8 @@ class CTFCommands(Cog, name="CTF Commands"):
                     embed_1_value.append(
                         f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: [{game.mvp}](https://www.brawl.com/players/{game.mvp})")
                 else:
-                    embed_1_value.append(f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: **No One :(**")
+                    embed_1_value.append(
+                        f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: **No One :(**")
                 embed_1_value.append(
                     f":chart_with_upwards_trend: [Stats](https://www.brawl.com/games/ctf/lookup/{game.game_id})")
                 embed_1_value.append("")
@@ -119,7 +120,8 @@ class CTFCommands(Cog, name="CTF Commands"):
                     embed_2_value.append(
                         f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: [{game.mvp}](https://www.brawl.com/players/{game.mvp})")
                 else:
-                    embed_2_value.append(f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: **No One :(**")
+                    embed_2_value.append(
+                        f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: **No One :(**")
                 embed_2_value.append(
                     f":chart_with_upwards_trend: [Stats](https://www.brawl.com/games/ctf/lookup/{game.game_id})")
                 embed_2_value.append("")
@@ -132,7 +134,7 @@ class CTFCommands(Cog, name="CTF Commands"):
 
     @tasks.loop(hours=FORUM_THREADS_INTERVAL_HOURS)
     async def threads_update(self):
-        #await self.bot_channel.send("hi jus checking if it works bye") #TODO: Have an announcement when team sizes change (scuffed roster moves)
+        # await self.bot_channel.send("hi jus checking if it works bye") #TODO: Have an announcement when team sizes change (scuffed roster moves)
         url = get('https://www.brawl.com/forums/299/')
         page = BeautifulSoup(url.content, features="html.parser")
 
@@ -151,7 +153,7 @@ class CTFCommands(Cog, name="CTF Commands"):
                 thread_link = f"https://www.brawl.com/{info.get('href')}"
                 team_title = split("((\[|\()?[0-9][0-9]/25(\]|\))?)", info.text, 1)
                 team_size = split("([0-9][0-9]/25)", info.text, 1)
-                try: #this try/except could be optimized but it's only because team_title raises an error since oly does not have member count in title (will do some day)
+                try:  # this try/except could be optimized but it's only because team_title raises an error since oly does not have member count in title (will do some day)
                     print(
                         f"{team_title[0]}\nLink: {thread_link}\nMembers: {team_size[1]}\nAuthor: {author.text}\nImage: {author_avatar} \n")
                     teams_threads[team_title[0].rstrip()] = {
@@ -174,18 +176,43 @@ class CTFCommands(Cog, name="CTF Commands"):
             dump(teams_threads, file, indent=4)
 
     @cog_slash(name="threads", description="Shows team threads from the forums",
-               guild_ids=SLASH_COMMANDS_GUILDS, options=[])
-    async def threads(self, ctx):
+               guild_ids=SLASH_COMMANDS_GUILDS,
+               options=[manage_commands.create_option(
+                   name="search_term", description="The team thread you would like to search for",
+                   option_type=3, required=False
+               )])
+    async def threads(self, ctx, search_term=None):
 
         with open('utils/team_threads.json') as file:
             threads = load(file)
 
         teams_info = []
-        for thread in threads:
-            info = f"**{thread}**\n\n" \
-                   f"**Author**: {threads[thread]['author']}\n" \
-                   f"**Members**: {threads[thread]['members']}\n" \
-                   f"**Link**: {threads[thread]['link']}\n"
-            teams_info.append(info)
+        thumbnails = []
+        if search_term:
+            filtered_thread_names = []
+            count = 0
+            for thread in threads:
+                if search_term.lower() in thread.lower():
+                    filtered_thread_names.append(thread)
+                    count += 1
+            for thread in filtered_thread_names:
+                info = f"**{thread}**\n\n" \
+                       f"**Author**: {threads[thread]['author']}\n" \
+                       f"**Members**: {threads[thread]['members']}\n" \
+                       f"**Link**: {threads[thread]['link']}\n"
+                teams_info.append(info)
+                thumbnails.append(threads[thread]['image'])
 
-        await create_list_pages(self.bot, ctx, "Team threads", teams_info, "Empty :(", "\n", 1)
+            await create_list_pages(self.bot, ctx, "Team threads", teams_info, "No results", "\n", 1,
+                                    thumbnails=thumbnails)
+        else:
+            for thread in threads:
+                info = f"**{thread}**\n\n" \
+                       f"**Author**: {threads[thread]['author']}\n" \
+                       f"**Members**: {threads[thread]['members']}\n" \
+                       f"**Link**: {threads[thread]['link']}\n"
+                teams_info.append(info)
+                thumbnails.append(threads[thread]['image'])
+
+            await create_list_pages(self.bot, ctx, "Team threads", teams_info, "Empty :(", "\n", 1,
+                                    thumbnails=thumbnails)

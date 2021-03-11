@@ -31,7 +31,7 @@ async def response_embed(ctx, title, description):
 
 
 async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "Empty List", sep: str = "\n",
-                            elements_per_page: int = 10):
+                            elements_per_page: int = 10, thumbnails=None):
     if not info:
         await ctx.send(embed=Embed(title=title, description=if_empty, colour=Colour.dark_red()))
         return
@@ -49,6 +49,13 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
 
     embed = Embed(title=title, description=contents[current_page - 1], colour=Colour.dark_purple())
     embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
+
+    if thumbnails:
+        if len(thumbnails) == 1:
+            embed.set_thumbnail(url=thumbnails[0])
+        else:
+            embed.set_thumbnail(url=thumbnails[current_page - 1])
+
     message = await ctx.send(embed=embed)
 
     await message.add_reaction("◀")
@@ -66,6 +73,13 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                 current_page += 1
                 embed = Embed(title=title, description=contents[current_page - 1],
                               colour=Colour.dark_purple())
+
+                if thumbnails:
+                    if len(thumbnails) == 1:
+                        embed.set_thumbnail(url=thumbnails[0])
+                    else:
+                        embed.set_thumbnail(url=thumbnails[current_page - 1])
+
                 embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
                 await message.edit(embed=embed)
                 await message.remove_reaction(reaction, user)
@@ -74,6 +88,13 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                 current_page -= 1
                 embed = Embed(title=title, description=contents[current_page - 1],
                               colour=Colour.dark_purple())
+
+                if thumbnails:
+                    if len(thumbnails) == 1:
+                        embed.set_thumbnail(url=thumbnails[0])
+                    else:
+                        embed.set_thumbnail(url=thumbnails[current_page - 1])
+
                 embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
                 await message.edit(embed=embed)
                 await message.remove_reaction(reaction, user)
