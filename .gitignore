@@ -3,3 +3,4 @@ __pycache__
 utils/token.json
 database/database.db
 IDs/
+utils/command_names.json
