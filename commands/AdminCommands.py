@@ -44,6 +44,11 @@ class AdminCommands(Cog, name="Admin Commands"):
         print("restart now")
         os.execv(sys.executable, ['python'] + sys.argv)
 
+    @cog_slash(name="admintest", description="a command purely for testing purposes",
+               guild_ids=SLASH_COMMANDS_GUILDS)
+    async def admintest(self, ctx):
+        await ctx.send("the test worked")
+
 
 
 
