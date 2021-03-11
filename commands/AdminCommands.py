@@ -49,6 +49,11 @@ class AdminCommands(Cog, name="Admin Commands"):
     async def admintest(self, ctx):
         await ctx.send("the test worked")
 
+    @cog_slash(name="admintest2", description="a command purely for testing purposes",
+               guild_ids=SLASH_COMMANDS_GUILDS)
+    async def admintest2(self, ctx):
+        await ctx.send("the test worked")
+
 
 
 
