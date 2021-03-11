@@ -17,17 +17,20 @@ def get_json_data(file):
 
 async def error_embed(ctx, description):
     embed = Embed(title="Error ❌", description=description, color=Colour.dark_red())
-    await ctx.send(embed=embed)
+    message = await ctx.send(embed=embed)
+    return message
 
 
 async def success_embed(ctx, description):
     embed = Embed(title="Success ✅", description=description, color=Colour.green())
-    await ctx.send(embed=embed)
+    message = await ctx.send(embed=embed)
+    return message
 
 
 async def response_embed(ctx, title, description):
     embed = Embed(title=title, description=description, color=Colour.dark_purple())
-    await ctx.send(embed=embed)
+    message = await ctx.send(embed=embed)
+    return message
 
 
 async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "Empty List", sep: str = "\n",
