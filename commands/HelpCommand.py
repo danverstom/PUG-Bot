@@ -21,6 +21,7 @@ class HelpCommand(Cog, name="Help Command"):
                                       choices=list(get_json_data("utils/command_names.json")), required=False)
     ])
     async def help(self, ctx, command_name=None):
+        print("Help command used")
         if command_name:
             commands = {command_name: self.slash.commands[command_name]}
         else:

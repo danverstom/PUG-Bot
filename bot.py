@@ -4,7 +4,6 @@ from utils.config import bot_token
 from utils.utils import save_json_file
 from discord_slash import SlashCommand
 from discord_slash.utils import manage_commands
-import atexit
 from utils.config import SLASH_COMMANDS_GUILDS
 
 # Creating the bot object
