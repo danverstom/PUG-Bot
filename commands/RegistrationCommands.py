@@ -281,13 +281,12 @@ class RegistrationCommands(Cog, name="User Registration"):
         else:
             await error_embed(ctx, "Invalid action argument. Use 'get' or 'set'")
 
-    @cog_slash(name="elo", description="Returns your or someone else's ELO",
-               options=[manage_commands.create_option(name="discord_tag",
+    @cog_slash(name="profile", options=[manage_commands.create_option(name="discord_tag",
                                                       description="The user's discord @",
                                                       option_type=6, required=False)], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def elo(self, ctx, user: User = None):
+    async def profile(self, ctx, user: User = None):
         """
-        Allows you to check your (or someone else's) ELO
+        Displays a user's profile
         """
         if user:
             player_id = user.id
@@ -298,7 +297,14 @@ class RegistrationCommands(Cog, name="User Registration"):
         except PlayerDoesNotExistError:
             await error_embed(ctx, "Player does not exist")
             return
-        await response_embed(ctx, f"{player.minecraft_username}'s ELO", str(player.get_elo()))
+
+        stats = f"**ELO:** {getattr(player, 'elo')}\n**Discord:** <@{getattr(player, 'discord_id')}>"
+        #for key in player.__dict__.keys():
+        #    stats += f"**{key}:** {getattr(player, key)}\n"
+        
+        embed = Embed(description=stats, color=Colour.dark_purple())
+        embed.set_author(name=f"User profile - {getattr(player, 'minecraft_username')}", icon_url=f"https://cravatar.eu/helmavatar/{getattr(player, 'minecraft_username')}/128.png")
+        await ctx.send(embed=embed)
 
     @tasks.loop(hours=IGN_TRACKER_INTERVAL_HOURS)
     async def update_usernames(self):
