@@ -6,3 +6,4 @@ discord.py==1.5.1
 discord_py_slash_command==1.0.9.5
 beautifulsoup4==4.9.3
 discord==1.0.1
+lxml
