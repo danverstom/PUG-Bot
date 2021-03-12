@@ -9,7 +9,7 @@ from discord_slash.utils import manage_commands as mc
 
 from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS
 from utils.event_util import get_event_time, check_if_cancel, announce_event
-from utils.utils import response_embed, error_embed, success_embed
+from utils.utils import response_embed, error_embed, success_embed, has_permissions
 from database.Event import Event
 from database.Signup import Signup, SignupDoesNotExistError
 
@@ -266,12 +266,14 @@ class EventCommands(Cog, name="Event Commands"):
             return await success_embed(ctx, stats)
         await response_embed(ctx, "No roles removed", "Check your usage")
 
-    @has_role(MOD_ROLE)
-    @cog_slash(name="getsignups", options=[mc.create_option(name="event_id",
-                                                            description="Gets a list of discord tags",
-                                                            option_type=3, required=True)],
+    @cog_slash(options=[mc.create_option(name="event_id",
+                                         description="Gets a list of discord tags",
+                                         option_type=3, required=True)],
                guild_ids=SLASH_COMMANDS_GUILDS)
     async def getsignups(self, ctx, event_id):
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         try:
             event_id = int(event_id)
         except ValueError:
