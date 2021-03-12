@@ -12,6 +12,7 @@ from utils.event_util import get_event_time, check_if_cancel, announce_event
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
 from database.Event import Event
 from database.Signup import Signup, SignupDoesNotExistError
+from asyncio import TimeoutError
 
 from datetime import datetime
 from pytz import timezone
@@ -61,9 +62,11 @@ class EventCommands(Cog, name="Event Commands"):
                                                      "deadline.  Default is 20 minutes",
                                          option_type=4, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
-    @has_role(MOD_ROLE)
     async def event(self, ctx, title, announcement_channel, mention_role, signup_channel, signup_role, event_time,
                     event_date="", signup_deadline=20):
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         if not isinstance(announcement_channel, TextChannel):
             await error_embed(ctx, f"Announcement channel {announcement_channel.mention} is not a text channel")
             return
@@ -194,70 +197,44 @@ class EventCommands(Cog, name="Event Commands"):
 
             await signup_message.edit(embed=embed)
 
-    @has_role(MOD_ROLE)
-    @cog_slash(name="setroles", options=[mc.create_option(name="role1",
-                                                          description="The role you would like to set",
-                                                          option_type=8, required=True),
-                                         mc.create_option(name="users1",
-                                                          description="Users to give role",
-                                                          option_type=3, required=True),
-                                         mc.create_option(name="role2",
-                                                          description="Another role you would like to set ",
-                                                          option_type=8, required=False),
-                                         mc.create_option(name="users2",
-                                                          description="Users to give role ",
-                                                          option_type=3, required=False)],
-               guild_ids=SLASH_COMMANDS_GUILDS)
-    async def setroles(self, ctx, role1, users1, roles2=None, users2=None, *args):
-        """Give multiple roles"""
-        message = await response_embed(ctx, "Giving roles...", "")
-        count = 0
-        skipped = []
-
-        dict = {}
-        dict[role1] = users1
-
-        if (not users2 == None and not roles2 == None):
-            dict[roles2] = users2
-
-        for role in list(dict.keys()):
-            expr = "\<(.*?)\>"  # Match between <>
-            for users in re.findall(expr, str(dict[role])):
-
-                if users.startswith("@"):
-                    user_id = int(users.strip(" <@!>"))
-                    member = await ctx.guild.fetch_member(user_id)
-                    await member.add_roles(role, reason="setroles command issued by " + str(ctx.message.author))
-                    count += 1
-
-            not_matched = re.sub(expr, "", str(dict[role])).strip()
-            if not_matched:
-                skipped.append(not_matched)
-
-        stats = "set {} roles!".format(count)
-        if skipped:
-            stats += "\nskipped {} lines: \n{}".format(len(skipped), "\n".join(skipped))
-
-        embed = await success_embed(ctx, stats)
-
-    @has_role(MOD_ROLE)
     @cog_slash(name="removeroles", options=[mc.create_option(name="roles",
                                                              description="Tag roles to remove from all members",
                                                              option_type=3, required=True)],
                guild_ids=SLASH_COMMANDS_GUILDS)
     async def removeroles(self, ctx, *args):
         """Remove multiple roles"""
-        await response_embed(ctx, "Removing roles...", "")
-
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         counter = {}
+        roles = []
+        total_to_remove = 0
+        total_removed = 0
         expr = "\<(.*?)\>"  # Match between <>
+
         for role_id in re.findall(expr, args[0]):
             role_id = role_id.strip(" <@&!>")
             role = ctx.guild.get_role(int(role_id))
             if role:
+                roles.append(role)
                 counter[role.name] = len(role.members)
-                for member in role.members:
-                    await member.remove_roles(role)
+                total_to_remove += len(role.members)
+
+        removing_embed = Embed(title="Removing roles", colour=Colour.dark_purple())
+        removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+
+        removing_msg = await ctx.send(embed=removing_embed)
+
+        for role in roles:
+            for member in role.members:
+                await member.remove_roles(role)
+                total_removed += 1
+                if total_removed % 5 == 0:
+                    removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+                    await removing_msg.edit(embed=removing_embed)
+
+        removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+        await removing_msg.edit(embed=removing_embed)
 
         stats = ""
         for roles in list(counter.keys()):
@@ -288,3 +265,108 @@ class EventCommands(Cog, name="Event Commands"):
         else:
             await error_embed(ctx, "Could not find the event you are searching for. Use the message ID of the event "
                                    "announcement.")
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
+    async def setroles(self, ctx):
+        """
+        Use this command to set many roles, quickly.
+        """
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+
+        def check(m):
+            return m.author == ctx.author
+
+        roles_dict = {}
+        while True:
+            info_embed = Embed(title="/setroles - Enter information", colour=Colour.dark_purple())
+            info_embed.description = "Please enter a message tagging the role and all the members who you would like to" \
+                                     " assign it to."
+            info_embed.set_footer(text='"done/finished/yes/y" to continue\n"no/cancel/n/stop" to cancel')
+
+            info_message = await ctx.send(embed=info_embed)
+
+            response = await self.bot.wait_for("message", check=check)
+            if response.content.lower() in ["done", "finished", "yes", "y"]:
+                if len(roles_dict.keys()) > 0:
+                    await response.delete()
+                    await info_message.delete()
+                    total_roles_count = 0
+                    embed = Embed(title="Roles Summary", description="Please review the roles you are about to set\n\n"
+                                                                     "*this message has a timeout of 5 minutes*",
+                                  colour=Colour.dark_purple())
+                    embed.set_footer(text=f"✅ to set roles\n❌ to cancel")
+                    for role in roles_dict:
+                        users_string = f"{role.mention}\n"
+                        for user in roles_dict[role]:
+                            users_string += f"{user.mention}\n"
+                        total_roles_count += len(roles_dict[role])
+                        embed.add_field(name=f"{role.name} ({len(roles_dict[role])})", value=users_string)
+                    embed.description += f"\n*{total_roles_count} members in total*"
+                    message = await ctx.send(embed=embed)
+                    await message.add_reaction("✅")
+                    await message.add_reaction("❌")
+
+                    def check_reaction(r, u):
+                        return r.message.id == message.id and u == ctx.author and str(r.emoji) in ["✅", "❌"]
+
+                    set_roles = False
+                    while True:
+                        try:
+                            reaction, user = await self.bot.wait_for("reaction_add", timeout=300, check=check_reaction)
+                            if str(reaction.emoji) == "✅":
+                                await message.clear_reactions()
+                                embed.set_footer(text=Embed.Empty)
+                                embed.description = Embed.Empty
+                                await message.edit(embed=embed)
+                                set_roles = True
+                                break
+                            elif str(reaction.emoji) == "❌":
+                                raise TimeoutError
+                            else:
+                                await message.remove_reaction(reaction, user)
+                        except TimeoutError:
+                            await message.edit(content="Message Expired", embed=None)
+                            await message.clear_reactions()
+                            break
+                    if set_roles:
+                        roles_embed = Embed(title="Setting Roles", colour=Colour.green())
+                        roles_assigned = 0
+                        roles_msg = await ctx.send(embed=roles_embed)
+                        for role in roles_dict:
+                            users_string = f"{role.mention}\n"
+                            for member in roles_dict[role]:
+                                users_string += f"{member.mention}\n"
+                                await member.add_roles(role,
+                                                       reason=f"role added by {ctx.author.name} with setroles command")
+                                roles_assigned += 1
+                                if roles_assigned % 5 == 0:
+                                    roles_embed.description = f"Progress: {roles_assigned}/{total_roles_count}"
+                                    await roles_msg.edit(embed=roles_embed)
+                            roles_embed.add_field(name=f"{role.name} ({len(roles_dict[role])})", value=users_string)
+                            await roles_msg.edit(embed=roles_embed)
+                        roles_embed.title = "Roles Set"
+                        roles_embed.description = f"Progress: Done"
+                        await roles_msg.edit(embed=roles_embed)
+                        await message.delete()
+                    return
+                else:
+                    await error_embed(ctx, "You didn't input anything, cancelled setroles command")
+                    return
+            elif response.content.lower() in ["no", "cancel", "n", "stop"]:
+                await info_message.delete()
+                await response.delete()
+                await ctx.send(embed=Embed(title="Cancelled", description="You cancelled the setroles command",
+                                           colour=Colour.dark_purple()))
+                return
+            else:
+                members = response.mentions
+                if len(members) > 0:
+                    if len(response.role_mentions) == 1:
+                        roles_dict[response.role_mentions[0]] = members
+                    else:
+                        await error_embed(ctx, "You can only mention one role at a time")
+                else:
+                    await error_embed(ctx, "You did not mention any members")
+            await info_message.delete()
