@@ -184,20 +184,24 @@ class RegistrationCommands(Cog, name="User Registration"):
         else:
             await response_embed(ctx, "Stopped Deletion", f"User {user.mention} will not be deleted from the database.")
 
-    @cog_slash(name="useredit", description="Get or change information about a user",
+    @cog_slash(name="user", description="Get or change information about a user",
                options=[manage_commands.create_option(name="discord_tag",
                                                       description="The user's discord @",
                                                       option_type=6, required=True),
+                        manage_commands.create_option(name="action_type",
+                                                      description="How you would like to interact with the user's data",
+                                                      option_type=3, required=False,
+                                                      choices=["get", "set"]),
                         manage_commands.create_option(name="variable_name",
                                                       description="Variable to change",
-                                                      option_type=3, required=True,
+                                                      option_type=3, required=False,
                                                       choices=["username", "discord", "elo", "priority"]),
                         manage_commands.create_option(name="value",
                                                       description="Value to set",
-                                                      option_type=3, required=True)],
+                                                      option_type=3, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
     @has_role(MOD_ROLE)
-    async def useredit(self, ctx, discord_tag: User = None, variable_name=None, value=None):
+    async def user(self, ctx, discord_tag: User = None, action_type="get", variable_name=None, value=None):
         """
         Allows a PUG Mod to edit information about a user.
         Usage: user @Tom <get/set> <variable_name> <value>
@@ -207,62 +211,75 @@ class RegistrationCommands(Cog, name="User Registration"):
             user @Tom set elo [elo]             sets user ELO
         """
         user = self.bot.get_user(discord_tag.id)
+        if action_type == "get":
+            try:
+                player = Player.from_discord_id(user.id)
+            except PlayerDoesNotExistError:
+                await error_embed(ctx, "Player does not exist")
+                return
+            embed = Embed(title=f"User Profile - {user.name}", color=Colour.dark_purple())
+            for key in player.__dict__.keys():
+                embed.add_field(name=key, value=getattr(player, key), inline=False)
+            await ctx.send(embed=embed)
 
-        try:
-            player = Player.from_discord_id(user.id)
-        except PlayerDoesNotExistError:
-            await error_embed(ctx, "Player does not exist")
-            return
-        if variable_name:
-            if value:
-                if variable_name == "username":
-                    old_username = player.update_minecraft_username()
-                    try:
-                        player.change_minecraft_username(value)
-                        await success_embed(ctx, f"Changed username: **{old_username}** -> **{value}**")
-                    except UsernameAlreadyExistsError:
-                        await error_embed(ctx, f"Username **{value}** is already in the database")
-                    except UsernameDoesNotExistError:
-                        await error_embed(ctx, f"Username **{value}** is not a valid username")
-                elif variable_name == "discord":
-                    value = value[3:-1]
-                    if value.isdigit():
-                        user = self.bot.get_user(int(value))
-                        if user:
-                            try:
-                                player.change_discord_id(user.id)
-                                await success_embed(ctx,
-                                                    f"Changed discord user: {discord_tag.mention} -> {user.mention}")
-                            except DiscordAlreadyExistsError:
-                                await error_embed(ctx, f"User {user.mention} is already in the database")
+        elif action_type == "set":
+            try:
+                player = Player.from_discord_id(user.id)
+            except PlayerDoesNotExistError:
+                await error_embed(ctx, "Player does not exist")
+                return
+            if variable_name:
+                if value:
+                    if variable_name == "username":
+                        old_username = player.update_minecraft_username()
+                        try:
+                            player.change_minecraft_username(value)
+                            await success_embed(ctx, f"Changed username: **{old_username}** -> **{value}**")
+                        except UsernameAlreadyExistsError:
+                            await error_embed(ctx, f"Username **{value}** is already in the database")
+                        except UsernameDoesNotExistError:
+                            await error_embed(ctx, f"Username **{value}** is not a valid username")
+                    elif variable_name == "discord":
+                        value = value[3:-1]
+                        if value.isdigit():
+                            user = self.bot.get_user(int(value))
+                            if user:
+                                try:
+                                    player.change_discord_id(user.id)
+                                    await success_embed(ctx,
+                                                        f"Changed discord user: {discord_tag.mention} -> {user.mention}")
+                                except DiscordAlreadyExistsError:
+                                    await error_embed(ctx, f"User {user.mention} is already in the database")
+                            else:
+                                await error_embed(ctx, "Value must be a User")
                         else:
                             await error_embed(ctx, "Value must be a User")
-                    else:
-                        await error_embed(ctx, "Value must be a User")
-                elif variable_name == "elo":
-                    old_elo = player.get_elo()
-                    if value.isdigit():
-                        value = int(value)
-                        if player.set_elo(value):
-                            await success_embed(ctx, f"Set elo: **{old_elo}** -> **{value}**")
+                    elif variable_name == "elo":
+                        old_elo = player.get_elo()
+                        if value.isdigit():
+                            value = int(value)
+                            if player.set_elo(value):
+                                await success_embed(ctx, f"Set elo: **{old_elo}** -> **{value}**")
+                            else:
+                                await error_embed(ctx, f"Elo given (**{value}**) is below Elo floor (**{ELO_FLOOR}**)")
                         else:
-                            await error_embed(ctx, f"Elo given (**{value}**) is below Elo floor (**{ELO_FLOOR}**)")
+                            await error_embed(ctx, "Value must be an int")
                     else:
-                        await error_embed(ctx, "Value must be an int")
+                        old_priority = player.get_priority()
+                        if value.isdigit():
+                            value = int(value)
+                            if player.set_priority(value):
+                                await success_embed(ctx, f"Set priority: **{old_priority}** -> **{value}**")
+                            else:
+                                await error_embed(ctx, f"Priority given (**{value}**) is negative")
+                        else:
+                            await error_embed(ctx, "Value must be an int")
                 else:
-                    old_priority = player.get_priority()
-                    if value.isdigit():
-                        value = int(value)
-                        if player.set_priority(value):
-                            await success_embed(ctx, f"Set priority: **{old_priority}** -> **{value}**")
-                        else:
-                            await error_embed(ctx, f"Priority given (**{value}**) is negative")
-                    else:
-                        await error_embed(ctx, "Value must be an int")
+                    await error_embed(ctx, "No value inputted")
             else:
-                await error_embed(ctx, "No value inputted")
+                await error_embed(ctx, "No variable name inputted")
         else:
-            await error_embed(ctx, "No variable name inputted")
+            await error_embed(ctx, "Invalid action argument. Use 'get' or 'set'")
 
     @cog_slash(name="elo", description="Returns your or someone else's ELO",
                options=[manage_commands.create_option(name="discord_tag",

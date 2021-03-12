@@ -1,14 +1,11 @@
 from discord.ext.commands import Cog
 from random import randint
-from discord import Embed
+from discord.embeds import Embed
 from discord import Colour
-from discord_slash.cog_ext import cog_slash, manage_commands
+from discord_slash.cog_ext import cog_slash
 from utils.config import SLASH_COMMANDS_GUILDS
 from utils.utils import create_list_pages
 from database.database import get_sorted_elo
-from utils.utils import error_embed, success_embed
-from database.Player import Player, PlayerDoesNotExistError, UsernameAlreadyExistsError, UsernameDoesNotExistError, \
-    DiscordAlreadyExistsError
 
 
 class BaseCommands(Cog, name="Base Commands"):
@@ -57,29 +54,3 @@ class BaseCommands(Cog, name="Base Commands"):
                                 elements_per_page=20,
                                 thumbnails=[f"https://cravatar.eu/helmavatar/{data[0][0]}/128.png"],
                                 can_be_reversed=True)
-
-    @cog_slash(name="user", description="Displays a user's profile",
-               options=[manage_commands.create_option(name="discord_tag",
-                                                      description="The user's discord @",
-                                                      option_type=6, required=False)],
-                        guild_ids=SLASH_COMMANDS_GUILDS)
-    async def user(self, ctx, user = None):
-
-        if user is None:
-            user = ctx.author
-
-        try:
-            player = Player.from_discord_id(user.id)
-        except PlayerDoesNotExistError:
-            await error_embed(ctx, "Player does not exist")
-            return
-
-        stats = ""
-        for key in player.__dict__.keys():
-            stats += f"**{key}:** {getattr(player, key)}\n"
-        
-        embed = Embed(description=stats, color=Colour.dark_purple())
-        embed.set_author(name=f"User profile - {getattr(player, 'minecraft_username')}", icon_url=f"https://cravatar.eu/helmavatar/{getattr(player, 'minecraft_username')}/128.png")
-        await ctx.send(embed=embed)
-
-        
