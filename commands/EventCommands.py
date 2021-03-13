@@ -285,6 +285,12 @@ class EventCommands(Cog, name="Event Commands"):
                                      " assign it to."
             info_embed.set_footer(text='"done/finished/yes/y" to continue\n"no/cancel/n/stop" to cancel')
 
+            for role in roles_dict:
+                users_string = f"{role.mention}\n"
+                for user in roles_dict[role]:
+                    users_string += f"{user.mention}\n"
+                info_embed.add_field(name=f"{role.name} ({len(roles_dict[role])})", value=users_string)
+
             info_message = await ctx.send(embed=info_embed)
 
             response = await self.bot.wait_for("message", check=check)
