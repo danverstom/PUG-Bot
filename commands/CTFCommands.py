@@ -300,6 +300,7 @@ class CTFCommands(Cog, name="CTF Commands"):
 
         matches = []
 
+
         for column in df.iloc[:, res[0] :].columns: #[:, start :] removes the first column. [rows, column]
                                                #remove time column
                                                # if we wanted to make SS past, we would change this to be df.iloc[:, 1:res[0]]
@@ -332,7 +333,6 @@ class CTFCommands(Cog, name="CTF Commands"):
                 end = parser.parse(" ".join([aDay, aDate, end2]), tzinfos={"EST": "UTC-4"}) #same for the end time
                 
                 matches.append(Match(key, start, end)) # i made my own class but i dont think its useful, maybe someone else can shorten the code here
-
 
         matches.sort()  # since we made a class of matches, we can now decide how they are compared. Check the Match class, we compare by datetimes
         if matches:
