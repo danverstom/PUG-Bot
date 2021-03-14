@@ -1,6 +1,7 @@
 from discord.ext.commands import Cog, has_role
 from discord import File, Embed, Colour
 from utils.utils import get_json_data, error_embed, success_embed, response_embed, has_permissions
+import utils.config
 import os
 import sys
 import platform
@@ -66,3 +67,15 @@ class AdminCommands(Cog, name="Admin Commands"):
         else:
             await error_embed(ctx, "Bot is not running on Windows or Linux, failed to restart")
         quit()
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
+    async def debug(self, ctx):
+        if not has_permissions(ctx, ADMIN_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        if utils.config.debug:
+            utils.config.debug = False
+            await success_embed(ctx, "Toggled debug mode **off**")
+        else:
+            utils.config.debug = True
+            await success_embed(ctx, "Toggled debug mode **on**")

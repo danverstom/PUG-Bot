@@ -53,3 +53,8 @@ class BaseCommands(Cog, name="Base Commands"):
                                 elements_per_page=20,
                                 thumbnails=[f"https://cravatar.eu/helmavatar/{data[0][0]}/128.png"],
                                 can_be_reversed=True)
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def error_test_command(self, ctx):
+        int("bonjour")
+        await ctx.send("test")
