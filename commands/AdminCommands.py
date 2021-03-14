@@ -24,7 +24,7 @@ class AdminCommands(Cog, name="Admin Commands"):
     @cog_slash(name="removecommands", description="Removes all slash commands from the bot",
                guild_ids=SLASH_COMMANDS_GUILDS)
     async def removecommands(self, ctx):
-        if not has_permissions(ctx, MOD_ROLE):
+        if not has_permissions(ctx, ADMIN_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
         message = await response_embed(ctx, "Removing commands", "Please wait, this process can take a while")
@@ -43,7 +43,7 @@ class AdminCommands(Cog, name="Admin Commands"):
                                              description="if true, pull the latest changes from github",
                                              required=False)])
     async def restart(self, ctx, remove_commands=False, pull_changes=False):
-        if not has_permissions(ctx, MOD_ROLE):
+        if not has_permissions(ctx, ADMIN_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
         if remove_commands:
