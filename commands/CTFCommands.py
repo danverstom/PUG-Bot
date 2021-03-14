@@ -294,7 +294,6 @@ class CTFCommands(Cog, name="CTF Commands"):
             aDay, aDate = df[column].iloc[1], df[column].iloc[0] #get day and date
             df1 = df.iloc[2:] #remove date/day rows
             day = df1[column] #we iterate through all the days
-            print(df1[column])
 
             day1 = df1[day.astype(bool)].iloc[:, [0, column]] #Remove all cells which dont have a value in them, whilst also adding the time column to it in a new DF
             day1 = day1.replace("^", None).ffill() # Then replace all "^" with a cell that doesnt have a value
