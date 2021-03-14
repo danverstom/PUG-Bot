@@ -1,6 +1,6 @@
 import discord
 from discord.ext.commands import Bot
-from utils.config import bot_token
+from utils.config import bot_token, get_debug_status
 from utils.utils import save_json_file, error_embed
 from discord_slash import SlashCommand
 from discord_slash.utils import manage_commands
@@ -41,9 +41,14 @@ async def on_ready():
 
 @bot.event
 async def on_slash_command_error(ctx, error):
-    tb = error.__traceback__
-    # Find some way of printing this traceback
-    await error_embed(ctx, "There was an error executing this command")
+    print(''.join(traceback.format_exception(etype=type(error), value=error, tb=error.__traceback__)))
+    if get_debug_status():
+        desc = f"```{''.join(traceback.format_exception(etype=type(error), value=error, tb=error.__traceback__))}```"
+        desc += f"_command executed by {ctx.author.mention}_"
+        embed = discord.Embed(title=type(error).__name__, description=desc, colour=discord.Colour.red())
+        await ctx.send(embed=embed)
+    else:
+        await error_embed(ctx, f"`{type(error).__name__}: {error}`")
 
 
 bot.run(bot_token)
