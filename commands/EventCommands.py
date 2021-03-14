@@ -136,8 +136,11 @@ class EventCommands(Cog, name="Event Commands"):
         for event in self.events.values():
             if datetime.now(timezone('EST')) >= datetime.fromisoformat(event.time_est) + timedelta(days=1):
                 event.set_is_active(False)
+            elif not event.is_signups_active:
+                continue
             elif datetime.now(timezone('EST')) >= datetime.fromisoformat(event.signup_deadline):
-                save_signups(self.signups, event.event_id)
+                save_signups(self.signups[event.event_id], event.event_id)
+                event.set_is_signup_active(False)
                 continue
 
             can_play_users = []

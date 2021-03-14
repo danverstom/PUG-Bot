@@ -2,8 +2,9 @@ from datetime import datetime, timedelta
 from pytz import timezone
 
 from database.database import check_events_event_id, fetch_events_event_id, add_event, fetch_events_list_event_id, \
-    delete_event, update_events_title, update_events_description, update_events_time_est, update_events_signup_deadline, \
-    update_events_is_active, fetch_active_events_list_event_id
+    delete_event, update_events_title, update_events_description, update_events_time_est, \
+    update_events_signup_deadline, update_events_is_active, fetch_active_events_list_event_id, \
+    update_events_is_signup_active, fetch_signup_active_events_list_event_id
 
 
 class EventDoesNotExistError(Exception):
@@ -46,6 +47,7 @@ class Event:
         self.signup_message = data[9]
         self.signup_deadline = data[10]
         self.is_active = bool(data[11])
+        self.is_signups_active = bool(data[12])
 
     def delete(self):
         return delete_event(self.event_id)
@@ -57,6 +59,7 @@ class Event:
         self.time_est = data[3]
         self.signup_deadline = data[10]
         self.is_active = bool(data[11])
+        self.is_signups_active = bool(data[12])
 
     def get_title(self):
         self.update()
@@ -124,6 +127,15 @@ class Event:
         update_events_is_active(int(is_active), self.event_id)
         return True
 
+    def get_is_signup_active(self):
+        self.update()
+        return self.is_signups_active
+
+    def set_is_signup_active(self, is_signup_active):
+        self.is_signups_active = is_signup_active
+        update_events_is_signup_active(int(is_signup_active), self.event_id)
+        return True
+
     @classmethod
     def add_event(cls, event_id, title, description, time_est, created_est, creator, guild, announcement_channel,
                   signup_channel, signup_message, signup_deadline):
@@ -169,6 +181,22 @@ class Event:
     @classmethod
     def fetch_active_events_dict(cls):
         result = fetch_active_events_list_event_id()
+        event_dict = dict()
+        for id_tuple in result:
+            event_dict[id_tuple[0]] = cls.from_event_id(id_tuple[0])
+        return event_dict
+
+    @classmethod
+    def fetch_signup_active_events_list(cls):
+        result = fetch_signup_active_events_list_event_id()
+        event_list = []
+        for id_tuple in result:
+            event_list.append(cls.from_event_id(id_tuple[0]))
+        return event_list
+
+    @classmethod
+    def fetch_signup_active_events_dict(cls):
+        result = fetch_signup_active_events_list_event_id()
         event_dict = dict()
         for id_tuple in result:
             event_dict[id_tuple[0]] = cls.from_event_id(id_tuple[0])
