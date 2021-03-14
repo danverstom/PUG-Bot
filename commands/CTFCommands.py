@@ -294,6 +294,7 @@ class CTFCommands(Cog, name="CTF Commands"):
             aDay, aDate = df[column].iloc[1], df[column].iloc[0] #get day and date
             df1 = df.iloc[2:] #remove date/day rows
             day = df1[column] #we iterate through all the days
+            print(df1[column])
 
             day1 = df1[day.astype(bool)].iloc[:, [0, column]] #Remove all cells which dont have a value in them, whilst also adding the time column to it in a new DF
             day1 = day1.replace("^", None).ffill() # Then replace all "^" with a cell that doesnt have a value
@@ -308,16 +309,13 @@ class CTFCommands(Cog, name="CTF Commands"):
                 df2 = item.iloc[[0, -1]] #get the first and last items of the dataframe. This willgive the time it starts/ends
                 start_time = df2[0].iloc[0].split(" - ")[0] # get the first row (which gives us start time), get the time column and get time
                 end =df2[0].tail(1).index.item() # same process but for end
-                end_time = df[0][end+1].split(" - ") #end time here, but I show another way later to get time 
 
                 if end == 49: #special case for 11:30pm. we get the next time box which is the alternate method
-                    end2 = df[0][0] #get the 12am timebox
+                    end2 = df[0][2] #get the 12am timebox
                 else:
                     end2 = df[0][end+1] #otherwise get the next one along
-                    
-                end2 = end2.split(" - ")[0] #Date 
 
-
+                end2 = end2.split(" - ")[0] #Date
                 start = parser.parse(" ".join([aDay, aDate, start_time]), tzinfos={"EST": "UTC-4"}) #add the day, date, and start time to get one datetime
                 
                 end = parser.parse(" ".join([aDay, aDate, end2]), tzinfos={"EST": "UTC-4"}) #same for the end time
