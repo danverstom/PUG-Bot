@@ -29,6 +29,7 @@ conn.execute(
     announcement_channel integer,
     signup_channel integer,
     signup_message integer,
+    signup_role integer,
     signup_deadline integer,
     is_active bool,
     is_signup_active bool)'''
@@ -182,12 +183,12 @@ Functions that interact with the Events database.
 
 
 def add_event(event_id, title, description, time_est, created_est, creator, guild_id, announcement_channel,
-              signup_channel, signup_message, signup_deadline, is_active=1, is_signup_active=1):
+              signup_channel, signup_message, signup_role, signup_deadline, is_active=1, is_signup_active=1):
     if check_events_event_id(event_id):
         return False
-    c.execute("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    c.execute("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
               (event_id, title, description, time_est, created_est, creator, guild_id, announcement_channel,
-               signup_channel, signup_message, signup_deadline, is_active, is_signup_active))
+               signup_channel, signup_message, signup_role, signup_deadline, is_active, is_signup_active))
     conn.commit()
     return True
 

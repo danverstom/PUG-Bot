@@ -126,8 +126,8 @@ class EventCommands(Cog, name="Event Commands"):
 
         new_event = Event.add_event(event_message_ids[0], title, description, event_time_package[0][0].isoformat(),
                                     datetime.now(timezone('EST')).isoformat(), ctx.author.id, ctx.guild.id,
-                                    announcement_channel.id,
-                                    signup_channel.id, event_message_ids[1], event_time_package[1][0].isoformat())
+                                    announcement_channel.id, signup_channel.id, event_message_ids[1], signup_role.id,
+                                    event_time_package[1][0].isoformat())
         self.events[event_message_ids[0]] = new_event
         self.signups[event_message_ids[0]] = []
 
@@ -139,7 +139,6 @@ class EventCommands(Cog, name="Event Commands"):
             elif not event.is_signups_active:
                 continue
             elif datetime.now(timezone('EST')) >= datetime.fromisoformat(event.signup_deadline):
-                save_signups(self.signups[event.event_id], event.event_id)
                 event.set_is_signup_active(False)
                 continue
 
@@ -166,9 +165,12 @@ class EventCommands(Cog, name="Event Commands"):
 
             [signups, change] = reaction_changes(signups, can_play_users, is_muted_users, can_sub_users, event.event_id)
             if change:
+                save_signups(self.signups[event.event_id], signups)
                 self.signups[event.event_id] = signups
                 can_play = [user for user in signups if user.can_play]
                 can_sub = [user for user in signups if user.can_sub]
+                signup_role = self.bot.get_guild(event.guild_id).get_role(event.signup_role)
+                [await self.bot.get_user(user).add_roles(signup_role) for user in can_play]
                 embed = signup_message.embeds[0]
                 if can_play:
                     value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"

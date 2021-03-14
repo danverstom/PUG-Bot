@@ -45,9 +45,10 @@ class Event:
         self.announcement_channel = data[7]
         self.signup_channel = data[8]
         self.signup_message = data[9]
-        self.signup_deadline = data[10]
-        self.is_active = bool(data[11])
-        self.is_signups_active = bool(data[12])
+        self.signup_role = data[10]
+        self.signup_deadline = data[11]
+        self.is_active = bool(data[12])
+        self.is_signups_active = bool(data[13])
 
     def delete(self):
         return delete_event(self.event_id)
@@ -57,9 +58,9 @@ class Event:
         self.title = data[1]
         self.description = data[2]
         self.time_est = data[3]
-        self.signup_deadline = data[10]
-        self.is_active = bool(data[11])
-        self.is_signups_active = bool(data[12])
+        self.signup_deadline = data[11]
+        self.is_active = bool(data[12])
+        self.is_signups_active = bool(data[13])
 
     def get_title(self):
         self.update()
@@ -138,13 +139,13 @@ class Event:
 
     @classmethod
     def add_event(cls, event_id, title, description, time_est, created_est, creator, guild, announcement_channel,
-                  signup_channel, signup_message, signup_deadline):
+                  signup_channel, signup_message, signup_role, signup_deadline):
         if check_events_event_id(event_id):
             raise EventAlreadyExistsError()
         add_event(event_id, title, description, time_est, created_est, creator, guild, announcement_channel,
-                  signup_channel, signup_message, signup_deadline)
+                  signup_channel, signup_message, signup_role, signup_deadline)
         return cls((event_id, title, description, time_est, created_est, creator, guild, announcement_channel,
-                    signup_channel, signup_message, signup_deadline, True))
+                    signup_channel, signup_message, signup_role, signup_deadline, True, True))
 
     @classmethod
     def from_event_id(cls, event_id):

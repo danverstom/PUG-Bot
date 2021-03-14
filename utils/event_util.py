@@ -149,8 +149,7 @@ async def get_event_time(ctx, event_time, event_date, deadline):
     return [(event_datetime, event_string), (signup_deadline, deadline_string)]
 
 
-def save_signups(signups, event_id):
-    db_signups = Signup.fetch_signups_list(event_id)
+def save_signups(db_signups, signups):
     [signup.update_db() for signup in signups]
     [signup.delete() for signup in db_signups if signup not in signups]
 
