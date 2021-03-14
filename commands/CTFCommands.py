@@ -39,9 +39,9 @@ class Match:
 
     def end_time(self):
         if os.name == "nt":
-            return self.end.strftime("%#I:%M%p") 
-        return self.end.strftime("-#I:%M%p") 
-    
+            return self.end.strftime("%#I:%M%p")
+        return self.end.strftime("%-I:%M%p")
+
     def __str__(self):
         if os.name == "nt":
             return f"**{self.name}**\n{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%#d')}\n{self.start_time()} - {self.end_time()} EST\n"
