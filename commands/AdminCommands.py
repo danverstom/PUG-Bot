@@ -1,6 +1,6 @@
 from discord.ext.commands import Cog, has_role
 from discord import File, Embed, Colour
-from utils.utils import get_json_data, error_embed, success_embed, response_embed
+from utils.utils import get_json_data, error_embed, success_embed, response_embed, has_permissions
 import os
 import sys
 import platform
@@ -24,9 +24,9 @@ class AdminCommands(Cog, name="Admin Commands"):
     @cog_slash(name="removecommands", description="Removes all slash commands from the bot",
                guild_ids=SLASH_COMMANDS_GUILDS)
     async def removecommands(self, ctx):
-        if ADMIN_ROLE.lower() not in [role.name.lower() for role in ctx.author.roles]:
-            await error_embed(ctx, "You do not have sufficient permissions to do this")
-            return
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         message = await response_embed(ctx, "Removing commands", "Please wait, this process can take a while")
         await manage_commands.remove_all_commands(self.bot.user.id, self.token, guild_ids=SLASH_COMMANDS_GUILDS)
         await message.delete()
@@ -43,9 +43,9 @@ class AdminCommands(Cog, name="Admin Commands"):
                                              description="if true, pull the latest changes from github",
                                              required=False)])
     async def restart(self, ctx, remove_commands=False, pull_changes=False):
-        if ADMIN_ROLE.lower() not in [role.name.lower() for role in ctx.author.roles]:
-            await error_embed(ctx, "You do not have sufficient permissions to do this")
-            return
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         if remove_commands:
             message = await response_embed(ctx, "Removing commands", "Please wait, this process can take a while")
             await manage_commands.remove_all_commands(self.bot.user.id, self.token, guild_ids=SLASH_COMMANDS_GUILDS)

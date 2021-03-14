@@ -39,9 +39,9 @@ class Match:
 
     def end_time(self):
         if os.name == "nt":
-            return self.end.strftime("%#I:%M%p") 
-        return self.end.strftime("-#I:%M%p") 
-    
+            return self.end.strftime("%#I:%M%p")
+        return self.end.strftime("%-I:%M%p")
+
     def __str__(self):
         if os.name == "nt":
             return f"**{self.name}**\n{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%#d')}\n{self.start_time()} - {self.end_time()} EST\n"
@@ -129,6 +129,8 @@ class CTFCommands(Cog, name="CTF Commands"):
         """
         match_1 = get_server_games("1.ctfmatch.brawl.com")
         match_2 = get_server_games("2.ctfmatch.brawl.com")
+        match_1.reverse()
+        match_2.reverse()
 
         with open("utils/maps.json") as file:
             maps = load(file)

@@ -4,6 +4,13 @@ from asyncio import TimeoutError
 from json import load, dump
 
 
+def has_permissions(ctx, required_role):
+    if required_role.lower() in [role.name.lower() for role in ctx.author.roles]:
+        return True
+    else:
+        return False
+
+
 def save_json_file(file, content):
     with open(file, "w") as file:
         dump(content, file)

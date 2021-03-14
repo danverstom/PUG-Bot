@@ -5,7 +5,7 @@ from database.Player import Player, PlayerDoesNotExistError, UsernameAlreadyExis
     DiscordAlreadyExistsError
 from database.database import check_user_requests, add_register_request, get_register_request, \
     remove_register_request, get_all_register_requests
-from utils.utils import error_embed, success_embed, response_embed, create_list_pages
+from utils.utils import error_embed, success_embed, response_embed, create_list_pages, has_permissions
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL, ELO_FLOOR
 from mojang import MojangAPI
 from asyncio import sleep as async_sleep
@@ -40,8 +40,10 @@ class RegistrationCommands(Cog, name="User Registration"):
                                                       option_type=3, required=True,
                                                       choices=["players", "register_requests"])],
                guild_ids=SLASH_COMMANDS_GUILDS)
-    @has_role(MOD_ROLE)
     async def list(self, ctx, data_type):
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         title = "List"
         info = []
         if data_type == "players":
@@ -153,8 +155,10 @@ class RegistrationCommands(Cog, name="User Registration"):
                options=[manage_commands.create_option(name="discord_tag",
                                                       description="The user's discord @",
                                                       option_type=6, required=True)], guild_ids=SLASH_COMMANDS_GUILDS)
-    @has_role(MOD_ROLE)
     async def unregister(self, ctx, input_user: User = None):
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         """
         Allows a PUG Mod to unregister a discord user from the Minecraft account they registered to.
         Usage: unregister <user_mention>
@@ -200,7 +204,6 @@ class RegistrationCommands(Cog, name="User Registration"):
                                                       description="Value to set",
                                                       option_type=3, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
-    @has_role(MOD_ROLE)
     async def user(self, ctx, discord_tag: User = None, action_type="get", variable_name=None, value=None):
         """
         Allows a PUG Mod to edit information about a user.
@@ -210,6 +213,9 @@ class RegistrationCommands(Cog, name="User Registration"):
             user @Tom get                       returns user profile
             user @Tom set elo [elo]             sets user ELO
         """
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         user = self.bot.get_user(discord_tag.id)
         if action_type == "get":
             try:
