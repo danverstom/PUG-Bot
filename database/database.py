@@ -29,7 +29,8 @@ conn.execute(
     announcement_channel integer,
     signup_channel integer,
     signup_message integer,
-    signup_deadline integer)'''
+    signup_deadline integer,
+    is_active bool)'''
 )
 
 conn.execute(
@@ -180,12 +181,12 @@ Functions that interact with the Events database.
 
 
 def add_event(event_id, title, description, time_est, created_est, creator, guild_id, announcement_channel,
-              signup_channel, signup_message, signup_deadline):
+              signup_channel, signup_message, signup_deadline, is_active=1):
     if check_events_event_id(event_id):
         return False
-    c.execute("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    c.execute("INSERT INTO events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
               (event_id, title, description, time_est, created_est, creator, guild_id, announcement_channel,
-               signup_channel, signup_message, signup_deadline))
+               signup_channel, signup_message, signup_deadline, is_active))
     conn.commit()
     return True
 
@@ -214,6 +215,11 @@ def fetch_events_list_event_id():
     return c.fetchall()
 
 
+def fetch_active_events_list_event_id():
+    c.execute("SELECT event_id FROM events WHERE is_active = 1")
+    return c.fetchall()
+
+
 def update_events_title(title, event_id):
     c.execute("UPDATE events SET title = ? WHERE event_id = ?", (title, event_id))
     conn.commit()
@@ -231,6 +237,11 @@ def update_events_time_est(time_est, event_id):
 
 def update_events_signup_deadline(signup_deadline, event_id):
     c.execute("UPDATE events SET signup_deadline = ? WHERE event_id = ?", (signup_deadline, event_id))
+    conn.commit()
+
+
+def update_events_is_active(is_active, event_id):
+    c.execute("UPDATE events SET is_active = ? WHERE event_id = ?", (is_active, event_id))
     conn.commit()
 
 

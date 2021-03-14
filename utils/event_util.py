@@ -5,6 +5,7 @@ from re import fullmatch
 from discord import Embed, Colour
 from pytz import timezone
 
+from database.Signup import Signup
 from utils.utils import error_embed
 
 
@@ -148,11 +149,39 @@ async def get_event_time(ctx, event_time, event_date, deadline):
     return [(event_datetime, event_string), (signup_deadline, deadline_string)]
 
 
+def save_signups(signups, event_id):
+    db_signups = Signup.fetch_signups_list(event_id)
+    [signup.update_db() for signup in signups]
+    [signup.delete() for signup in db_signups if signup not in signups]
+
+
+def reaction_changes(signups, can_play, is_muted, can_sub, event_id):
+    old_can_play = [user.user_id for user in signups if user.can_play]
+    old_is_muted = [user.user_id for user in signups if user.is_muted]
+    old_can_sub = [user.user_id for user in signups if user.can_sub]
+
+    diff = set(old_can_play) == set(can_play) or set(old_is_muted) == set(is_muted) or set(old_can_sub) == set(can_sub)
+
+    stl_can_play = [user for user in old_can_play if user in can_play]
+    add_can_play = [user for user in can_play if user not in old_can_play]
+    only_can_sub = [user for user in can_sub if user not in can_play]
+
+    all_signups = dict()
+    for user in can_play:
+        all_signups[user] = Signup.create_signup(user, event_id, True, user in is_muted, user in can_sub)
+    for user in only_can_sub:
+        all_signups[user] = Signup.create_signup(user, event_id, False, user in is_muted, True)
+
+    new_signups = [all_signups[user] for user in stl_can_play]
+    new_signups.extend([all_signups[user] for user in add_can_play])
+    new_signups.extend([all_signups[user] for user in only_can_sub])
+    return new_signups, diff
+
+
 async def announce_event(title, description, announcement_channel, signup_list_channel, mention_role, event_time,
                          signup_deadline):
     embed_description = f"**Time:**\n{event_time}\n\n**Signup Deadline:**\n{signup_deadline}\n\n{description}\n\n" \
-                        f"React with ✅ to play\nReact with ❌ if you can't play\nReact with :mute: if you cannot " \
-                        f"speak\nReact with :elevator: if you are able to sub"
+                        f"React with ✅ to play\nReact with 🔇 if you cannot speak\nReact with 🛗 if you are able to sub"
     embed = Embed(title=title, description=embed_description, color=Colour.light_grey())
     if mention_role.lower() == "none":
         mention_role = ""
