@@ -277,9 +277,13 @@ class CTFCommands(Cog, name="CTF Commands"):
 
         df = pd.DataFrame.from_records(values)
         row = df.loc[0] #get row with the dates
+        res = None
         if os.name == "nt":
             res = row[row == (date.today().strftime("%#m/%d/%Y"))].index
-        res = row[row == (date.today().strftime("%-m/%d/%Y"))].index #find index of todays date, and use that index to start from
+        else:
+            res = row[row == (date.today().strftime("%-m/%d/%Y"))].index #find index of todays date, and use that index to start from
+        
+        
         
         matches = []
         for column in df.iloc[:, res[0] :].columns: #[:, start :] removes the first column. [rows, column]
