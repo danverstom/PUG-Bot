@@ -1,7 +1,7 @@
 from discord.ext.commands import Cog
 from discord import File, Embed, Colour
 from utils.CTFGame import get_server_games, CTFGame
-from utils.utils import response_embed, create_list_pages
+from utils.utils import response_embed, success_embed, create_list_pages
 from random import choice
 from json import load, dump
 from re import split
@@ -10,10 +10,48 @@ from discord.ext import tasks
 from bs4 import BeautifulSoup
 from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL
 
+#ss
+import os 
+import gspread
+import pandas as pd
+from dateutil import parser
+from datetime import datetime, date
+from pytz import timezone
+
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
 from utils.config import SLASH_COMMANDS_GUILDS
 
+class Match:
+    def __init__(self, name, datetime, end):
+        self.name = name
+        self.datetime = datetime
+        self.end = end
+
+    def date(self):
+        return f"{self.datetime.date()}"
+
+    def start_time(self):
+        if os.name == "nt":
+            return self.datetime.strftime("%#I:%M%p")
+        return self.datetime.strftime("%-I:%M%p")
+
+
+    def end_time(self):
+        if os.name == "nt":
+            return self.end.strftime("%#I:%M%p") 
+        return self.end.strftime("-#I:%M%p") 
+    
+    def __str__(self):
+        if os.name == "nt":
+            return f"**{self.name}**\n{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%#d')}\n{self.start_time()} - {self.end_time()} EST\n"
+        return f"**{self.name}**\n{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%-d')}\n{self.start_time()} - {self.end_time()} EST\n"
+     
+    def __lt__(self, other):
+        return self.datetime < other.datetime
+        
+
+    #i really didnt have to make this class
 
 class CTFCommands(Cog, name="CTF Commands"):
     """
@@ -213,3 +251,80 @@ class CTFCommands(Cog, name="CTF Commands"):
 
             await create_list_pages(self.bot, ctx, "Team threads", teams_info, "Empty :(", "\n", 1,
                                     thumbnails=thumbnails)
+
+    @cog_slash(name="ss", description="Shows upcoming matches", guild_ids=SLASH_COMMANDS_GUILDS,
+              options=[
+               manage_commands.create_option(
+                 name="match",
+                 description="Which match server to view",
+                 option_type=3,
+                 required=False,
+                 choices=[
+                  manage_commands.create_choice(
+                    name="Match1",
+                    value="1"
+                  ),
+                  manage_commands.create_choice(
+                    name="Match2",
+                    value="2")]
+                 )
+               ]
+               )
+    async def ss(self, ctx, server = "1"):
+        gc = gspread.service_account(filename='utils/service_account.json')
+        if server == "1":
+            values = gc.open_by_key("1CrQOxzaXC6iSjwZwQvu6DNIYsCDg-uQ4x5UiaWLHzxg").worksheet("Upcoming Matches").get("c10:w59")
+        else:
+            values = gc.open_by_key("1CrQOxzaXC6iSjwZwQvu6DNIYsCDg-uQ4x5UiaWLHzxg").worksheet("Upcoming Matches (Server 2)").get("c10:w59")
+
+        df = pd.DataFrame.from_records(values)
+        row = df.loc[0] #get row with the dates
+        res = None
+        if os.name == "nt":
+            res = row[row == (date.today().strftime("%#m/%d/%Y"))].index
+        else:
+            res = row[row == (date.today().strftime("%-m/%d/%Y"))].index #find index of todays date, and use that index to start from
+        
+        
+        
+        matches = []
+        for column in df.iloc[:, res[0] :].columns: #[:, start :] removes the first column. [rows, column]
+                                               #remove time column
+                                               # if we wanted to make SS past, we would change this to be df.iloc[:, 1:res[0]]
+            aDay, aDate = df[column].iloc[1], df[column].iloc[0] #get day and date
+            df1 = df.iloc[2:] #remove date/day rows
+            day = df1[column] #we iterate through all the days
+
+            day1 = df1[day.astype(bool)].iloc[:, [0, column]] #Remove all cells which dont have a value in them, whilst also adding the time column to it in a new DF
+            day1 = day1.replace("^", None).ffill() # Then replace all "^" with a cell that doesnt have a value
+                                                   # So we can use fill forward, which changes 'Dunce ppm, ^ ^' to
+                                                   # 'Dunce ppm, dunce ppm, dunce ppm'. Ez grouping
+                                                   
+            first = day1.groupby([column]) # then get a DF from the changes we did ^
+            
+            for key, item in first: #Maybe theres a way to do this without iterating at all
+                                    # not smart enough to attempt it tho
+                                    
+                df2 = item.iloc[[0, -1]] #get the first and last items of the dataframe. This willgive the time it starts/ends
+                start_time = df2[0].iloc[0].split(" - ")[0] # get the first row (which gives us start time), get the time column and get time
+                end =df2[0].tail(1).index.item() # same process but for end
+                end_time = df[0][end+1].split(" - ") #end time here, but I show another way later to get time 
+
+                if end == 49: #special case for 11:30pm. we get the next time box which is the alternate method
+                    end2 = df[0][0] #get the 12am timebox
+                else:
+                    end2 = df[0][end+1] #otherwise get the next one along
+                    
+                end2 = end2.split(" - ")[0] #Date 
+
+
+                start = parser.parse(" ".join([aDay, aDate, start_time]), tzinfos={"EST": "UTC-4"}) #add the day, date, and start time to get one datetime
+                
+                end = parser.parse(" ".join([aDay, aDate, end2]), tzinfos={"EST": "UTC-4"}) #same for the end time
+                
+                matches.append(Match(key, start, end)) # i made my own class but i dont think its useful, maybe someone else can shorten the code here
+
+        matches.sort() #since we made a class of matches, we can now decide how they are compared. Check the Match class, we compare by datetimes
+        if matches:
+            return await success_embed(ctx, "\n".join(list(map(lambda x: str(x), matches[:7])))) #lambda
+        await success_embed(ctx, "No upcoming matches")
