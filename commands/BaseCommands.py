@@ -46,7 +46,6 @@ class BaseCommands(Cog, name="Base Commands"):
         leaderboard_entries = []
         count = 1
         for item in data:
-            user = self.bot.get_user(item[2])
             leaderboard_entries.append(f"**#{count}:** {item[0]} - **{item[1]}**")
             count += 1
 
