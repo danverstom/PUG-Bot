@@ -285,8 +285,6 @@ class CTFCommands(Cog, name="CTF Commands"):
         else:
             res = row[row == (date.today().strftime("%-m/%d/%Y"))].index #find index of todays date, and use that index to start from
         
-        
-        
         matches = []
         for column in df.iloc[:, res[0] :].columns: #[:, start :] removes the first column. [rows, column]
                                                #remove time column
@@ -308,7 +306,6 @@ class CTFCommands(Cog, name="CTF Commands"):
                 df2 = item.iloc[[0, -1]] #get the first and last items of the dataframe. This willgive the time it starts/ends
                 start_time = df2[0].iloc[0].split(" - ")[0] # get the first row (which gives us start time), get the time column and get time
                 end =df2[0].tail(1).index.item() # same process but for end
-                end_time = df[0][end+1].split(" - ") #end time here, but I show another way later to get time 
 
                 if end == 49: #special case for 11:30pm. we get the next time box which is the alternate method
                     end2 = df[0][0] #get the 12am timebox
