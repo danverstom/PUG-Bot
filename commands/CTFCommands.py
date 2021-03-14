@@ -337,6 +337,38 @@ class CTFCommands(Cog, name="CTF Commands"):
 
                 matches.append(Match(key, start,
                                      end))  # i made my own class but i dont think its useful, maybe someone else can shorten the code here
+        for column in df.iloc[:, res[0] :].columns: #[:, start :] removes the first column. [rows, column]
+                                               #remove time column
+                                               # if we wanted to make SS past, we would change this to be df.iloc[:, 1:res[0]]
+            aDay, aDate = df[column].iloc[1], df[column].iloc[0] #get day and date
+            df1 = df.iloc[2:] #remove date/day rows
+            day = df1[column] #we iterate through all the days
+
+            day1 = df1[day.astype(bool)].iloc[:, [0, column]] #Remove all cells which dont have a value in them, whilst also adding the time column to it in a new DF
+            day1 = day1.replace("^", None).ffill() # Then replace all "^" with a cell that doesnt have a value
+                                                   # So we can use fill forward, which changes 'Dunce ppm, ^ ^' to
+                                                   # 'Dunce ppm, dunce ppm, dunce ppm'. Ez grouping
+                                                   
+            first = day1.groupby([column]) # then get a DF from the changes we did ^
+            
+            for key, item in first: #Maybe theres a way to do this without iterating at all
+                                    # not smart enough to attempt it tho
+                                    
+                df2 = item.iloc[[0, -1]] #get the first and last items of the dataframe. This willgive the time it starts/ends
+                start_time = df2[0].iloc[0].split(" - ")[0] # get the first row (which gives us start time), get the time column and get time
+                end =df2[0].tail(1).index.item() # same process but for end
+
+                if end == 49: #special case for 11:30pm. we get the next time box which is the alternate method
+                    end2 = df[0][2] #get the 12am timebox
+                else:
+                    end2 = df[0][end+1] #otherwise get the next one along
+
+                end2 = end2.split(" - ")[0] #Date
+                start = parser.parse(" ".join([aDay, aDate, start_time]), tzinfos={"EST": "UTC-4"}) #add the day, date, and start time to get one datetime
+                
+                end = parser.parse(" ".join([aDay, aDate, end2]), tzinfos={"EST": "UTC-4"}) #same for the end time
+                
+                matches.append(Match(key, start, end)) # i made my own class but i dont think its useful, maybe someone else can shorten the code here
 
         matches.sort()  # since we made a class of matches, we can now decide how they are compared. Check the Match class, we compare by datetimes
         if matches:
