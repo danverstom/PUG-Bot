@@ -6,6 +6,7 @@ from discord.utils import get
 from discord.ext.commands import Cog, has_role
 from discord_slash.cog_ext import cog_slash
 from discord_slash.utils import manage_commands as mc
+from discord.errors import Forbidden
 
 from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS
 from utils.event_util import get_event_time, check_if_cancel, announce_event
@@ -344,8 +345,8 @@ class EventCommands(Cog, name="Event Commands"):
                             users_string = f"{role.mention}\n"
                             for member in roles_dict[role]:
                                 users_string += f"{member.mention}\n"
-                                await member.add_roles(role,
-                                                       reason=f"role added by {ctx.author.name} with setroles command")
+                                await member.add_roles(role, reason=f"role added by {ctx.author.name} with setroles"
+                                                                    f" command")
                                 roles_assigned += 1
                                 if roles_assigned % 5 == 0:
                                     roles_embed.description = f"Progress: {roles_assigned}/{total_roles_count}"
@@ -370,7 +371,15 @@ class EventCommands(Cog, name="Event Commands"):
                 members = response.mentions
                 if len(members) > 0:
                     if len(response.role_mentions) == 1:
-                        roles_dict[response.role_mentions[0]] = members
+                        role = response.role_mentions[0]
+                        server = ctx.message.guild
+                        bot_member = server.get_member(self.bot.user.id)
+
+                        if bot_member.top_role.position <= role.position:
+                            await error_embed(ctx, "This role is too high to be set by the bot. Please enter a "
+                                                   "different role.")
+                        else:
+                            roles_dict[role] = members
                     else:
                         await error_embed(ctx, "You can only mention one role at a time")
                 else:
