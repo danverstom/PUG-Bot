@@ -169,8 +169,9 @@ class EventCommands(Cog, name="Event Commands"):
                 self.signups[event.event_id] = signups
                 can_play = [user for user in signups if user.can_play]
                 can_sub = [user for user in signups if user.can_sub]
-                signup_role = self.bot.get_guild(event.guild_id).get_role(event.signup_role)
-                [await self.bot.get_user(user).add_roles(signup_role) for user in can_play]
+                guild = self.bot.get_guild(event.guild_id)
+                signup_role = guild.get_role(event.signup_role)
+                [await guild.get_member(signup.user_id).add_roles(signup_role) for signup in can_play]
                 embed = signup_message.embeds[0]
                 if can_play:
                     value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
