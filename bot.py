@@ -1,10 +1,11 @@
 import discord
 from discord.ext.commands import Bot
-from utils.config import bot_token
-from utils.utils import save_json_file
+from utils.config import bot_token, get_debug_status
+from utils.utils import save_json_file, error_embed
 from discord_slash import SlashCommand
 from discord_slash.utils import manage_commands
 from utils.config import SLASH_COMMANDS_GUILDS
+import traceback
 
 # Creating the bot object
 intents = discord.Intents.all()
@@ -36,6 +37,18 @@ async def on_ready():
     save_json_file("utils/command_names.json", [command for command in slash.commands])
     await bot.change_presence(
         activity=discord.Activity(type=discord.ActivityType.competing, name="PUG Season 2"))
+
+
+@bot.event
+async def on_slash_command_error(ctx, error):
+    print(''.join(traceback.format_exception(etype=type(error), value=error, tb=error.__traceback__)))
+    if get_debug_status():
+        desc = f"```{''.join(traceback.format_exception(etype=type(error), value=error, tb=error.__traceback__))}```"
+        desc += f"_command executed by {ctx.author.mention}_"
+        embed = discord.Embed(title=type(error).__name__, description=desc, colour=discord.Colour.red())
+        await ctx.send(embed=embed)
+    else:
+        await error_embed(ctx, f"`{type(error).__name__}: {error}`")
 
 
 bot.run(bot_token)

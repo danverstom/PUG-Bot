@@ -5,7 +5,7 @@ from database.Player import Player, PlayerDoesNotExistError, UsernameAlreadyExis
     DiscordAlreadyExistsError
 from database.database import check_user_requests, add_register_request, get_register_request, \
     remove_register_request, get_all_register_requests
-from utils.utils import error_embed, success_embed, response_embed, create_list_pages
+from utils.utils import error_embed, success_embed, response_embed, create_list_pages, has_permissions
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL, ELO_FLOOR
 from mojang import MojangAPI
 from asyncio import sleep as async_sleep
@@ -31,6 +31,7 @@ class RegistrationCommands(Cog, name="User Registration"):
     @Cog.listener()
     async def on_ready(self):
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
+        await success_embed(self.bot_channel, "Bot has started")
         self.update_usernames.start()
 
     @cog_slash(name="list", description="Lists data",
@@ -39,8 +40,10 @@ class RegistrationCommands(Cog, name="User Registration"):
                                                       option_type=3, required=True,
                                                       choices=["players", "register_requests"])],
                guild_ids=SLASH_COMMANDS_GUILDS)
-    @has_role(MOD_ROLE)
     async def list(self, ctx, data_type):
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         title = "List"
         info = []
         if data_type == "players":
@@ -152,8 +155,10 @@ class RegistrationCommands(Cog, name="User Registration"):
                options=[manage_commands.create_option(name="discord_tag",
                                                       description="The user's discord @",
                                                       option_type=6, required=True)], guild_ids=SLASH_COMMANDS_GUILDS)
-    @has_role(MOD_ROLE)
     async def unregister(self, ctx, input_user: User = None):
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         """
         Allows a PUG Mod to unregister a discord user from the Minecraft account they registered to.
         Usage: unregister <user_mention>
@@ -199,7 +204,6 @@ class RegistrationCommands(Cog, name="User Registration"):
                                                       description="Value to set",
                                                       option_type=3, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
-    @has_role(MOD_ROLE)
     async def user(self, ctx, discord_tag: User = None, action_type="get", variable_name=None, value=None):
         """
         Allows a PUG Mod to edit information about a user.
@@ -209,6 +213,9 @@ class RegistrationCommands(Cog, name="User Registration"):
             user @Tom get                       returns user profile
             user @Tom set elo [elo]             sets user ELO
         """
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         user = self.bot.get_user(discord_tag.id)
         if action_type == "get":
             try:
@@ -280,13 +287,12 @@ class RegistrationCommands(Cog, name="User Registration"):
         else:
             await error_embed(ctx, "Invalid action argument. Use 'get' or 'set'")
 
-    @cog_slash(name="elo", description="Returns your or someone else's ELO",
-               options=[manage_commands.create_option(name="discord_tag",
+    @cog_slash(name="profile", options=[manage_commands.create_option(name="discord_tag",
                                                       description="The user's discord @",
                                                       option_type=6, required=False)], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def elo(self, ctx, user: User = None):
+    async def profile(self, ctx, user: User = None):
         """
-        Allows you to check your (or someone else's) ELO
+        Displays a user's profile
         """
         if user:
             player_id = user.id
@@ -297,7 +303,14 @@ class RegistrationCommands(Cog, name="User Registration"):
         except PlayerDoesNotExistError:
             await error_embed(ctx, "Player does not exist")
             return
-        await response_embed(ctx, f"{player.minecraft_username}'s ELO", str(player.get_elo()))
+
+        stats = f"**ELO:** {getattr(player, 'elo')}\n**Discord:** <@{getattr(player, 'discord_id')}>"
+        #for key in player.__dict__.keys():
+        #    stats += f"**{key}:** {getattr(player, key)}\n"
+        
+        embed = Embed(description=stats, color=Colour.dark_purple())
+        embed.set_author(name=f"User profile - {getattr(player, 'minecraft_username')}", icon_url=f"https://cravatar.eu/helmavatar/{getattr(player, 'minecraft_username')}/128.png")
+        await ctx.send(embed=embed)
 
     @tasks.loop(hours=IGN_TRACKER_INTERVAL_HOURS)
     async def update_usernames(self):

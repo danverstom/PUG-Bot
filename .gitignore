@@ -3,3 +3,7 @@ __pycache__
 utils/token.json
 database/database.db
 IDs/
+utils/command_names.json
+utils/team_threads.json
+utils/pug_settings.json
+utils/service_account.json

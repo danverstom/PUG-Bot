@@ -28,6 +28,12 @@ class Signup:
         self.is_muted = bool(data[3])
         self.can_sub = bool(data[4])
 
+    def __eq__(self, other):
+        if isinstance(other, Signup):
+            return self.user_id == other.user_id and self.event_id == other.event_id
+        else:
+            return False
+
     def delete(self):
         return delete_signup(self.user_id, self.event_id)
 
@@ -36,6 +42,14 @@ class Signup:
         self.can_play = bool(data[2])
         self.is_muted = bool(data[3])
         self.can_sub = bool(data[4])
+
+    def update_db(self):
+        if check_signups_user_event(int(self.user_id), self.event_id):
+            update_signups_can_play(int(self.can_play), self.user_id, self.event_id)
+            update_signups_is_muted(int(self.is_muted), self.user_id, self.event_id)
+            update_signups_can_sub(int(self.can_sub), self.user_id, self.event_id)
+        else:
+            add_signup(self.user_id, self.event_id, int(self.can_play), int(self.is_muted), int(self.can_sub))
 
     def set_can_play(self, can_play):
         self.can_play = can_play
@@ -53,7 +67,11 @@ class Signup:
         return True
 
     def is_unsigned(self):
-        return not self.can_play and not self.is_muted and not self.can_sub
+        return not self.can_play and not self.can_sub
+
+    @classmethod
+    def create_signup(cls, user_id, event_id, can_play=False, is_muted=False, can_sub=False):
+        return cls((user_id, event_id, can_play, is_muted, can_sub))
 
     @classmethod
     def add_signup(cls, user_id, event_id, can_play=False, is_muted=False, can_sub=False):

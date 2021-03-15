@@ -4,6 +4,13 @@ from asyncio import TimeoutError
 from json import load, dump
 
 
+def has_permissions(ctx, required_role):
+    if required_role.lower() in [role.name.lower() for role in ctx.author.roles]:
+        return True
+    else:
+        return False
+
+
 def save_json_file(file, content):
     with open(file, "w") as file:
         dump(content, file)
@@ -34,7 +41,7 @@ async def response_embed(ctx, title, description):
 
 
 async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "Empty List", sep: str = "\n",
-                            elements_per_page: int = 10, thumbnails=None):
+                            elements_per_page: int = 10, thumbnails=None, can_be_reversed=False):
     if not info:
         await ctx.send(embed=Embed(title=title, description=if_empty, colour=Colour.dark_red()))
         return
@@ -63,11 +70,13 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
 
     await message.add_reaction("◀")
     await message.add_reaction("▶")
+    if can_be_reversed:
+        await message.add_reaction("🔃")
     await message.add_reaction("✅")
     await message.add_reaction("❌")
 
     def check(r, u):
-        return r.message.id == message.id and u == ctx.author and str(r.emoji) in ["◀", "▶", "✅", "❌"]
+        return r.message.id == message.id and u == ctx.author and str(r.emoji) in ["◀", "▶", "✅", "❌", "🔃"]
 
     while True:
         try:
@@ -107,6 +116,31 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                 embed.set_footer(text=f"Page {current_page}/{num_pages} (Saved)")
                 await message.edit(embed=embed)
                 break
+            elif str(reaction.emoji) == "🔃" and can_be_reversed:
+                info.reverse()
+                contents = []
+                num_pages = ceil(len(info) / elements_per_page)
+                page = ""
+                for index, value in enumerate(info):
+                    page = page + str(value + sep)
+                    if not (index + 1) % elements_per_page:
+                        contents.append(page)
+                        page = ""
+                contents.append(page)
+
+                current_page = 1
+                embed = Embed(title=title, description=contents[current_page - 1],
+                              colour=Colour.dark_purple())
+
+                if thumbnails:
+                    if len(thumbnails) == 1:
+                        embed.set_thumbnail(url=thumbnails[0])
+                    else:
+                        embed.set_thumbnail(url=thumbnails[current_page - 1])
+
+                embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
+                await message.edit(embed=embed)
+                await message.remove_reaction(reaction, user)
             elif str(reaction.emoji) == "❌":
                 raise TimeoutError
 
