@@ -245,9 +245,7 @@ class EventCommands(Cog, name="Event Commands"):
         except ValueError:
             await error_embed(ctx, "Please enter an integer")
             return
-        signups = self.signups.setdefault(event_id)
-        if not signups:
-            signups = Signup.fetch_signups_list(event_id)
+        signups = Signup.fetch_signups_list(event_id)
         if signups:
             tag_str = ""
             for signup in signups:
