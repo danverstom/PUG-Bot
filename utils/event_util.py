@@ -5,8 +5,39 @@ from re import fullmatch
 from discord import Embed, Colour
 from pytz import timezone
 
+from database.Player import Player, PlayerDoesNotExistError
 from database.Signup import Signup
 from utils.utils import error_embed
+from random import shuffle
+
+
+def priority_rng_signups(signups_list, size):
+    """
+    Randomly generates a list of signups. To be used for PUG events.
+
+    If a player is not registered / does not exist, they will not be included in the random list.
+    Handle this accordingly - a list of unregistered players is returned by this function.
+
+    :param signups_list: A list of Signup objects
+    :param size: The amount of players you would like to include in the output list
+    :return: (selected_players, benched_players, unregistered_signups)
+    """
+    players = []
+    unregistered_signups = []
+    for signup in signups_list:
+        try:
+            players.append(Player.from_discord_id(signup.user_id))
+        except PlayerDoesNotExistError:
+            unregistered_signups.append(signup)
+    shuffle(players)
+    players = sorted(players, key=lambda item: item.priority, reverse=True)
+    selected_players = players[:size]
+    for player in selected_players:
+        player.set_priority(0)
+    benched_players = players[size:]
+    for player in benched_players:
+        player.change_priority(1)
+    return selected_players, benched_players, unregistered_signups
 
 
 async def check_if_cancel(ctx, response):

@@ -3,15 +3,20 @@ import re
 from discord.channel import TextChannel
 from discord.ext import tasks
 from discord.ext.commands import Cog
+from discord.utils import get
 from discord_slash.cog_ext import cog_slash
 from discord_slash.utils import manage_commands as mc
 
-from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS
-from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups
+from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
+    BOT_OUTPUT_CHANNEL
+from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
+    priority_rng_signups
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
 from database.Event import Event
 from database.Signup import Signup
+from database.Player import Player, PlayerDoesNotExistError
 from asyncio import TimeoutError
+from random import shuffle
 
 from datetime import datetime, timedelta
 from pytz import timezone
@@ -26,6 +31,7 @@ class EventCommands(Cog, name="Event Commands"):
         self.bot = bot
         self.events = Event.fetch_active_events_dict()
         self.signups = dict()
+        self.bot_channel = None
         for event_id in self.events.keys():
             self.signups[event_id] = Signup.fetch_signups_list(event_id)
 
@@ -34,6 +40,7 @@ class EventCommands(Cog, name="Event Commands"):
 
     @Cog.listener()
     async def on_ready(self):
+        self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
         self.check_signups.start()
 
     @cog_slash(name="event", description="Creates an event.",
@@ -239,10 +246,11 @@ class EventCommands(Cog, name="Event Commands"):
         await response_embed(ctx, "No roles removed", "Check your usage")
 
     @cog_slash(options=[mc.create_option(name="event_id",
-                                         description="Gets a list of discord tags",
+                                         description="The message ID of the event announcement",
                                          option_type=3, required=True)],
                guild_ids=SLASH_COMMANDS_GUILDS)
     async def getsignups(self, ctx, event_id):
+        """Gets a list of discord tags who are signed up to an event"""
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
@@ -263,6 +271,46 @@ class EventCommands(Cog, name="Event Commands"):
         else:
             await error_embed(ctx, "Could not find the event you are searching for. Use the message ID of the event "
                                    "announcement.")
+
+    @cog_slash(options=[mc.create_option(name="event_id",
+                                         description="The message ID of the event announcement",
+                                         option_type=3, required=True),
+                        mc.create_option(name="size",
+                                         description="The maximum players to include in the RNG list. Default 22",
+                                         option_type=4, required=False)], guild_ids=SLASH_COMMANDS_GUILDS)
+    async def rngsignups(self, ctx, event_id, size=22):
+        """Randomises signups for an event"""
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        try:
+            event_id = int(event_id)
+        except ValueError:
+            await error_embed(ctx, "Please enter an integer for the event ID. This is the message ID of the event "
+                                   "announcement.")
+            return
+        signups = self.signups.setdefault(event_id)
+        if not signups:
+            signups = Signup.fetch_signups_list(event_id)
+        shuffle(signups)
+        selected_players = signups[:size]
+        benched_players = signups[size:]
+        results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
+        results_embed.description = f"Here are the results - these do not take into account priority, as priority is " \
+                                    f"reserved for PUGs and requires all players to be registered."
+        results_embed.add_field(name=f"Playing ({len(selected_players)})", value='\n'.join(
+            [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
+             selected_players]))
+        results_embed.add_field(name=f"Not Playing ({len(benched_players)})", value='\n'.join(
+            [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
+             benched_players]))
+        await ctx.send(f"{get(ctx.guild.roles, name=SIGNED_ROLE_NAME).mention} RNG results:", embed=results_embed)
+        tag_str = ""
+        for signup in selected_players:
+            user = self.bot.get_user(signup.user_id)
+            tag_str += f"@{user} \n"
+        await self.bot_channel.send(f"{ctx.author.mention} here is a list of tags to make the setroles process easy."
+                                    f"\n```{tag_str}```")
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
     async def setroles(self, ctx):
