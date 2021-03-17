@@ -10,7 +10,7 @@ from discord_slash.utils import manage_commands as mc
 from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
     BOT_OUTPUT_CHANNEL
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
-    priority_rng_signups
+    priority_rng_signups, get_embed_time_string
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
 from database.Event import Event
 from database.Signup import Signup
@@ -140,13 +140,36 @@ class EventCommands(Cog, name="Event Commands"):
 
     @tasks.loop(seconds=SIGNUPS_TRACKER_INTERVAL_SECONDS)
     async def check_signups(self):
-        for event in self.events.values():
+        for event in list(self.events.values()):
+            event.update()
+            # print(f"Event: \n{event.title} Active: {event.is_active}\nTime: {event.time_est}\nDeadline: {event.signup_deadline}")
             if datetime.now(timezone('EST')) >= datetime.fromisoformat(event.time_est) + timedelta(days=1):
                 event.set_is_active(False)
+                await success_embed(self.bot.get_channel(event.signup_channel),
+                                    f"Set event {event.event_id} / {event.title} to **inactive**")
+                message = await self.bot.get_channel(event.announcement_channel).fetch_message(event.event_id)
+                embed = message.embeds[0]
+                embed.description = "This event is no longer active."
+                await message.edit(embed=embed)
+                await message.clear_reactions()
             elif not event.is_signups_active:
                 continue
             elif datetime.now(timezone('EST')) >= datetime.fromisoformat(event.signup_deadline):
                 event.set_is_signup_active(False)
+                signups = self.signups.setdefault(event.event_id)
+                if not signups:
+                    signups = Signup.fetch_signups_list(event.event_id)
+                if signups:
+                    tag_str = ""
+                    for signup in signups:
+                        user = self.bot.get_user(signup.user_id)
+                        tag_str += f"@{user} \n"
+                    await success_embed(self.bot.get_channel(event.signup_channel), f"Signups on signup deadline:"
+                                                                                    f"\n```{tag_str}```\n"
+                                                                                    f"{event.title}")
+                else:
+                    await error_embed(self.bot.get_channel(event.signup_channel), "No signups on signup deadline :(\n"
+                                                                                  f"{event.title}")
                 continue
 
             can_play_users = []
@@ -430,3 +453,63 @@ class EventCommands(Cog, name="Event Commands"):
                 else:
                     await error_embed(ctx, "You did not mention any members")
             await info_message.delete()
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS,
+               options=[mc.create_option(name="event_id",
+                                         description="The message ID of the event announcement",
+                                         option_type=3, required=True),
+                        mc.create_option(name="minutes",
+                                         description="The amount of minutes to postpone by",
+                                         option_type=4, required=True),
+                        mc.create_option(name="hours",
+                                         description="The amount of hours to postpone by",
+                                         option_type=4, required=False),
+                        mc.create_option(name="days",
+                                         description="The amount of days to postpone by",
+                                         option_type=4, required=False)
+                        ])
+    async def postpone(self, ctx, event_id, minutes, hours=0, days=0):
+        """Postpones an event"""
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        try:
+            event_id = int(event_id)
+        except ValueError:
+            await error_embed(ctx, "Please enter an integer for the event ID. This is the message ID of the event "
+                                   "announcement.")
+            return
+        event = Event.from_event_id(event_id)
+        if not event.get_is_active():
+            return error_embed(ctx, "This event is not active")
+        postpone_amount = timedelta(minutes=minutes, hours=hours, days=days)
+        event_time = datetime.fromisoformat(event.get_event_time_est())
+        signup_deadline = datetime.fromisoformat(event.get_signup_deadline())
+        new_event_time = event_time + postpone_amount
+        new_signup_deadline = signup_deadline + postpone_amount
+        now = datetime.now(timezone('EST'))
+        if datetime.now(timezone('EST')) >= new_event_time + timedelta(minutes=5):
+            await error_embed(ctx, "You must postpone the event to a time at least 5 minutes away from now")
+            return
+        if new_signup_deadline < now + timedelta(minutes=1):
+            await response_embed(ctx, "Updating Signup Deadline", "Due to the late postpone, the signup deadline will "
+                                                                  "now equal the event time.")
+            new_signup_deadline = new_event_time
+        announcement_channel = self.bot.get_channel(event.announcement_channel)
+        announcement_message = await announcement_channel.fetch_message(event.event_id)
+        event.set_event_time_est(datetime.isoformat(new_event_time))
+        event.set_signup_deadline(datetime.isoformat(new_signup_deadline))
+        event.set_is_active(True)
+        event.set_is_signup_active(True)
+        event.update()
+        embed = announcement_message.embeds[0]
+        embed.description = f"**Time:**\n{get_embed_time_string(new_event_time)}\n\n**Signup Deadline:**" \
+                            f"\n{get_embed_time_string(new_signup_deadline)}\n\n{event.description}\n\nReact with ✅ to play" \
+                            f"\nReact with 🔇 if you cannot speak\nReact with 🛗 if you are able to sub"
+        embed.title += " (POSTPONED)" if "(POSTPONED)" not in embed.title else ""
+        signup_role = ctx.guild.get_role(event.signup_role)
+        await announcement_message.edit(embed=embed)
+        await announcement_channel.send(f"{signup_role.mention} **{event.title}** has been **postponed** to"
+                                        f" **{get_embed_time_string(new_event_time)} (EST)**")
+        await success_embed(ctx, f"**{event.title}** has been **postponed** to **{get_embed_time_string(new_event_time)}"
+                                 f" (EST)**")
