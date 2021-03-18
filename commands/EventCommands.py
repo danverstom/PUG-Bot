@@ -516,3 +516,36 @@ class EventCommands(Cog, name="Event Commands"):
                                         f" **{get_embed_time_string(new_event_time)} (EST)**")
         await success_embed(ctx, f"**{event.title}** has been **postponed** to **{get_embed_time_string(new_event_time)}"
                                  f" (EST)**")
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def removeevents(self, ctx):
+        """Removes all events that are currently inactive"""
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        events = Event.fetch_events_list()
+        info_embed = Embed(title="Deleted Events", description="Here is a list of **deleted events** and their details",
+                           colour=Colour.dark_purple())
+        for event in events:
+            if not event.get_is_active():
+                info_embed.description += f"\n**{event.title}** `{event.time_est}`\n> `{event.event_id}`"
+                event.delete()
+        info_embed.description += "\n\n**Currently active events (/currentevents):**"
+        for event in Event.fetch_active_events_list():
+            info_embed.description += f"\n**{event.title}** `{event.time_est}`\n> `{event.event_id}`"
+        await ctx.send(embed=info_embed)
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def currentevents(self, ctx):
+        """Gets a list of all active events"""
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        info_embed = Embed(title="Current Events", description="Here is a list of **events** and their details",
+                           colour=Colour.dark_purple())
+        for event in Event.fetch_events_list():
+            announcement_url = f"https://discord.com/channels/{event.guild_id}/{event.announcement_channel}/" \
+                               f"{event.event_id}"
+            info_embed.description += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
+                                      f"> Active: **{str(event.is_active) + (' 🟢' if event.is_active else ' 🔴')}**"
+        await ctx.send(embed=info_embed)
