@@ -5,8 +5,69 @@ from re import fullmatch
 from discord import Embed, Colour
 from pytz import timezone
 
+from database.Player import Player, PlayerDoesNotExistError
 from database.Signup import Signup
 from utils.utils import error_embed
+from random import shuffle
+
+
+def get_embed_time_string(time):
+    # Get string of event time
+    if time.hour >= 13:
+        hour = time.hour - 12
+        time_suffix = "pm"
+    elif time.hour == 12:
+        hour = time.hour
+        time_suffix = "pm"
+    elif time.hour > 0:
+        hour = time.hour
+        time_suffix = "am"
+    else:
+        hour = time.hour + 12
+        time_suffix = "am"
+    if time.minute == 0:
+        minute = ""
+    elif time.minute < 10:
+        minute = f":0{time.minute}"
+    else:
+        minute = f":{time.minute}"
+    if time.date() == time.date():
+        date_string = ""
+    elif time.year == time.year:
+        date_string = f" - {month_name[time.month]} {time.day}"
+    else:
+        date_string = f" - {month_name[time.month]} {time.day}, {time.year}"
+    event_string = f"{hour}{minute}{time_suffix}{date_string}"
+    return event_string
+
+
+def priority_rng_signups(signups_list, size):
+    """
+    Randomly generates a list of signups. To be used for PUG events.
+
+    If a player is not registered / does not exist, they will not be included in the random list.
+    Handle this accordingly - a list of unregistered players is returned by this function.
+
+    :param signups_list: A list of Signup objects
+    :param size: The amount of players you would like to include in the output list
+    :return: (selected_players, benched_players, unregistered_signups)
+    """
+    players = []
+    unregistered_signups = []
+    for signup in signups_list:
+        try:
+            players.append(Player.from_discord_id(signup.user_id))
+        except PlayerDoesNotExistError:
+            unregistered_signups.append(signup)
+    shuffle(players)
+    players = sorted(players, key=lambda item: item.priority, reverse=True)
+    selected_players = players[:size]
+    for player in selected_players:
+        player.set_priority(0)
+    benched_players = players[size:]
+    for player in benched_players:
+        player.change_priority(1)
+    return selected_players, benched_players, unregistered_signups
 
 
 async def check_if_cancel(ctx, response):
@@ -149,8 +210,7 @@ async def get_event_time(ctx, event_time, event_date, deadline):
     return [(event_datetime, event_string), (signup_deadline, deadline_string)]
 
 
-def save_signups(signups, event_id):
-    db_signups = Signup.fetch_signups_list(event_id)
+def save_signups(db_signups, signups):
     [signup.update_db() for signup in signups]
     [signup.delete() for signup in db_signups if signup not in signups]
 
@@ -186,7 +246,8 @@ async def announce_event(title, description, announcement_channel, signup_list_c
     if mention_role.lower() == "none":
         mention_role = ""
     announcement_message = await announcement_channel.send(content=f"{mention_role}", embed=embed)
-
+    embed.set_footer(text=f"Event ID: {announcement_message.id}")
+    await announcement_message.edit(embed=embed)
     description = f"{title}\n\n**Time:**\n{event_time}\n\n**Signup Deadline:**\n{signup_deadline}\n\n{description}"
     embed = Embed(title="Signups", description=description, color=Colour.light_grey())
     embed.add_field(name="✅ Players: 0", value="No one :(", inline=False)
