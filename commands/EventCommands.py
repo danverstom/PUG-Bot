@@ -3,15 +3,20 @@ import re
 from discord.channel import TextChannel
 from discord.ext import tasks
 from discord.ext.commands import Cog
+from discord.utils import get
 from discord_slash.cog_ext import cog_slash
 from discord_slash.utils import manage_commands as mc
 
-from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS
-from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups
+from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
+    BOT_OUTPUT_CHANNEL
+from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
+    priority_rng_signups, get_embed_time_string
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
 from database.Event import Event
 from database.Signup import Signup
+from database.Player import Player, PlayerDoesNotExistError
 from asyncio import TimeoutError
+from random import shuffle
 
 from datetime import datetime, timedelta
 from pytz import timezone
@@ -26,6 +31,7 @@ class EventCommands(Cog, name="Event Commands"):
         self.bot = bot
         self.events = Event.fetch_active_events_dict()
         self.signups = dict()
+        self.bot_channel = None
         for event_id in self.events.keys():
             self.signups[event_id] = Signup.fetch_signups_list(event_id)
 
@@ -34,6 +40,7 @@ class EventCommands(Cog, name="Event Commands"):
 
     @Cog.listener()
     async def on_ready(self):
+        self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
         self.check_signups.start()
 
     @cog_slash(name="event", description="Creates an event.",
@@ -126,18 +133,43 @@ class EventCommands(Cog, name="Event Commands"):
 
         new_event = Event.add_event(event_message_ids[0], title, description, event_time_package[0][0].isoformat(),
                                     datetime.now(timezone('EST')).isoformat(), ctx.author.id, ctx.guild.id,
-                                    announcement_channel.id,
-                                    signup_channel.id, event_message_ids[1], event_time_package[1][0].isoformat())
+                                    announcement_channel.id, signup_channel.id, event_message_ids[1], signup_role.id,
+                                    event_time_package[1][0].isoformat())
         self.events[event_message_ids[0]] = new_event
         self.signups[event_message_ids[0]] = []
 
     @tasks.loop(seconds=SIGNUPS_TRACKER_INTERVAL_SECONDS)
     async def check_signups(self):
-        for event in self.events.values():
+        for event in list(self.events.values()):
+            event.update()
+            # print(f"Event: \n{event.title} Active: {event.is_active}\nTime: {event.time_est}\nDeadline: {event.signup_deadline}")
             if datetime.now(timezone('EST')) >= datetime.fromisoformat(event.time_est) + timedelta(days=1):
                 event.set_is_active(False)
+                await success_embed(self.bot.get_channel(event.signup_channel),
+                                    f"Set event {event.event_id} / {event.title} to **inactive**")
+                message = await self.bot.get_channel(event.announcement_channel).fetch_message(event.event_id)
+                embed = message.embeds[0]
+                embed.description = "This event is no longer active."
+                await message.edit(embed=embed)
+                await message.clear_reactions()
+            elif not event.is_signups_active:
+                continue
             elif datetime.now(timezone('EST')) >= datetime.fromisoformat(event.signup_deadline):
-                save_signups(self.signups, event.event_id)
+                event.set_is_signup_active(False)
+                signups = self.signups.setdefault(event.event_id)
+                if not signups:
+                    signups = Signup.fetch_signups_list(event.event_id)
+                if signups:
+                    tag_str = ""
+                    for signup in signups:
+                        user = self.bot.get_user(signup.user_id)
+                        tag_str += f"@{user} \n"
+                    await success_embed(self.bot.get_channel(event.signup_channel), f"Signups on signup deadline:"
+                                                                                    f"\n```{tag_str}```\n"
+                                                                                    f"{event.title}")
+                else:
+                    await error_embed(self.bot.get_channel(event.signup_channel), "No signups on signup deadline :(\n"
+                                                                                  f"{event.title}")
                 continue
 
             can_play_users = []
@@ -163,9 +195,13 @@ class EventCommands(Cog, name="Event Commands"):
 
             [signups, change] = reaction_changes(signups, can_play_users, is_muted_users, can_sub_users, event.event_id)
             if change:
+                save_signups(self.signups[event.event_id], signups)
                 self.signups[event.event_id] = signups
                 can_play = [user for user in signups if user.can_play]
                 can_sub = [user for user in signups if user.can_sub]
+                guild = self.bot.get_guild(event.guild_id)
+                signup_role = guild.get_role(event.signup_role)
+                [await guild.get_member(signup.user_id).add_roles(signup_role) for signup in can_play]
                 embed = signup_message.embeds[0]
                 if can_play:
                     value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
@@ -233,10 +269,11 @@ class EventCommands(Cog, name="Event Commands"):
         await response_embed(ctx, "No roles removed", "Check your usage")
 
     @cog_slash(options=[mc.create_option(name="event_id",
-                                         description="Gets a list of discord tags",
+                                         description="The message ID of the event announcement",
                                          option_type=3, required=True)],
                guild_ids=SLASH_COMMANDS_GUILDS)
     async def getsignups(self, ctx, event_id):
+        """Gets a list of discord tags who are signed up to an event"""
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
@@ -257,6 +294,49 @@ class EventCommands(Cog, name="Event Commands"):
         else:
             await error_embed(ctx, "Could not find the event you are searching for. Use the message ID of the event "
                                    "announcement.")
+
+    @cog_slash(options=[mc.create_option(name="event_id",
+                                         description="The message ID of the event announcement",
+                                         option_type=3, required=True),
+                        mc.create_option(name="size",
+                                         description="The maximum players to include in the RNG list. Default 22",
+                                         option_type=4, required=False)], guild_ids=SLASH_COMMANDS_GUILDS)
+    async def rngsignups(self, ctx, event_id, size=22):
+        """Randomises signups for an event"""
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        try:
+            event_id = int(event_id)
+        except ValueError:
+            await error_embed(ctx, "Please enter an integer for the event ID. This is the message ID of the event "
+                                   "announcement.")
+            return
+        signups = self.signups.setdefault(event_id)
+        if not signups:
+            signups = Signup.fetch_signups_list(event_id)
+        shuffle(signups)
+        selected_players = signups[:size]
+        benched_players = signups[size:]
+        results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
+        results_embed.description = f"Here are the results - these do not take into account priority, as priority is " \
+                                    f"reserved for PUGs and requires all players to be registered."
+        if selected_players:
+            results_embed.add_field(name=f"Playing ({len(selected_players)})", value='\n'.join(
+                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
+                 selected_players]))
+        if benched_players:
+            results_embed.add_field(name=f"Not Playing ({len(benched_players)})", value='\n'.join(
+                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
+                 benched_players]))
+        await ctx.send(content=f"{get(ctx.guild.roles, name=SIGNED_ROLE_NAME).mention} RNG results:",
+                       embed=results_embed)
+        tag_str = ""
+        for signup in selected_players:
+            user = self.bot.get_user(signup.user_id)
+            tag_str += f"@{user} \n"
+        await self.bot_channel.send(f"{ctx.author.mention} here is a list of tags to make the setroles process easy."
+                                    f"\n```{tag_str}```")
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
     async def setroles(self, ctx):
@@ -376,3 +456,96 @@ class EventCommands(Cog, name="Event Commands"):
                 else:
                     await error_embed(ctx, "You did not mention any members")
             await info_message.delete()
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS,
+               options=[mc.create_option(name="event_id",
+                                         description="The message ID of the event announcement",
+                                         option_type=3, required=True),
+                        mc.create_option(name="minutes",
+                                         description="The amount of minutes to postpone by",
+                                         option_type=4, required=True),
+                        mc.create_option(name="hours",
+                                         description="The amount of hours to postpone by",
+                                         option_type=4, required=False),
+                        mc.create_option(name="days",
+                                         description="The amount of days to postpone by",
+                                         option_type=4, required=False)
+                        ])
+    async def postpone(self, ctx, event_id, minutes, hours=0, days=0):
+        """Postpones an event"""
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        try:
+            event_id = int(event_id)
+        except ValueError:
+            await error_embed(ctx, "Please enter an integer for the event ID. This is the message ID of the event "
+                                   "announcement.")
+            return
+        event = Event.from_event_id(event_id)
+        if not event.get_is_active():
+            return error_embed(ctx, "This event is not active")
+        postpone_amount = timedelta(minutes=minutes, hours=hours, days=days)
+        event_time = datetime.fromisoformat(event.get_event_time_est())
+        signup_deadline = datetime.fromisoformat(event.get_signup_deadline())
+        new_event_time = event_time + postpone_amount
+        new_signup_deadline = signup_deadline + postpone_amount
+        now = datetime.now(timezone('EST'))
+        if datetime.now(timezone('EST')) >= new_event_time + timedelta(minutes=5):
+            await error_embed(ctx, "You must postpone the event to a time at least 5 minutes away from now")
+            return
+        if new_signup_deadline < now + timedelta(minutes=1):
+            await response_embed(ctx, "Updating Signup Deadline", "Due to the late postpone, the signup deadline will "
+                                                                  "now equal the event time.")
+            new_signup_deadline = new_event_time
+        announcement_channel = self.bot.get_channel(event.announcement_channel)
+        announcement_message = await announcement_channel.fetch_message(event.event_id)
+        event.set_event_time_est(datetime.isoformat(new_event_time))
+        event.set_signup_deadline(datetime.isoformat(new_signup_deadline))
+        event.set_is_active(True)
+        event.set_is_signup_active(True)
+        event.update()
+        embed = announcement_message.embeds[0]
+        embed.description = f"**Time:**\n{get_embed_time_string(new_event_time)}\n\n**Signup Deadline:**" \
+                            f"\n{get_embed_time_string(new_signup_deadline)}\n\n{event.description}\n\nReact with ✅ to play" \
+                            f"\nReact with 🔇 if you cannot speak\nReact with 🛗 if you are able to sub"
+        embed.title += " (POSTPONED)" if "(POSTPONED)" not in embed.title else ""
+        signup_role = ctx.guild.get_role(event.signup_role)
+        await announcement_message.edit(embed=embed)
+        await announcement_channel.send(f"{signup_role.mention} **{event.title}** has been **postponed** to"
+                                        f" **{get_embed_time_string(new_event_time)} (EST)**")
+        await success_embed(ctx, f"**{event.title}** has been **postponed** to **{get_embed_time_string(new_event_time)}"
+                                 f" (EST)**")
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def removeevents(self, ctx):
+        """Removes all events that are currently inactive"""
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        events = Event.fetch_events_list()
+        info_embed = Embed(title="Deleted Events", description="Here is a list of **deleted events** and their details",
+                           colour=Colour.dark_purple())
+        for event in events:
+            if not event.get_is_active():
+                info_embed.description += f"\n**{event.title}** `{event.time_est}`\n> `{event.event_id}`"
+                event.delete()
+        info_embed.description += "\n\n**Currently active events (/currentevents):**"
+        for event in Event.fetch_active_events_list():
+            info_embed.description += f"\n**{event.title}** `{event.time_est}`\n> `{event.event_id}`"
+        await ctx.send(embed=info_embed)
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def currentevents(self, ctx):
+        """Gets a list of all active events"""
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        info_embed = Embed(title="Current Events", description="Here is a list of **events** and their details",
+                           colour=Colour.dark_purple())
+        for event in Event.fetch_events_list():
+            announcement_url = f"https://discord.com/channels/{event.guild_id}/{event.announcement_channel}/" \
+                               f"{event.event_id}"
+            info_embed.description += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
+                                      f"> Active: **{str(event.is_active) + (' 🟢' if event.is_active else ' 🔴')}**"
+        await ctx.send(embed=info_embed)

@@ -6,12 +6,6 @@ from utils.utils import get_json_data
 from discord_slash.cog_ext import cog_slash, manage_commands
 from utils.config import SLASH_COMMANDS_GUILDS
 
-command_names = []
-try:
-    command_names = list(get_json_data("utils/command_names.json"))
-except FileNotFoundError:
-    print("Command names file does not exist yet; restart the bot for the help command to provide choices")
-
 
 class HelpCommand(Cog, name="Help Command"):
     """
@@ -24,7 +18,7 @@ class HelpCommand(Cog, name="Help Command"):
 
     @cog_slash(name="help", description="Help command", guild_ids=SLASH_COMMANDS_GUILDS, options=[
         manage_commands.create_option(name="command", description="Help regarding a specific command", option_type=3,
-                                      choices=command_names, required=False)
+                                      required=False)
     ])
     async def help(self, ctx, command_name=None):
         print("Help command used")
