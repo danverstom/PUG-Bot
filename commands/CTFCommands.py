@@ -9,6 +9,7 @@ from requests import get
 from discord.ext import tasks
 from bs4 import BeautifulSoup
 from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL
+from os import path
 
 # ss
 import os
@@ -67,8 +68,8 @@ class CTFCommands(Cog, name="CTF Commands"):
 
     @Cog.listener()
     async def on_ready(self):
-        self.threads_update.start()
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
+        self.threads_update.start()
 
     @cog_slash(name="rngmap", description="Picks a random map out of a preset map pool",
                guild_ids=SLASH_COMMANDS_GUILDS, options=[])
@@ -115,18 +116,18 @@ class CTFCommands(Cog, name="CTF Commands"):
 
         if search_2:
             list_maps_2 = [(map_name, maps[map_name]) for map_name in list(maps.keys()) if
-                         search_2.lower() in map_name.lower()]
+                           search_2.lower() in map_name.lower()]
             list_maps += list_maps_2
 
         if search_3:
             list_maps_3 = [(map_name, maps[map_name]) for map_name in list(maps.keys()) if
-                         search_3.lower() in map_name.lower()]
+                           search_3.lower() in map_name.lower()]
             list_maps += list_maps_3
 
         for (map_name, map_id) in list_maps:
             map_str.append(f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})")
 
-        if len(list_maps) == 3: #Shows map ids only if there are 3 results
+        if len(list_maps) == 3:  # Shows map ids only if there are 3 results
             map_str.append(f"\n*For match server:*\n`{' '.join(str(item[1]) for item in list_maps)}`")
 
         await create_list_pages(self.bot, ctx, "Maps Found:", map_str, "No Maps were found")
@@ -182,9 +183,35 @@ class CTFCommands(Cog, name="CTF Commands"):
         else:
             await ctx.send(embed=embed)
 
+    async def rosters_comparison(self, old_threads, new_threads): #Compares old and new forum threads (team sizes)
+        changes = ""
+        for thread in old_threads:
+            if thread not in new_threads:
+                changes += f"---{thread}\n\n"
+
+        for thread in new_threads:
+            if thread in old_threads:
+                if new_threads[thread]['members'] != old_threads[thread]['members']:
+                    new_size = int(new_threads[thread]['members'].split("/")[0])
+                    old_size = int(old_threads[thread]['members'].split("/")[0])
+                    if new_size > old_size:
+                        changes += (
+                            f"🟢 **{thread}:** {old_threads[thread]['members']} -> {new_threads[thread]['members']} (**+{new_size - old_size}**)\n\n")
+                    else:
+                        changes += (
+                            f"🔴 **{thread}:** {old_threads[thread]['members']} -> {new_threads[thread]['members']} (**{new_size - old_size}**)\n\n")
+            else:
+                changes += f"+++{thread}\n\n"
+        if changes:
+            embed = Embed(title="Roster Changes", description=changes, color=Colour.dark_purple())
+        else:
+            embed = Embed(title="Roster Changes", description="No recent roster moves",
+                          color=Colour.dark_purple())
+        message = await self.bot_channel.send(embed=embed)
+        return message
+
     @tasks.loop(hours=FORUM_THREADS_INTERVAL_HOURS)
     async def threads_update(self):
-        # await self.bot_channel.send("hi jus checking if it works bye") #TODO: Have an announcement when team sizes change (scuffed roster moves)
         url = get('https://www.brawl.com/forums/299/')
         page = BeautifulSoup(url.content, features="html.parser")
 
@@ -202,21 +229,25 @@ class CTFCommands(Cog, name="CTF Commands"):
                     author_avatar = f"https://www.brawl.com/{img_loc.get('src')}"
                 thread_link = f"https://www.brawl.com/{info.get('href')}"
                 team_title = split("((\[|\()?[0-9][0-9]/25(\]|\))?)", info.text, 1)
+
                 team_size = split("([0-9][0-9]/25)", info.text, 1)
-                try:  # this try/except could be optimized but it's only because team_title raises an error since oly does not have member count in title (will do some day)
-                    teams_threads[team_title[0].rstrip()] = {
-                        "link": thread_link,
-                        "members": team_size[1],
-                        "author": author.text,
-                        "image": author_avatar
-                    }
+                try:  # uhh haha not all teams have member size in title
+                    team_size = team_size[1]
                 except:
-                    teams_threads[team_title[0].rstrip()] = {
-                        "link": thread_link,
-                        "members": "NaN",
-                        "author": author.text,
-                        "image": author_avatar
-                    }
+                    team_size = "NaN"
+
+                teams_threads[team_title[0].rstrip()] = {
+                    "link": thread_link,
+                    "members": team_size,
+                    "author": author.text,
+                    "image": author_avatar
+                }
+
+        if path.exists('utils/team_threads.json'):
+            with open('utils/team_threads.json') as file:
+                old_threads = load(file)
+            await self.rosters_comparison(old_threads, teams_threads)
+
         with open('utils/team_threads.json', 'w') as file:
             dump(teams_threads, file, indent=4)
 
@@ -300,39 +331,43 @@ class CTFCommands(Cog, name="CTF Commands"):
 
         matches = []
 
+        for column in df.iloc[:, res[0]:].columns:  # [:, start :] removes the first column. [rows, column]
+            # remove time column
+            # if we wanted to make SS past, we would change this to be df.iloc[:, 1:res[0]]
+            aDay, aDate = df[column].iloc[1], df[column].iloc[0]  # get day and date
+            df1 = df.iloc[2:]  # remove date/day rows
+            day = df1[column]  # we iterate through all the days
 
-        for column in df.iloc[:, res[0] :].columns: #[:, start :] removes the first column. [rows, column]
-                                               #remove time column
-                                               # if we wanted to make SS past, we would change this to be df.iloc[:, 1:res[0]]
-            aDay, aDate = df[column].iloc[1], df[column].iloc[0] #get day and date
-            df1 = df.iloc[2:] #remove date/day rows
-            day = df1[column] #we iterate through all the days
+            day1 = df1[day.astype(bool)].iloc[:, [0,
+                                                  column]]  # Remove all cells which dont have a value in them, whilst also adding the time column to it in a new DF
+            day1 = day1.replace("^", None).ffill()  # Then replace all "^" with a cell that doesnt have a value
+            # So we can use fill forward, which changes 'Dunce ppm, ^ ^' to
+            # 'Dunce ppm, dunce ppm, dunce ppm'. Ez grouping
 
-            day1 = df1[day.astype(bool)].iloc[:, [0, column]] #Remove all cells which dont have a value in them, whilst also adding the time column to it in a new DF
-            day1 = day1.replace("^", None).ffill() # Then replace all "^" with a cell that doesnt have a value
-                                                   # So we can use fill forward, which changes 'Dunce ppm, ^ ^' to
-                                                   # 'Dunce ppm, dunce ppm, dunce ppm'. Ez grouping
-                                                   
-            first = day1.groupby([column]) # then get a DF from the changes we did ^
-            
-            for key, item in first: #Maybe theres a way to do this without iterating at all
-                                    # not smart enough to attempt it tho
-                                    
-                df2 = item.iloc[[0, -1]] #get the first and last items of the dataframe. This willgive the time it starts/ends
-                start_time = df2[0].iloc[0].split(" - ")[0] # get the first row (which gives us start time), get the time column and get time
-                end =df2[0].tail(1).index.item() # same process but for end
+            first = day1.groupby([column])  # then get a DF from the changes we did ^
 
-                if end == 49: #special case for 11:30pm. we get the next time box which is the alternate method
-                    end2 = df[0][2] #get the 12am timebox
+            for key, item in first:  # Maybe theres a way to do this without iterating at all
+                # not smart enough to attempt it tho
+
+                df2 = item.iloc[
+                    [0, -1]]  # get the first and last items of the dataframe. This willgive the time it starts/ends
+                start_time = df2[0].iloc[0].split(" - ")[
+                    0]  # get the first row (which gives us start time), get the time column and get time
+                end = df2[0].tail(1).index.item()  # same process but for end
+
+                if end == 49:  # special case for 11:30pm. we get the next time box which is the alternate method
+                    end2 = df[0][2]  # get the 12am timebox
                 else:
-                    end2 = df[0][end+1] #otherwise get the next one along
+                    end2 = df[0][end + 1]  # otherwise get the next one along
 
-                end2 = end2.split(" - ")[0] #Date
-                start = parser.parse(" ".join([aDay, aDate, start_time]), tzinfos={"EST": "UTC-4"}) #add the day, date, and start time to get one datetime
-                
-                end = parser.parse(" ".join([aDay, aDate, end2]), tzinfos={"EST": "UTC-4"}) #same for the end time
-                
-                matches.append(Match(key, start, end)) # i made my own class but i dont think its useful, maybe someone else can shorten the code here
+                end2 = end2.split(" - ")[0]  # Date
+                start = parser.parse(" ".join([aDay, aDate, start_time]),
+                                     tzinfos={"EST": "UTC-4"})  # add the day, date, and start time to get one datetime
+
+                end = parser.parse(" ".join([aDay, aDate, end2]), tzinfos={"EST": "UTC-4"})  # same for the end time
+
+                matches.append(Match(key, start,
+                                     end))  # i made my own class but i dont think its useful, maybe someone else can shorten the code here
 
         matches.sort()  # since we made a class of matches, we can now decide how they are compared. Check the Match class, we compare by datetimes
         if matches:
