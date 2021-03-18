@@ -321,13 +321,16 @@ class EventCommands(Cog, name="Event Commands"):
         results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
         results_embed.description = f"Here are the results - these do not take into account priority, as priority is " \
                                     f"reserved for PUGs and requires all players to be registered."
-        results_embed.add_field(name=f"Playing ({len(selected_players)})", value='\n'.join(
-            [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
-             selected_players]))
-        results_embed.add_field(name=f"Not Playing ({len(benched_players)})", value='\n'.join(
-            [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
-             benched_players]))
-        await ctx.send(f"{get(ctx.guild.roles, name=SIGNED_ROLE_NAME).mention} RNG results:", embed=results_embed)
+        if selected_players:
+            results_embed.add_field(name=f"Playing ({len(selected_players)})", value='\n'.join(
+                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
+                 selected_players]))
+        if benched_players:
+            results_embed.add_field(name=f"Not Playing ({len(benched_players)})", value='\n'.join(
+                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
+                 benched_players]))
+        await ctx.send(content=f"{get(ctx.guild.roles, name=SIGNED_ROLE_NAME).mention} RNG results:",
+                       embed=results_embed)
         tag_str = ""
         for signup in selected_players:
             user = self.bot.get_user(signup.user_id)
