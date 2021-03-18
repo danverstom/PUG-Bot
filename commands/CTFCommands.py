@@ -9,6 +9,7 @@ from requests import get
 from discord.ext import tasks
 from bs4 import BeautifulSoup
 from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL
+from os import path
 
 # ss
 import os
@@ -184,16 +185,23 @@ class CTFCommands(Cog, name="CTF Commands"):
 
     async def rosters_comparison(self, old_threads, new_threads): #Compares old and new forum threads (team sizes)
         changes = ""
+        for thread in old_threads:
+            if thread not in new_threads:
+                changes += f"---{thread}\n\n"
+
         for thread in new_threads:
-            if new_threads[thread]['members'] != old_threads[thread]['members']:
-                new_size = int(new_threads[thread]['members'].split("/")[0])
-                old_size = int(old_threads[thread]['members'].split("/")[0])
-                if new_size > old_size:
-                    changes += (
-                        f"🟢 **{thread}:** {old_threads[thread]['members']} -> {new_threads[thread]['members']} (**+{new_size - old_size}**)\n\n")
-                else:
-                    changes += (
-                        f"🔴 **{thread}:** {old_threads[thread]['members']} -> {new_threads[thread]['members']} (**{new_size - old_size}**)\n\n")
+            if thread in old_threads:
+                if new_threads[thread]['members'] != old_threads[thread]['members']:
+                    new_size = int(new_threads[thread]['members'].split("/")[0])
+                    old_size = int(old_threads[thread]['members'].split("/")[0])
+                    if new_size > old_size:
+                        changes += (
+                            f"🟢 **{thread}:** {old_threads[thread]['members']} -> {new_threads[thread]['members']} (**+{new_size - old_size}**)\n\n")
+                    else:
+                        changes += (
+                            f"🔴 **{thread}:** {old_threads[thread]['members']} -> {new_threads[thread]['members']} (**{new_size - old_size}**)\n\n")
+            else:
+                changes += f"+++{thread}\n\n"
         if changes:
             embed = Embed(title="Roster Changes", description=changes, color=Colour.dark_purple())
         else:
@@ -206,9 +214,6 @@ class CTFCommands(Cog, name="CTF Commands"):
     async def threads_update(self):
         url = get('https://www.brawl.com/forums/299/')
         page = BeautifulSoup(url.content, features="html.parser")
-
-        with open('utils/team_threads.json') as file: #TODO: Make it so it doesn't rely on pre-existent .json, add exceptions, figure out the case a thread is added/removed (dict key error)
-            old_threads = load(file)
 
         teams_threads = {}
 
@@ -237,8 +242,11 @@ class CTFCommands(Cog, name="CTF Commands"):
                     "author": author.text,
                     "image": author_avatar
                 }
-
-        await self.rosters_comparison(old_threads, teams_threads)
+                
+        if path.exists('utils/team_threads.json'):
+            with open('utils/team_threads.json') as file:
+                old_threads = load(file)
+            await self.rosters_comparison(old_threads, teams_threads)
 
         with open('utils/team_threads.json', 'w') as file:
             dump(teams_threads, file, indent=4)
