@@ -242,7 +242,7 @@ class CTFCommands(Cog, name="CTF Commands"):
                     "author": author.text,
                     "image": author_avatar
                 }
-                
+
         if path.exists('utils/team_threads.json'):
             with open('utils/team_threads.json') as file:
                 old_threads = load(file)
