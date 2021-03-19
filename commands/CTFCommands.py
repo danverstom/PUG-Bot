@@ -307,11 +307,11 @@ class CTFCommands(Cog, name="CTF Commands"):
                        required=False,
                        choices=[
                            manage_commands.create_choice(
-                               name="Match1",
+                               name="Match 1",
                                value="1"
                            ),
                            manage_commands.create_choice(
-                               name="Match2",
+                               name="Match 2",
                                value="2")]
                    )
                ]
@@ -326,55 +326,50 @@ class CTFCommands(Cog, name="CTF Commands"):
                 "Upcoming Matches (Server 2)").get("c10:w59")
 
         df = pd.DataFrame.from_records(values)
-        row = df.loc[0]  # get row with the dates
+        row = df.loc[0]  
         res = None
         if os.name == "nt":
             res = row[row == (date.today().strftime("%#m/%d/%Y"))].index
         else:
             res = row[row == (date.today().strftime(
-                "%-m/%d/%Y"))].index  # find index of todays date, and use that index to start from
+                "%-m/%d/%Y"))].index  
 
         matches = []
 
-        for column in df.iloc[:, res[0]:].columns:  # [:, start :] removes the first column. [rows, column]
-            # remove time column
-            # if we wanted to make SS past, we would change this to be df.iloc[:, 1:res[0]]
-            aDay, aDate = df[column].iloc[1], df[column].iloc[0]  # get day and date
-            df1 = df.iloc[2:]  # remove date/day rows
-            day = df1[column]  # we iterate through all the days
+        days = df.iloc[0:2, res[0]:22] #if we wanted to make SS past, it would be here
+        df2 = df.iloc[2:, res[0]:22] #and here
 
+        days.iloc[0, :] = days.iloc[0, :] + " " + days.iloc[1, :] #combine days and dates into one row
+        days = days.iloc[0] #change dataframe into just that one row with days/dates
 
-            day1 = df1[day.astype(bool)].iloc[:, [0,
-                                                  column]]  # Remove all cells which dont have a value in them, whilst also adding the time column to it in a new DF
-            day1 = day1.replace("^", None).ffill()  # Then replace all "^" with a cell that doesnt have a value
-            # So we can use fill forward, which changes 'Dunce ppm, ^ ^' to
-            # 'Dunce ppm, dunce ppm, dunce ppm'. Ez grouping
+        melted_df = pd.melt(df2) #"melt" all columns into one single column (one after another)
+        melted_df = melted_df.replace(to_replace=days.index, value=days) #replace numerical index of days to actual date strings
 
-            first = day1.groupby([column])  # then get a DF from the changes we did ^
+        time_column = pd.concat([df.iloc[2:, 0]]*len(df2.columns)).reset_index(drop=True) #repeat the times
 
-            for key, item in first:  # Maybe theres a way to do this without iterating at all
-                # not smart enough to attempt it tho
+        melted_df.iloc[:, 0] = melted_df.iloc[:, 0] + " " + time_column #then combine days+date with time, so our dataframe has columns of [Day, date, time], and [matchname] 
+        melted_df = melted_df.replace(["", None], "#~#~#").replace("^", None).ffill() # 'detect' all events. THIS INCLUDES TIMES WHERE THERES NO MATCHES! 
+        grouped_df = melted_df.groupby([(melted_df.iloc[:, 1] != melted_df.iloc[:, 1].shift()).cumsum()]) # group by consecutive values
+        #grouped_df = grouped_df #add .filter(lambda x: x.iloc[0, 1] != "#~#~#") on the end of this line to get 1 dataframe of all valid matches!
 
-                df2 = item.iloc[
-                    [0, -1]]  # get the first and last items of the dataframe. This willgive the time it starts/ends
-                start_time = df2[0].iloc[0].split(" - ")[
-                    0]  # get the first row (which gives us start time), get the time column and get time
-                end = df2[0].tail(1).index.item()  # same process but for end
+        for group_index, group_df in grouped_df: #got it down to one iteration of just detected events
+            #GROUP_INDEX/GROUP_DF REPRESENTS ALL THE GROUPS DETECTED IN THE SS! EVEN EMPTY EVENTS! (where nothing is happening)
+            if group_df.iloc[0, 1] == "#~#~#": continue #SO WE REJECT THE EMPTY EVENTS
+            
+            match_df = group_df.iloc[[0, -1]] 
+            start_time = match_df.iloc[0][0].split(" - ")[0]
+            index = match_df.index[1]+1
+            if index == len(melted_df.index): #case for the last day, last time on SS
+                index = match_df.index[1]
+            end_time = melted_df.iloc[index][0].split(" - ")[0]
+            name = match_df.iloc[1][1]
 
-                if end == 49:  # special case for 11:30pm. we get the next time box which is the alternate method
-                    end2 = df[0][2]  # get the 12am timebox
-                else:
-                    end2 = df[0][end + 1]  # otherwise get the next one along
+            start = parser.parse(start_time, tzinfos={"EST": "UTC-4"}) 
+            end = parser.parse(end_time, tzinfos={"EST": "UTC-4"}) 
 
-                end2 = end2.split(" - ")[0]  # Date
-                start = parser.parse(" ".join([aDay, aDate, start_time]),
-                                     tzinfos={"EST": "UTC-4"})  # add the day, date, and start time to get one datetime
+            matches.append(Match(name, start, end))
+        matches.sort()
 
-                end = parser.parse(" ".join([aDay, aDate, end2]), tzinfos={"EST": "UTC-4"})  # same for the end time
-
-                matches.append(Match(key, start,
-                                     end))  # i made my own class but i dont think its useful, maybe someone else can shorten the code here
-        matches.sort()  # since we made a class of matches, we can now decide how they are compared. Check the Match class, we compare by datetimes
         if matches:
             return await success_embed(ctx, "\n".join(list(map(lambda x: str(x), matches[:7]))))  # lambda
         await success_embed(ctx, "No upcoming matches")
