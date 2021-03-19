@@ -330,7 +330,6 @@ class CTFCommands(Cog, name="CTF Commands"):
                 "%-m/%d/%Y"))].index  
 
         matches = []
-        day_index = 
         days = df.iloc[0:2, res[0]:22] #if we wanted to make SS past, it would be here
         df2 = df.iloc[2:, res[0]:22] #and here
 
@@ -347,9 +346,9 @@ class CTFCommands(Cog, name="CTF Commands"):
         grouped_df = melted_df.groupby([(melted_df.iloc[:, 1] != melted_df.iloc[:, 1].shift()).cumsum()]) # group by consecutive values
         #grouped_df = grouped_df #add .filter(lambda x: x.iloc[0, 1] != "#~#~#") on the end of this line to get 1 dataframe of all valid matches!
 
-        for group_index, group_df in grouped_df:
-            #GROUP_INDEX REPRESENTS ALL THE GROUPS DETECTED IN THE SS! EVEN BAD ONES!
-            if group_df.iloc[0, 1] == "#~#~#": continue
+        for group_index, group_df in grouped_df: #got it down to one iteration of just detected events
+            #GROUP_INDEX/GROUP_DF REPRESENTS ALL THE GROUPS DETECTED IN THE SS! EVEN EMPTY EVENTS! (where nothing is happening)
+            if group_df.iloc[0, 1] == "#~#~#": continue #SO WE REJECT THE EMPTY EVENTS
             
             match_df = group_df.iloc[[0, -1]] 
             start_time = match_df.iloc[0][0].split(" - ")[0]
