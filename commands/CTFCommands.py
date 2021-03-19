@@ -9,6 +9,7 @@ from requests import get
 from discord.ext import tasks
 from bs4 import BeautifulSoup
 from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL
+from os import path
 
 # ss
 import os
@@ -66,8 +67,8 @@ class CTFCommands(Cog, name="CTF Commands"):
 
     @Cog.listener()
     async def on_ready(self):
-        self.threads_update.start()
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
+        self.threads_update.start()
 
     @cog_slash(name="rngmap", description="Picks a random map out of a preset map pool",
                guild_ids=SLASH_COMMANDS_GUILDS, options=[])
@@ -187,9 +188,35 @@ class CTFCommands(Cog, name="CTF Commands"):
         else:
             await ctx.send(embed=embed)
 
+    async def rosters_comparison(self, old_threads, new_threads): #Compares old and new forum threads (team sizes)
+        changes = ""
+        for thread in old_threads:
+            if thread not in new_threads:
+                changes += f"---{thread}\n\n"
+
+        for thread in new_threads:
+            if thread in old_threads:
+                if new_threads[thread]['members'] != old_threads[thread]['members']:
+                    new_size = int(new_threads[thread]['members'].split("/")[0])
+                    old_size = int(old_threads[thread]['members'].split("/")[0])
+                    if new_size > old_size:
+                        changes += (
+                            f"🟢 **{thread}:** {old_threads[thread]['members']} -> {new_threads[thread]['members']} (**+{new_size - old_size}**)\n\n")
+                    else:
+                        changes += (
+                            f"🔴 **{thread}:** {old_threads[thread]['members']} -> {new_threads[thread]['members']} (**{new_size - old_size}**)\n\n")
+            else:
+                changes += f"+++{thread}\n\n"
+        if changes:
+            embed = Embed(title="Roster Changes", description=changes, color=Colour.dark_purple())
+        else:
+            embed = Embed(title="Roster Changes", description="No recent roster moves",
+                          color=Colour.dark_purple())
+        message = await self.bot_channel.send(embed=embed)
+        return message
+
     @tasks.loop(hours=FORUM_THREADS_INTERVAL_HOURS)
     async def threads_update(self):
-        # await self.bot_channel.send("hi jus checking if it works bye") #TODO: Have an announcement when team sizes change (scuffed roster moves)
         url = get('https://www.brawl.com/forums/299/')
         page = BeautifulSoup(url.content, features="html.parser")
 
@@ -207,21 +234,25 @@ class CTFCommands(Cog, name="CTF Commands"):
                     author_avatar = f"https://www.brawl.com/{img_loc.get('src')}"
                 thread_link = f"https://www.brawl.com/{info.get('href')}"
                 team_title = split("((\[|\()?[0-9][0-9]/25(\]|\))?)", info.text, 1)
+
                 team_size = split("([0-9][0-9]/25)", info.text, 1)
-                try:  # this try/except could be optimized but it's only because team_title raises an error since oly does not have member count in title (will do some day)
-                    teams_threads[team_title[0].rstrip()] = {
-                        "link": thread_link,
-                        "members": team_size[1],
-                        "author": author.text,
-                        "image": author_avatar
-                    }
+                try:  # uhh haha not all teams have member size in title
+                    team_size = team_size[1]
                 except:
-                    teams_threads[team_title[0].rstrip()] = {
-                        "link": thread_link,
-                        "members": "NaN",
-                        "author": author.text,
-                        "image": author_avatar
-                    }
+                    team_size = "NaN"
+
+                teams_threads[team_title[0].rstrip()] = {
+                    "link": thread_link,
+                    "members": team_size,
+                    "author": author.text,
+                    "image": author_avatar
+                }
+
+        if path.exists('utils/team_threads.json'):
+            with open('utils/team_threads.json') as file:
+                old_threads = load(file)
+            await self.rosters_comparison(old_threads, teams_threads)
+
         with open('utils/team_threads.json', 'w') as file:
             dump(teams_threads, file, indent=4)
 
@@ -312,7 +343,9 @@ class CTFCommands(Cog, name="CTF Commands"):
             df1 = df.iloc[2:]  # remove date/day rows
             day = df1[column]  # we iterate through all the days
 
-            day1 = df1[day.astype(bool)].iloc[:, [0, column]]  # Remove all cells which dont have a value in them, whilst also adding the time column to it in a new DF
+
+            day1 = df1[day.astype(bool)].iloc[:, [0,
+                                                  column]]  # Remove all cells which dont have a value in them, whilst also adding the time column to it in a new DF
             day1 = day1.replace("^", None).ffill()  # Then replace all "^" with a cell that doesnt have a value
             # So we can use fill forward, which changes 'Dunce ppm, ^ ^' to
             # 'Dunce ppm, dunce ppm, dunce ppm'. Ez grouping
@@ -339,8 +372,8 @@ class CTFCommands(Cog, name="CTF Commands"):
 
                 end = parser.parse(" ".join([aDay, aDate, end2]), tzinfos={"EST": "UTC-4"})  # same for the end time
 
-                matches.append(Match(key, start, end))  # i made my own class but i dont think its useful, maybe someone else can shorten the code here
-
+                matches.append(Match(key, start,
+                                     end))  # i made my own class but i dont think its useful, maybe someone else can shorten the code here
         matches.sort()  # since we made a class of matches, we can now decide how they are compared. Check the Match class, we compare by datetimes
         if matches:
             return await success_embed(ctx, "\n".join(list(map(lambda x: str(x), matches[:7]))))  # lambda
