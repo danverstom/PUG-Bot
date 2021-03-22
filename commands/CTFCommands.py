@@ -8,7 +8,7 @@ from re import split
 from requests import get
 from discord.ext import tasks
 from bs4 import BeautifulSoup
-from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL
+from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL, GENERAL_CHAT
 from os import path
 
 # ss
@@ -61,6 +61,7 @@ class CTFCommands(Cog, name="CTF Commands"):
     def __init__(self, bot):
         self.bot = bot
         self.bot_channel = None
+        self.general_chat = None
 
     def cog_unload(self):
         self.threads_update.cancel()
@@ -68,6 +69,7 @@ class CTFCommands(Cog, name="CTF Commands"):
     @Cog.listener()
     async def on_ready(self):
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
+        self.general_chat = self.bot.get_channel(GENERAL_CHAT)
         self.threads_update.start()
 
     @cog_slash(name="rngmap", description="Picks a random map out of a preset map pool",
@@ -209,11 +211,10 @@ class CTFCommands(Cog, name="CTF Commands"):
                 changes += f"+++{thread}\n\n"
         if changes:
             embed = Embed(title="Roster Changes", description=changes, color=Colour.dark_purple())
+            message = await self.general_chat.send(embed=embed)
+            return message
         else:
-            embed = Embed(title="Roster Changes", description="No recent roster moves",
-                          color=Colour.dark_purple())
-        message = await self.bot_channel.send(embed=embed)
-        return message
+            print(f"No roster moves in the last {FORUM_THREADS_INTERVAL_HOURS}h")
 
     @tasks.loop(hours=FORUM_THREADS_INTERVAL_HOURS)
     async def threads_update(self):
