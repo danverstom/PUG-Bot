@@ -12,7 +12,7 @@ from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERV
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
     priority_rng_signups, get_embed_time_string
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
-from database.Event import Event
+from database.Event import Event, EventDoesNotExistError
 from database.Signup import Signup
 from database.Player import Player, PlayerDoesNotExistError
 from asyncio import TimeoutError
@@ -159,6 +159,7 @@ class EventCommands(Cog, name="Event Commands"):
                 signups = self.signups.setdefault(event.event_id)
                 if not signups:
                     signups = Signup.fetch_signups_list(event.event_id)
+                signups = list(filter(lambda sign: sign.can_play, signups))
                 if signups:
                     tag_str = ""
                     for signup in signups:
@@ -283,15 +284,39 @@ class EventCommands(Cog, name="Event Commands"):
             await error_embed(ctx, "Please enter an integer")
             return
         signups = Signup.fetch_signups_list(event_id)
+        playing_signups = []
+        sub_signups = []
+        try:
+            event = Event.from_event_id(event_id)
+        except EventDoesNotExistError:
+            await error_embed(ctx, "This event does not exist")
+            return False
+        embed = Embed(title=f"Signups - {event.title}", colour=Colour.dark_purple())
         if signups:
-            tag_str = ""
             for signup in signups:
-                user = self.bot.get_user(signup.user_id)
-                tag_str += f"@{user} \n"
-            await ctx.send(f"```{tag_str}```")
+                if signup.can_play:
+                    playing_signups.append(signup)
+                if signup.can_sub:
+                    sub_signups.append(signup)
+            signups_tag_str = ""
+            subs_tag_str = ""
+            if len(playing_signups) > 0:
+                for signup in playing_signups:
+                    user = self.bot.get_user(signup.user_id)
+                    signups_tag_str += f"@{user} \n"
+            else:
+                signups_tag_str = "Nobody :("
+            if len(sub_signups) > 0:
+                for signup in sub_signups:
+                    user = self.bot.get_user(signup.user_id)
+                    subs_tag_str += f"@{user} \n"
+            else:
+                subs_tag_str = "Nobody :("
+            embed.add_field(name="Signed", value=f"```{signups_tag_str}```", inline=False)
+            embed.add_field(name="Can Sub", value=f"```{subs_tag_str}```", inline=False)
+            await ctx.send(embed=embed)
         else:
-            await error_embed(ctx, "Could not find the event you are searching for. Use the message ID of the event "
-                                   "announcement.")
+            await error_embed(ctx, "There are no signups for this event")
 
     @cog_slash(options=[mc.create_option(name="event_id",
                                          description="The message ID of the event announcement",
@@ -313,6 +338,7 @@ class EventCommands(Cog, name="Event Commands"):
         signups = self.signups.setdefault(event_id)
         if not signups:
             signups = Signup.fetch_signups_list(event_id)
+        signups = list(filter(lambda signup: signup.can_play, signups))
         shuffle(signups)
         selected_players = signups[:size]
         benched_players = signups[size:]

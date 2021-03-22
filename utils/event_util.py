@@ -41,20 +41,20 @@ def get_embed_time_string(time):
     return event_string
 
 
-def priority_rng_signups(signups_list, size):
+def priority_rng_signups(playing_signups_list, size):
     """
     Randomly generates a list of signups. To be used for PUG events.
 
     If a player is not registered / does not exist, they will not be included in the random list.
     Handle this accordingly - a list of unregistered players is returned by this function.
 
-    :param signups_list: A list of Signup objects
+    :param playing_signups_list: A list of Signup objects
     :param size: The amount of players you would like to include in the output list
     :return: (selected_players, benched_players, unregistered_signups)
     """
     players = []
     unregistered_signups = []
-    for signup in signups_list:
+    for signup in playing_signups_list:
         try:
             players.append(Player.from_discord_id(signup.user_id))
         except PlayerDoesNotExistError:
