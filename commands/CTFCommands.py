@@ -8,7 +8,7 @@ from re import split
 from requests import get
 from discord.ext import tasks
 from bs4 import BeautifulSoup
-from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL
+from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL, GENERAL_CHAT
 from os import path
 
 # ss
@@ -16,8 +16,7 @@ import os
 import gspread
 import pandas as pd
 from dateutil import parser
-from datetime import datetime, date
-from pytz import timezone
+from datetime import date
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
@@ -62,6 +61,7 @@ class CTFCommands(Cog, name="CTF Commands"):
     def __init__(self, bot):
         self.bot = bot
         self.bot_channel = None
+        self.general_chat = None
 
     def cog_unload(self):
         self.threads_update.cancel()
@@ -69,6 +69,7 @@ class CTFCommands(Cog, name="CTF Commands"):
     @Cog.listener()
     async def on_ready(self):
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
+        self.general_chat = self.bot.get_channel(GENERAL_CHAT)
         self.threads_update.start()
 
     @cog_slash(name="rngmap", description="Picks a random map out of a preset map pool",
@@ -152,14 +153,17 @@ class CTFCommands(Cog, name="CTF Commands"):
             index = min(3, len(match_1))
             for i in range(index):
                 game = CTFGame(match_1[i])
-                if game.mvp:
-                    embed_1_value.append(
-                        f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: [{game.mvp}](https://www.brawl.com/players/{game.mvp})")
+                if game.map_name in maps.keys():
+                    map_str = f":map: **[{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]})**"
                 else:
-                    embed_1_value.append(
-                        f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: **No One :(**")
+                    map_str = f":map: **{game.map_name}**"
+                if game.mvp:
+                    mvp_str = f":trophy: **[{game.mvp}](https://www.brawl.com/players/{game.mvp})**"
+                else:
+                    mvp_str = f":trophy: **No One :(**"
+                embed_1_value.append(f"{map_str} | {mvp_str}")
                 embed_1_value.append(
-                    f":chart_with_upwards_trend: [Stats](https://www.brawl.com/games/ctf/lookup/{game.game_id})")
+                    f":chart_with_upwards_trend: **[Stats](https://www.brawl.com/games/ctf/lookup/{game.game_id})**")
                 embed_1_value.append("")
             embed.add_field(name="__Match 1__", value="\n".join(embed_1_value), inline=False)
         if match_2:
@@ -167,14 +171,17 @@ class CTFCommands(Cog, name="CTF Commands"):
             index = min(3, len(match_2))
             for i in range(index):
                 game = CTFGame(match_2[i])
-                if game.mvp:
-                    embed_2_value.append(
-                        f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: [{game.mvp}](https://www.brawl.com/players/{game.mvp})")
+                if game.map_name in maps.keys():
+                    map_str = f":map: **[{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]})**"
                 else:
-                    embed_2_value.append(
-                        f":map: [{game.map_name}](https://www.brawl.com/games/ctf/maps/{maps[game.map_name]}) | :trophy: **No One :(**")
+                    map_str = f":map: **{game.map_name}**"
+                if game.mvp:
+                    mvp_str = f":trophy: **[{game.mvp}](https://www.brawl.com/players/{game.mvp})**"
+                else:
+                    mvp_str = f":trophy: **No One :(**"
+                embed_2_value.append(f"{map_str} | {mvp_str}")
                 embed_2_value.append(
-                    f":chart_with_upwards_trend: [Stats](https://www.brawl.com/games/ctf/lookup/{game.game_id})")
+                    f":chart_with_upwards_trend: **[Stats](https://www.brawl.com/games/ctf/lookup/{game.game_id})**")
                 embed_2_value.append("")
             embed.add_field(name="__Match 2__", value="\n".join(embed_2_value), inline=False)
 
@@ -204,11 +211,10 @@ class CTFCommands(Cog, name="CTF Commands"):
                 changes += f"+++{thread}\n\n"
         if changes:
             embed = Embed(title="Roster Changes", description=changes, color=Colour.dark_purple())
+            message = await self.general_chat.send(embed=embed)
+            return message
         else:
-            embed = Embed(title="Roster Changes", description="No recent roster moves",
-                          color=Colour.dark_purple())
-        message = await self.bot_channel.send(embed=embed)
-        return message
+            print(f"No roster moves in the last {FORUM_THREADS_INTERVAL_HOURS}h")
 
     @tasks.loop(hours=FORUM_THREADS_INTERVAL_HOURS)
     async def threads_update(self):
@@ -330,6 +336,7 @@ class CTFCommands(Cog, name="CTF Commands"):
                 "%-m/%d/%Y"))].index  
 
         matches = []
+
         days = df.iloc[0:2, res[0]:22] #if we wanted to make SS past, it would be here
         df2 = df.iloc[2:, res[0]:22] #and here
 
@@ -363,7 +370,7 @@ class CTFCommands(Cog, name="CTF Commands"):
 
             matches.append(Match(name, start, end))
         matches.sort()
-        
+
         if matches:
             return await success_embed(ctx, "\n".join(list(map(lambda x: str(x), matches[:7]))))  # lambda
         await success_embed(ctx, "No upcoming matches")

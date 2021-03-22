@@ -307,7 +307,7 @@ class RegistrationCommands(Cog, name="User Registration"):
         stats = f"**ELO:** {getattr(player, 'elo')}\n**Discord:** <@{getattr(player, 'discord_id')}>"
         #for key in player.__dict__.keys():
         #    stats += f"**{key}:** {getattr(player, key)}\n"
-        
+
         embed = Embed(description=stats, color=Colour.dark_purple())
         embed.set_author(name=f"User profile - {getattr(player, 'minecraft_username')}", icon_url=f"https://cravatar.eu/helmavatar/{getattr(player, 'minecraft_username')}/128.png")
         await ctx.send(embed=embed)
@@ -318,7 +318,7 @@ class RegistrationCommands(Cog, name="User Registration"):
         for player in Player.fetch_players_list():
             old_username = player.minecraft_username
             latest_username = player.update_minecraft_username()
-            if latest_username != old_username:
+            if latest_username != old_username and latest_username is not None:
                 changes_list.append([player, old_username])
             await async_sleep(3)
         if len(changes_list) > 0:
