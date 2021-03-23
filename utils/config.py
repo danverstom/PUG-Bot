@@ -6,7 +6,7 @@ with open("utils/token.json") as file:
 bot_token = token_json["bot_token"]
 ELO_FLOOR = 975
 MOD_ROLE = "PUG Mod"
-ADMIN_ROLE = "PUG Admin"
+ADMIN_ROLE = "PUG Dev"
 BOT_OUTPUT_CHANNEL = 816004363544690738
 IGN_TRACKER_INTERVAL_HOURS = 12
 SIGNUPS_TRACKER_INTERVAL_SECONDS = 10
