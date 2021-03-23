@@ -1,11 +1,14 @@
 from discord import Embed, Colour
+from discord.utils import get
 from math import ceil
 from asyncio import TimeoutError
 from json import load, dump
 
 
-def has_permissions(ctx, required_role):
-    if required_role.lower() in [role.name.lower() for role in ctx.author.roles]:
+def has_permissions(ctx, required_role_name):
+    server = ctx.bot.get_guild(ctx.guild_id)
+    required_role = get(server.roles, name=required_role_name)
+    if ctx.author.top_role.position >= required_role.position:
         return True
     else:
         return False
