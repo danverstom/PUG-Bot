@@ -467,7 +467,7 @@ class EventCommands(Cog, name="Event Commands"):
                 if len(members) > 0:
                     if len(response.role_mentions) == 1:
                         role = response.role_mentions[0]
-                        server = ctx.message.guild
+                        server = ctx.guild
                         bot_member = server.get_member(self.bot.user.id)
 
                         if bot_member.top_role.position <= role.position:
