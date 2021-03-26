@@ -323,8 +323,12 @@ class EventCommands(Cog, name="Event Commands"):
                                          option_type=3, required=True),
                         mc.create_option(name="size",
                                          description="The maximum players to include in the RNG list. Default 22",
-                                         option_type=4, required=False)], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def rngsignups(self, ctx, event_id, size=22):
+                                         option_type=4, required=False),
+                        mc.create_option(name="priority_role",
+                                         description="A role to prioritise over other roles",
+                                         option_type=8, required=False)
+                        ], guild_ids=SLASH_COMMANDS_GUILDS)
+    async def rngsignups(self, ctx, event_id, size=22, priority_role=None):
         """Randomises signups for an event"""
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
@@ -340,6 +344,8 @@ class EventCommands(Cog, name="Event Commands"):
             signups = Signup.fetch_signups_list(event_id)
         signups = list(filter(lambda signup: signup.can_play, signups))
         shuffle(signups)
+        if priority_role:
+            signups = sorted(signups, key=lambda signup: 1 if priority_role in ctx.guild.get_member(signup.user_id).roles else 0, reverse=True)
         selected_players = signups[:size]
         benched_players = signups[size:]
         results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
@@ -353,6 +359,7 @@ class EventCommands(Cog, name="Event Commands"):
             results_embed.add_field(name=f"Not Playing ({len(benched_players)})", value='\n'.join(
                 [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
                  benched_players]))
+
         await ctx.send(content=f"{get(ctx.guild.roles, name=SIGNED_ROLE_NAME).mention} RNG results:",
                        embed=results_embed)
         tag_str = ""
