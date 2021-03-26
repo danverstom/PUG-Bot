@@ -108,10 +108,10 @@ async def get_event_time(ctx, event_time, event_date, deadline):
                     minute *= 10
                     minute += int(c)
             if if_m:
+                if hour == 12 and (c == 'p' or c == 'a'):
+                    hour = 0
                 if c == 'p':
                     hour += 12
-                    if hour == 24:
-                        hour = 0
     elif fullmatch("^(([01]?[0-9])|(2[0-3]))(:[0-5][0-9])?$", event_time):
         is_hour = True
         is_minute = False
