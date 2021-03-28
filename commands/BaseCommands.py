@@ -7,6 +7,7 @@ from utils.config import SLASH_COMMANDS_GUILDS
 from utils.utils import create_list_pages
 from database.database import get_sorted_elo
 from datetime import datetime
+from pytz import timezone
 
 
 class BaseCommands(Cog, name="Base Commands"):
@@ -27,7 +28,8 @@ class BaseCommands(Cog, name="Base Commands"):
 
     @cog_slash(name="time", description="Show system time", options=[], guild_ids=SLASH_COMMANDS_GUILDS)
     async def time(self, ctx):
-        time = datetime.now()
+        tz = timezone('US/Eastern') 
+        time = datetime.now(tz)
         await ctx.send(f"The time is {time.strftime('%H:%M:%S')}")
 
     @cog_slash(name="coinflip", description="a coinflip",
