@@ -1,7 +1,8 @@
 from discord.ext.commands import Cog
 from discord import File, Embed, Colour
 from utils.utils import get_json_data
-
+from difflib import get_close_matches
+from utils.utils import error_embed
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
 from utils.config import SLASH_COMMANDS_GUILDS
@@ -23,7 +24,12 @@ class HelpCommand(Cog, name="Help Command"):
     async def help(self, ctx, command_name=None):
         print("Help command used")
         if command_name:
-            commands = {command_name: self.slash.commands[command_name]}
+            commands = None
+            try:
+                commands = {command_name: self.slash.commands[command_name]}
+            except KeyError:
+                matches = get_close_matches(command_name, self.slash.commands)
+                return await error_embed(ctx, f"Command not found, did you mean `{', '.join(matches)}`?")
         else:
             commands = self.slash.commands
         embed = Embed(title="Help", colour=Colour.dark_purple())

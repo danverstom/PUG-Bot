@@ -490,6 +490,8 @@ class EventCommands(Cog, name="Event Commands"):
                         if bot_member.top_role.position <= role.position:
                             await error_embed(ctx, "This role is too high to be set by the bot. Please enter a "
                                                    "different role.")
+                        elif ctx.author.top_role.position <= role.position:
+                            await error_embed(ctx, "You cannot give others this role")
                         else:
                             roles_dict[role] = members
                     else:

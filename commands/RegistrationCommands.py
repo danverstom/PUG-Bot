@@ -223,9 +223,10 @@ class RegistrationCommands(Cog, name="User Registration"):
             except PlayerDoesNotExistError:
                 await error_embed(ctx, "Player does not exist")
                 return
-            embed = Embed(title=f"User Profile - {user.name}", color=Colour.dark_purple())
+            info = ""
             for key in player.__dict__.keys():
-                embed.add_field(name=key, value=getattr(player, key), inline=False)
+                info += f"**{key}**: {getattr(player, key)}\n"
+            embed = Embed(description=info, title=f"User Profile - {user.name}", color=Colour.dark_purple())
             await ctx.send(embed=embed)
 
         elif action_type == "set":
@@ -240,7 +241,7 @@ class RegistrationCommands(Cog, name="User Registration"):
                         old_username = player.update_minecraft_username()
                         try:
                             player.change_minecraft_username(value)
-                            await success_embed(ctx, f"Changed username: **{old_username}** -> **{value}**")
+                            await success_embed(ctx, f"Changed {discord_tag.mention}'s username: **{old_username}** -> **{value}**")
                         except UsernameAlreadyExistsError:
                             await error_embed(ctx, f"Username **{value}** is already in the database")
                         except UsernameDoesNotExistError:
@@ -265,7 +266,7 @@ class RegistrationCommands(Cog, name="User Registration"):
                         if value.isdigit():
                             value = int(value)
                             if player.set_elo(value):
-                                await success_embed(ctx, f"Set elo: **{old_elo}** -> **{value}**")
+                                await success_embed(ctx, f"Set {discord_tag.mention}'s elo: **{old_elo}** -> **{value}**")
                             else:
                                 await error_embed(ctx, f"Elo given (**{value}**) is below Elo floor (**{ELO_FLOOR}**)")
                         else:
@@ -275,7 +276,7 @@ class RegistrationCommands(Cog, name="User Registration"):
                         if value.isdigit():
                             value = int(value)
                             if player.set_priority(value):
-                                await success_embed(ctx, f"Set priority: **{old_priority}** -> **{value}**")
+                                await success_embed(ctx, f"Set {discord_tag.mention}'s priority: **{old_priority}** -> **{value}**")
                             else:
                                 await error_embed(ctx, f"Priority given (**{value}**) is negative")
                         else:
