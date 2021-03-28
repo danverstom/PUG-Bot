@@ -63,13 +63,13 @@ class RegistrationCommands(Cog, name="User Registration"):
                                 if_empty="There are no Registration Requests", elements_per_page=5)
 
     @cog_slash(name="register", description="Registers Minecraft username to Discord."
-                                            "  This is required to sign up for PUGs.",
+                                            " Required to sign up for PUGs.",
                options=[manage_commands.create_option(name="minecraft_username",
                                                       description="Your current minecraft username",
                                                       option_type=3, required=True)], guild_ids=SLASH_COMMANDS_GUILDS)
     async def register(self, ctx, minecraft_username=""):
         """
-        Registers Minecraft username to Discord.  This is required to sign up for PUGs.
+        Registers Minecraft username to Discord. Required to sign up for PUGs.
         Usage: register <minecraft_username>
 
         Example:
