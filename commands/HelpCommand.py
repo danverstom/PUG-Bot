@@ -32,7 +32,7 @@ class HelpCommand(Cog, name="Help Command"):
                 return await error_embed(ctx, f"Command not found, did you mean `{', '.join(matches)}`?")
         else:
             commands = self.slash.commands
-        embed = Embed(title="Help", colour=Colour.dark_purple())
+        info = ""
         for command in commands:
             options = commands[command].options if len(commands[command].options) > 0 else False
             guilds = ', '.join([self.bot.get_guild(guild_id).name for guild_id in commands[command].allowed_guild_ids])
@@ -45,9 +45,10 @@ class HelpCommand(Cog, name="Help Command"):
                     options_string += f"`{option['name']}` {'[REQUIRED]' if option['required'] else ''}\n" \
                                       f"> *{option['description']}*{choices}\n"
                 options_string = options_string[:-1]
-                details_formatted = f"\n{options_string}\n\n*Servers: {guilds}*"
+                info += f"**/{command}**\n{commands[command].description}\n\n{options_string}\n\n*Servers: {guilds}*"
             else:
-                details_formatted = ''
-            field_value = f"{commands[command].description}\n{details_formatted}"
-            embed.add_field(name=f"/{command}", value=field_value)
+                info += f"**/{command}** - {commands[command].description}\n"
+
+
+        embed = Embed(title="Help", colour=Colour.dark_purple(), description=info)
         await ctx.send(embed=embed)
