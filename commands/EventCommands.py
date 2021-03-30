@@ -329,9 +329,12 @@ class EventCommands(Cog, name="Event Commands"):
                                          option_type=8, required=False),
                         mc.create_option(name="results_channel",
                                          description="The channel to send the RNG results",
+                                         option_type=7, required=False),
+                        mc.create_option(name="do_priority",
+                                         description="The channel to send the RNG results",
                                          option_type=7, required=False)
                         ], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def rngsignups(self, ctx, event_id, size=22, priority_role=None, results_channel=None):
+    async def rngsignups(self, ctx, event_id, size=22, priority_role=None, results_channel=None, do_priority=True):
         """Randomises signups for an event"""
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
@@ -343,26 +346,46 @@ class EventCommands(Cog, name="Event Commands"):
                                    "announcement.")
             return
         signups = self.signups.setdefault(event_id)
+        results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
         if not signups:
             signups = Signup.fetch_signups_list(event_id)
         signups = list(filter(lambda signup: signup.can_play, signups))
         shuffle(signups)
+        if do_priority:
+            # key is player.priority if player exists else its 0
+            signups = sorted(signups, key=lambda signup: Player.from_discord_id(signup.user_id)
+                             .priority if Player.exists_discord_id(signup.user_id) else -1, reverse=True)
+            results_embed.description = "Here are the results - these take into account priority, for which you must" \
+                                        " be registered. In order to register, use the `/register` command"
+        else:
+            results_embed.description = f"Here are the results - these do not take into account priority, as" \
+                                        f" priority is reserved for PUGs and requires players to be registered."
         if priority_role:
             signups = sorted(signups, key=lambda signup: 1 if priority_role in ctx.guild.get_member(signup.user_id)
                              .roles else 0, reverse=True)
         selected_players = signups[:size]
         benched_players = signups[size:]
-        results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
-        results_embed.description = f"Here are the results - these do not take into account priority, as priority is " \
-                                    f"reserved for PUGs and requires all players to be registered."
+
         if selected_players:
             results_embed.add_field(name=f"Playing ({len(selected_players)})", value='\n'.join(
-                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
+                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') +
+                 ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
                  selected_players]))
+            if do_priority:
+                for signup in selected_players:
+                    player = Player.exists_discord_id(signup.user_id)
+                    if player:
+                        player.change_priority(-1)
         if benched_players:
             results_embed.add_field(name=f"Not Playing ({len(benched_players)})", value='\n'.join(
-                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
+                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') +
+                 ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
                  benched_players]))
+            if do_priority:
+                for signup in benched_players:
+                    player = Player.exists_discord_id(signup.user_id)
+                    if player:
+                        player.change_priority(1)
 
         if not results_channel:
             await ctx.send(content=f"{get(ctx.guild.roles, name=SIGNED_ROLE_NAME).mention} RNG results:",
