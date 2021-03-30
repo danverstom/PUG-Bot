@@ -54,7 +54,7 @@ class BaseCommands(Cog, name="Base Commands"):
         leaderboard_entries = []
         count = 1
         for item in data:
-            leaderboard_entries.append(f"**#{count}:** {item[0]} - **{item[1]}**")
+            leaderboard_entries.append(f"**#{count}:** `{item[0]}` - **{item[1]}**")
             count += 1
 
         await create_list_pages(self.bot, ctx, "Leaderboard", leaderboard_entries, "There are no registered players",
