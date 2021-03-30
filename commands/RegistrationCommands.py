@@ -358,28 +358,24 @@ class RegistrationCommands(Cog, name="User Registration"):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
         server = ctx.guild
-        registered_str = ""
-        unregistered_str = ""
-        without_nick_str = ""
+        registered = []
+        unregistered = []
+        without_nick = []
         for member in server.members:
             if not member.bot:
                 if member.nick is None:
-                    without_nick_str += f"{member.mention}\n"
+                    without_nick.append(member.mention)
                 else:
                     try:
                         player = Player.from_discord_id(member.id)
                     except PlayerDoesNotExistError:
-                        unregistered_str += f"{member.mention}\n"
+                        unregistered.append(member.mention)
                     else:
                         team_list = re.findall(r"^\[(\w{1,4})\]", member.nick)
                         alias_list = re.findall(r"\s\((.*)\)$", member.nick)
                         new_nick = f"{'[' + team_list[0] + '] ' if team_list else ''}{player.minecraft_username}" + \
                                    (f" ({alias_list[0]})" if alias_list else "")
-                        registered_str += f"{member.mention} → `{new_nick}`\n"
-        embed = Embed(title="Server Members", color=Colour.dark_purple())
-        embed.add_field(name="Registered users:", value=registered_str if registered_str else "Nobody :(", inline=False)
-        embed.add_field(name="Unregistered users:", value=unregistered_str if unregistered_str else "Nobody :)",
-                        inline=False)
-        embed.add_field(name="Users without nicknames:", value=without_nick_str if without_nick_str else "Nobody :)",
-                        inline=False)
-        await ctx.send(embed=embed)
+                        registered.append(f"{member.mention} → `{new_nick}`")
+        await create_list_pages(self.bot, ctx, info=registered, title="Registered Users", elements_per_page=20)
+        await create_list_pages(self.bot, ctx, info=unregistered, title="Unregistered Users", elements_per_page=20)
+        await create_list_pages(self.bot, ctx, info=without_nick, title="Users without nicknames", elements_per_page=20)
