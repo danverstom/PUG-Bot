@@ -330,10 +330,10 @@ class CTFCommands(Cog, name="CTF Commands"):
         row = df.loc[0]  
         res = None
         if os.name == "nt":
-            res = row[row == (date.today().strftime("%#m/%d/%Y"))].index
+            res = row[row == (date.today().strftime("%#m/%#d/%Y"))].index
         else:
             res = row[row == (date.today().strftime(
-                "%-m/%d/%Y"))].index  
+                "%-m/%-d/%Y"))].index  
 
         matches = []
 
