@@ -6,10 +6,13 @@ from database.Player import Player, PlayerDoesNotExistError, UsernameAlreadyExis
 from database.database import check_user_requests, add_register_request, get_register_request, \
     remove_register_request, get_all_register_requests
 from utils.utils import error_embed, success_embed, response_embed, create_list_pages, has_permissions
-from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL, ELO_FLOOR
+from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL,\
+    ELO_FLOOR, ADMIN_ROLE
 from mojang import MojangAPI
 from asyncio import sleep as async_sleep
 from discord.errors import Forbidden
+from discord.utils import get
+import re
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
@@ -127,7 +130,8 @@ class RegistrationCommands(Cog, name="User Registration"):
             server = self.bot.get_guild(payload.guild_id)
             mod_member = server.get_member(payload.user_id)
             player_member = server.get_member(request[1])
-            if str(payload.emoji) == "✅" and MOD_ROLE in [role.name for role in mod_member.roles]:
+            required_role = get(server.roles, name=MOD_ROLE)
+            if str(payload.emoji) == "✅" and required_role.position <= mod_member.top_role.position:
                 Player.add_player(request[0], request[1])
                 remove_register_request(payload.message_id)
                 await message.clear_reactions()
@@ -315,6 +319,7 @@ class RegistrationCommands(Cog, name="User Registration"):
 
     @tasks.loop(hours=IGN_TRACKER_INTERVAL_HOURS)
     async def update_usernames(self):
+        server = self.bot_channel.guild
         changes_list = []
         for player in Player.fetch_players_list():
             old_username = player.minecraft_username
@@ -326,7 +331,51 @@ class RegistrationCommands(Cog, name="User Registration"):
             embed = Embed(title="IGNs Updated", color=Colour.dark_purple())
             for change in changes_list:
                 player = change[0]
-                user = self.bot.get_user(player.discord_id)
+                member = server.get_member(player.discord_id)
                 old_username = change[1]
-                embed.add_field(name=f"{old_username} → {player.minecraft_username}", value=user.mention, inline=False)
+                team_list = re.findall(r"^\[(\w{1,4})\]", member.nick)
+                alias_list = re.findall(r"\s\((.*)\)$", member.nick)
+                new_nick = f"{'[' + team_list[0] + '] ' if team_list else ''}{player.minecraft_username}" + \
+                           (f" ({alias_list[0]})" if alias_list else "")
+                try:
+                    await member.edit(nick=new_nick)
+                except Forbidden:
+                    embed_value = f"🔴 Failed to update nickname to `{new_nick}` (Forbidden)"
+                else:
+                    embed_value = f"Updated server nickname to `{new_nick}`"
+                    try:
+                        await success_embed(member, f"PUG server nickname updated to `{new_nick}`")
+                        embed_value += " (DM sent)"
+                    except Forbidden:
+                        embed_value += " (confirmation DM failed to send)"
+                embed.add_field(name=f"{old_username} → {player.minecraft_username}", value=embed_value, inline=False)
             await self.bot_channel.send(embed=embed)
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
+    async def examine_members(self, ctx):
+        """Examines the status and checks nicknames for all server members (for debug purposes)"""
+        if not has_permissions(ctx, ADMIN_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        server = ctx.guild
+        registered = []
+        unregistered = []
+        without_nick = []
+        for member in server.members:
+            if not member.bot:
+                if member.nick is None:
+                    without_nick.append(member.mention)
+                else:
+                    try:
+                        player = Player.from_discord_id(member.id)
+                    except PlayerDoesNotExistError:
+                        unregistered.append(member.mention)
+                    else:
+                        team_list = re.findall(r"^\[(\w{1,4})\]", member.nick)
+                        alias_list = re.findall(r"\s\((.*)\)$", member.nick)
+                        new_nick = f"{'[' + team_list[0] + '] ' if team_list else ''}{player.minecraft_username}" + \
+                                   (f" ({alias_list[0]})" if alias_list else "")
+                        registered.append(f"{member.mention} → `{new_nick}`")
+        await create_list_pages(self.bot, ctx, info=registered, title="Registered Users", elements_per_page=20)
+        await create_list_pages(self.bot, ctx, info=unregistered, title="Unregistered Users", elements_per_page=20)
+        await create_list_pages(self.bot, ctx, info=without_nick, title="Users without nicknames", elements_per_page=20)

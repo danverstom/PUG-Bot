@@ -5,6 +5,7 @@ from discord import Colour
 from discord_slash.cog_ext import cog_slash
 from utils.config import SLASH_COMMANDS_GUILDS
 from utils.utils import create_list_pages
+from database.Player import Player
 from database.database import get_sorted_elo
 from datetime import datetime
 from pytz import timezone
@@ -50,11 +51,17 @@ class BaseCommands(Cog, name="Base Commands"):
     @cog_slash(name="leaderboard", description="Displays an ELO leaderboard",
                options=[], guild_ids=SLASH_COMMANDS_GUILDS)
     async def leaderboard(self, ctx):
+        player = Player.exists_discord_id(ctx.author.id)
         data = get_sorted_elo()
         leaderboard_entries = []
         count = 1
         for item in data:
-            leaderboard_entries.append(f"**#{count}:** {item[0]} - **{item[1]}**")
+            if player:
+                if player.minecraft_username == item[0]:
+                    leaderboard_entries.append(f"\n> **#{count}:** `{item[0]}` - **{item[1]}**\n")
+                    count += 1
+                    continue
+            leaderboard_entries.append(f"**#{count}:** `{item[0]}` - **{item[1]}**")
             count += 1
 
         await create_list_pages(self.bot, ctx, "Leaderboard", leaderboard_entries, "There are no registered players",
