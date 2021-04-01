@@ -332,10 +332,9 @@ class CTFCommands(Cog, name="CTF Commands"):
         res = None
         tz = timezone(TIMEZONE) 
         if os.name == "nt":
-            res = row[row == (date.today().strftime("%#m/%#d/%Y"))].index
+            res = row[row == (datetime.now(tz).today().strftime("%#m/%#d/%Y"))].index
         else:
-            res = row[row == (date.today().strftime(
-                "%-m/%-d/%Y"))].index  
+            res = row[row == (datetime.now(tz).today().strftime("%-m/%-d/%Y"))].index  
         matches = []
 
         days = df.iloc[0:2, res[0]:22] #if we wanted to make SS past, it would be here
