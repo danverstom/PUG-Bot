@@ -8,7 +8,7 @@ from re import split
 from requests import get
 from discord.ext import tasks
 from bs4 import BeautifulSoup
-from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL, GENERAL_CHAT
+from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL, GENERAL_CHAT, TIMEZONE
 from os import path
 
 # ss
@@ -16,7 +16,8 @@ import os
 import gspread
 import pandas as pd
 from dateutil import parser
-from datetime import date
+from datetime import datetime
+from pytz import timezone
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
@@ -329,12 +330,12 @@ class CTFCommands(Cog, name="CTF Commands"):
         df = pd.DataFrame.from_records(values)
         row = df.loc[0]  
         res = None
+        tz = timezone(TIMEZONE) 
         if os.name == "nt":
             res = row[row == (date.today().strftime("%#m/%#d/%Y"))].index
         else:
             res = row[row == (date.today().strftime(
                 "%-m/%-d/%Y"))].index  
-
         matches = []
 
         days = df.iloc[0:2, res[0]:22] #if we wanted to make SS past, it would be here
