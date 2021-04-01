@@ -4,11 +4,11 @@ from discord.channel import TextChannel
 from discord.ext import tasks
 from discord.ext.commands import Cog
 from discord.utils import get
-from discord_slash.cog_ext import cog_slash
+from discord_slash.cog_ext import cog_slash, cog_subcommand
 from discord_slash.utils import manage_commands as mc
 
 from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
-    BOT_OUTPUT_CHANNEL
+    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
     priority_rng_signups, get_embed_time_string
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
@@ -615,3 +615,66 @@ class EventCommands(Cog, name="Event Commands"):
             info_embed.description += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
                                       f"> Active: **{str(event.is_active) + (' 🟢' if event.is_active else ' 🔴')}**"
         await ctx.send(embed=info_embed)
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS,
+                    options=[
+                        mc.create_option(name="mode", description="Whether to set or change elo",
+                                         option_type=3, required=True,
+                                         choices=[mc.create_choice(name="change", value="change"),
+                                                  mc.create_choice(name="set", value="set")]),
+                        mc.create_option(name="amount", description="Positive or negative number",
+                                         option_type=4, required=True),
+                        mc.create_option(name="role", description="The role to allocate elo to",
+                                         option_type=8, required=False),
+                        mc.create_option(name="user", description="The user to allocate elo to",
+                                         option_type=6, required=False),
+                        mc.create_option(name="send_channel", description="A channel to send the update embed to",
+                                         option_type=7, required=False),
+                    ])
+    async def elo(self, ctx, mode, amount, role=None, user=None, send_channel=None):
+        """
+        Allows PUG staff to allocate ELO following a match
+        """
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        input_members = []
+        changes_str = ""
+        unregistered_members = ""
+        server = ctx.guild
+        if role:
+            if role.members:
+                input_members += role.members
+            else:
+                await error_embed(ctx, "The specified role has no members")
+                return
+        if user:
+            input_members.append(server.get_member(user.id))
+
+        for member in input_members:
+            try:
+                player = Player.from_discord_id(member.id)
+            except PlayerDoesNotExistError:
+                unregistered_members += f"{member.mention}\n"
+            else:
+                prev_elo = player.get_elo()
+                if mode == "set":
+                    if player.set_elo(amount):
+                        changes_str += f"{member.mention} `{prev_elo}` → `{player.get_elo()}`\n"
+                    else:
+                        await error_embed(ctx, "Could not set ELO to that value")
+                        return
+                elif mode == "change":
+                    player.change_elo(amount)
+                    changes_str += f"{member.mention} `{prev_elo} → {player.get_elo()}`\n"
+        summary = Embed(title="Summary of ELO changes", color=Colour.dark_purple())
+        if changes_str:
+            summary.add_field(name="ELO changes:", value=changes_str)
+        else:
+            summary.description = "No changes were made to ELO"
+        if unregistered_members:
+            summary.add_field(name="Unregistered members:", inline=False,
+                              value=f"The following players need to register to receive ELO:\n{unregistered_members}")
+        await ctx.send(embed=summary)
+        if send_channel:
+            await send_channel.send(embed=summary)
