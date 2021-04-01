@@ -8,7 +8,7 @@ from discord_slash.cog_ext import cog_slash, cog_subcommand
 from discord_slash.utils import manage_commands as mc
 
 from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
-    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT
+    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT, TIMEZONE
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
     priority_rng_signups, get_embed_time_string
 from utils.utils import response_embed, error_embed, success_embed, has_permissions

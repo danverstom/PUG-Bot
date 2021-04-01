@@ -130,7 +130,7 @@ async def get_event_time(ctx, event_time, event_date, deadline):
     else:
         await error_embed(ctx, "Event time is not in a valid format.  Use HH:MMam/pm or HH:MM")
         return False
-    event_time = time(hour=hour, minute=minute, tzinfo=timezone(TIMEZONE))
+    event_time = time(hour=hour, minute=minute)
 
     # Get date of event
     if not event_date:
@@ -145,7 +145,7 @@ async def get_event_time(ctx, event_time, event_date, deadline):
         except ValueError:
             await error_embed(ctx, "Event date is not in a valid format.  Use YYYY-MM-DD")
             return False
-    event_datetime = datetime.combine(event_date, event_time, timezone(TIMEZONE))
+    event_datetime = timezone(TIMEZONE).localize(datetime.combine(event_date, event_time))
 
     if event_datetime < current_datetime:
         await error_embed(ctx, "Event time is before the current time.")
