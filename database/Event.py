@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from pytz import timezone
-
+from utils.config import TIMEZONE
 from database.database import check_events_event_id, fetch_events_event_id, add_event, fetch_events_list_event_id, \
     delete_event, update_events_title, update_events_description, update_events_time_est, \
     update_events_signup_deadline, update_events_is_active, fetch_active_events_list_event_id, \
@@ -89,7 +89,7 @@ class Event:
             datetime_est = datetime.fromisoformat(time_est)
         except ValueError:
             raise ValueError
-        current_date = datetime.now(timezone('EST'))
+        current_date = datetime.now(timezone(TIMEZONE))
         if datetime_est < current_date:
             raise TimeBeforeCurrentTimeError()
         self.time_est = time_est
@@ -105,7 +105,7 @@ class Event:
             datetime_signup_deadline = datetime.fromisoformat(signup_deadline)
         except ValueError:
             raise ValueError
-        current_date = datetime.now(timezone('EST'))
+        current_date = datetime.now(timezone(TIMEZONE))
         if datetime_signup_deadline < current_date:
             raise TimeBeforeCurrentTimeError()
         self.signup_deadline = signup_deadline

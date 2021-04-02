@@ -4,6 +4,7 @@ from re import fullmatch
 
 from discord import Embed, Colour
 from pytz import timezone
+from utils.config import TIMEZONE
 
 from database.Player import Player, PlayerDoesNotExistError
 from database.Signup import Signup
@@ -80,7 +81,7 @@ async def check_if_cancel(ctx, response):
 
 
 async def get_event_time(ctx, event_time, event_date, deadline):
-    current_datetime = datetime.now(timezone('EST'))
+    current_datetime = datetime.now(timezone(TIMEZONE))
 
     # Get time of event
     hour = 0
@@ -129,7 +130,7 @@ async def get_event_time(ctx, event_time, event_date, deadline):
     else:
         await error_embed(ctx, "Event time is not in a valid format.  Use HH:MMam/pm or HH:MM")
         return False
-    event_time = time(hour=hour, minute=minute, tzinfo=timezone('EST'))
+    event_time = time(hour=hour, minute=minute)
 
     # Get date of event
     if not event_date:
@@ -144,7 +145,7 @@ async def get_event_time(ctx, event_time, event_date, deadline):
         except ValueError:
             await error_embed(ctx, "Event date is not in a valid format.  Use YYYY-MM-DD")
             return False
-    event_datetime = datetime.combine(event_date, event_time, timezone('EST'))
+    event_datetime = timezone(TIMEZONE).localize(datetime.combine(event_date, event_time))
 
     if event_datetime < current_datetime:
         await error_embed(ctx, "Event time is before the current time.")
