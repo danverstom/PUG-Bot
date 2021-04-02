@@ -109,7 +109,7 @@ async def get_event_time(ctx, event_time, event_date, deadline):
                     minute *= 10
                     minute += int(c)
             if if_m:
-                if c == 'p':
+                if c == 'p' and hour != 12:
                     hour += 12
                     if hour == 24:
                         hour = 0
@@ -221,7 +221,7 @@ def reaction_changes(signups, can_play, is_muted, can_sub, event_id):
     old_is_muted = [user.user_id for user in signups if user.is_muted]
     old_can_sub = [user.user_id for user in signups if user.can_sub]
 
-    diff = set(old_can_play) == set(can_play) or set(old_is_muted) == set(is_muted) or set(old_can_sub) == set(can_sub)
+    diff = set(old_can_play) != set(can_play) or set(old_is_muted) != set(is_muted) or set(old_can_sub) != set(can_sub)
 
     stl_can_play = [user for user in old_can_play if user in can_play]
     add_can_play = [user for user in can_play if user not in old_can_play]
