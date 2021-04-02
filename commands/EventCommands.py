@@ -289,6 +289,7 @@ class EventCommands(Cog, name="Event Commands"):
         signups = Signup.fetch_signups_list(event_id)
         playing_signups = []
         sub_signups = []
+        unregistered_signups = [signup for signup in signups if not Player.exists_discord_id(signup.user_id)]
         try:
             event = Event.from_event_id(event_id)
         except EventDoesNotExistError:
@@ -317,6 +318,9 @@ class EventCommands(Cog, name="Event Commands"):
                 subs_tag_str = "Nobody :("
             embed.add_field(name="Signed", value=f"```{signups_tag_str}```", inline=False)
             embed.add_field(name="Can Sub", value=f"```{subs_tag_str}```", inline=False)
+            if unregistered_signups:
+                tags = "\n".join([f"@{self.bot.get_user(signup.user_id)} " for signup in unregistered_signups])
+                embed.add_field(name="Unregistered:", value=f"```{tags}```", inline=False)
             await ctx.send(embed=embed)
         else:
             await error_embed(ctx, "There are no signups for this event")
@@ -334,8 +338,8 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="The channel to send the RNG results",
                                          option_type=7, required=False),
                         mc.create_option(name="do_priority",
-                                         description="The channel to send the RNG results",
-                                         option_type=7, required=False)
+                                         description="Whether to process priority",
+                                         option_type=5, required=False)
                         ], guild_ids=SLASH_COMMANDS_GUILDS)
     async def rngsignups(self, ctx, event_id, size=22, priority_role=None, results_channel=None, do_priority=True):
         """Randomises signups for an event"""
