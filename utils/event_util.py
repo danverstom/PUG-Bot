@@ -109,7 +109,7 @@ async def get_event_time(ctx, event_time, event_date, deadline):
                     minute *= 10
                     minute += int(c)
             if if_m:
-                if c == 'p':
+                if c == 'p' and hour != 12:
                     hour += 12
                     if hour == 24:
                         hour = 0
