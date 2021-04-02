@@ -8,7 +8,7 @@ from discord_slash.cog_ext import cog_slash, cog_subcommand
 from discord_slash.utils import manage_commands as mc
 
 from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
-    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT
+    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT, TIMEZONE
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
     priority_rng_signups, get_embed_time_string
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
@@ -132,7 +132,7 @@ class EventCommands(Cog, name="Event Commands"):
                                                  mention_role, event_time_package[0][1], event_time_package[1][1])
 
         new_event = Event.add_event(event_message_ids[0], title, description, event_time_package[0][0].isoformat(),
-                                    datetime.now(timezone('EST')).isoformat(), ctx.author.id, ctx.guild.id,
+                                    datetime.now(timezone(TIMEZONE)).isoformat(), ctx.author.id, ctx.guild.id,
                                     announcement_channel.id, signup_channel.id, event_message_ids[1], signup_role.id,
                                     event_time_package[1][0].isoformat())
         self.events[event_message_ids[0]] = new_event
@@ -143,7 +143,7 @@ class EventCommands(Cog, name="Event Commands"):
         for event in list(self.events.values()):
             event.update()
             # print(f"Event: \n{event.title} Active: {event.is_active}\nTime: {event.time_est}\nDeadline: {event.signup_deadline}")
-            if datetime.now(timezone('EST')) >= datetime.fromisoformat(event.time_est) + timedelta(days=1):
+            if datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.time_est) + timedelta(days=1):
                 event.set_is_active(False)
                 await success_embed(self.bot.get_channel(event.signup_channel),
                                     f"Set event {event.event_id} / {event.title} to **inactive**")
@@ -154,7 +154,7 @@ class EventCommands(Cog, name="Event Commands"):
                 await message.clear_reactions()
             elif not event.is_signups_active:
                 continue
-            elif datetime.now(timezone('EST')) >= datetime.fromisoformat(event.signup_deadline):
+            elif datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.signup_deadline):
                 event.set_is_signup_active(False)
                 signups = self.signups.setdefault(event.event_id)
                 if not signups:
@@ -556,8 +556,8 @@ class EventCommands(Cog, name="Event Commands"):
         signup_deadline = datetime.fromisoformat(event.get_signup_deadline())
         new_event_time = event_time + postpone_amount
         new_signup_deadline = signup_deadline + postpone_amount
-        now = datetime.now(timezone('EST'))
-        if datetime.now(timezone('EST')) >= new_event_time + timedelta(minutes=5):
+        now = datetime.now(timezone(TIMEZONE))
+        if datetime.now(timezone(TIMEZONE)) >= new_event_time + timedelta(minutes=5):
             await error_embed(ctx, "You must postpone the event to a time at least 5 minutes away from now")
             return
         if new_signup_deadline < now + timedelta(minutes=1):
