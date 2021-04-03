@@ -327,9 +327,13 @@ class EventCommands(Cog, name="Event Commands"):
             return False
         try:
             event_id = int(event_id)
+            event = Event.from_event_id(event_id)
         except ValueError:
             await error_embed(ctx, "Please enter an integer for the event ID. This is the message ID of the event "
                                    "announcement.")
+            return
+        except EventDoesNotExistError:
+            await error_embed(ctx, "This event does not exist")
             return
         signups = self.signups.setdefault(event_id)
         results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
@@ -372,21 +376,24 @@ class EventCommands(Cog, name="Event Commands"):
                     player = Player.exists_discord_id(signup.user_id)
                     if player:
                         player.change_priority(1)
-
+        signed_role = ctx.guild.get_role(event.signup_role)
         if not results_channel:
-            await ctx.send(content=f"{get(ctx.guild.roles, name=SIGNED_ROLE_NAME).mention} RNG results:",
+            await ctx.send(content=f"{signed_role.mention} RNG results:",
                            embed=results_embed)
         else:
             await results_channel.send(content=f"{get(ctx.guild.roles, name=SIGNED_ROLE_NAME).mention} RNG results:",
                                        embed=results_embed)
             await success_embed(ctx, f"Sent results embed to {results_channel}")
 
-        tag_str = ""
-        for signup in selected_players:
-            user = self.bot.get_user(signup.user_id)
-            tag_str += f"@{user} \n"
-        await self.bot_channel.send(f"{ctx.author.mention} here is a list of tags to make the setroles process easy."
-                                    f"\n```{tag_str}```")
+        if selected_players:
+            tag_str = ""
+            for signup in selected_players:
+                user = self.bot.get_user(signup.user_id)
+                tag_str += f"@{user} \n"
+            await self.bot_channel.send(f"{ctx.author.mention} here is a list of tags to make the setroles process easy."
+                                        f"\n```{tag_str}```")
+        else:
+            await error_embed(ctx, "No players were selected")
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
     async def setroles(self, ctx):
@@ -636,12 +643,13 @@ class EventCommands(Cog, name="Event Commands"):
                 return
         if user:
             input_members.append(server.get_member(user.id))
-
+        total_input = len(input_members)
         for member in input_members:
             try:
                 player = Player.from_discord_id(member.id)
             except PlayerDoesNotExistError:
                 unregistered_members += f"{member.mention}\n"
+                total_input -= 1
             else:
                 prev_elo = player.get_elo()
                 if mode == "set":
@@ -655,7 +663,7 @@ class EventCommands(Cog, name="Event Commands"):
                     changes_str += f"{member.mention} `{prev_elo} → {player.get_elo()}`\n"
         summary = Embed(title="Summary of ELO changes", color=Colour.dark_purple())
         if changes_str:
-            summary.add_field(name="ELO changes:", value=changes_str)
+            summary.add_field(name=f"ELO changes: ({total_input})", value=changes_str)
         else:
             summary.description = "No changes were made to ELO"
         if unregistered_members:
