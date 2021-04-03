@@ -79,16 +79,20 @@ class CTFCommands(Cog, name="CTF Commands"):
         """
         Picks a random map out of a preset map pool
         """
+        await ctx.defer()
         with open("utils/rng_maps.json") as file:
             maps = load(file)
         random_map = choice(list(maps.keys()))
 
         file = File(f"assets/map_screenshots/{maps[random_map]}.jpg", filename=f"{maps[random_map]}.png")
         embed = Embed(title="RNG Map",
-                      description=f"You will be playing [{random_map}](https://www.brawl.com/games/ctf/maps/{maps[random_map]}) ({maps[random_map]})",
+                      description=f"You will be playing [{random_map}](https://www.brawl.com/games/ctf/maps/"
+                                  f"{maps[random_map]}) ({maps[random_map]})\n_(Used by {ctx.author.mention})_",
                       color=Colour.dark_purple())
         embed.set_image(url=f"attachment://{maps[random_map]}.png")
-        await ctx.send(file=file, embed=embed)
+        response = await ctx.send("Grabbing a map from the pool")
+        await ctx.channel.send(file=file, embed=embed)
+        await response.delete()
 
     @cog_slash(name="maps", description="Lists all maps in rotation that contains the given search",
                options=[manage_commands.create_option(name="search",
@@ -140,6 +144,7 @@ class CTFCommands(Cog, name="CTF Commands"):
         """
         Gets most recent stats from match 1 and 2
         """
+        await ctx.defer()
         match_1 = get_server_games("1.ctfmatch.brawl.com")
         match_2 = get_server_games("2.ctfmatch.brawl.com")
         match_1.reverse()
@@ -319,6 +324,7 @@ class CTFCommands(Cog, name="CTF Commands"):
                ]
                )
     async def ss(self, ctx, server="1"):
+        await ctx.defer()
         gc = gspread.service_account(filename='utils/service_account.json')
         if server == "1":
             values = gc.open_by_key("1CrQOxzaXC6iSjwZwQvu6DNIYsCDg-uQ4x5UiaWLHzxg").worksheet("Upcoming Matches").get(
