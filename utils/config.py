@@ -1,4 +1,5 @@
 import json
+import logging
 
 with open("utils/token.json") as file:
     token_json = json.load(file)
@@ -22,3 +23,6 @@ debug = False
 
 def get_debug_status():
     return debug
+
+
+logging.basicConfig(level=logging.INFO)
