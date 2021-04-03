@@ -203,7 +203,7 @@ class EventCommands(Cog, name="Event Commands"):
                 guild = self.bot.get_guild(event.guild_id)
                 signup_role = guild.get_role(event.signup_role)
                 for members in signup_role.members:
-                    if members not in can_play_users:
+                    if members.id not in can_play_users:
                         await members.remove_roles(signup_role)
                 [await guild.get_member(signup.user_id).add_roles(signup_role) for signup in can_play]
                 embed = signup_message.embeds[0]
