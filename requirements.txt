@@ -3,7 +3,7 @@ requests==2.24.0
 pytz==2020.4
 pandas==1.1.4
 discord.py==1.5.1
-discord_py_slash_command==1.0.9.5
+discord_py_slash_command==1.1.0
 beautifulsoup4==4.9.3
 discord==1.0.1
 lxml
