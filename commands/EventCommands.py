@@ -10,14 +10,14 @@ from discord_slash.utils import manage_commands as mc
 from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
     BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT, TIMEZONE
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
-    priority_rng_signups, get_embed_time_string
+    priority_rng_signups, get_embed_time_string, generate_signups_embed
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
 from database.Event import Event, EventDoesNotExistError
 from database.Signup import Signup
 from database.Player import Player, PlayerDoesNotExistError
 from asyncio import TimeoutError
 from random import shuffle
-
+import logging
 from datetime import datetime, timedelta
 from pytz import timezone
 
@@ -161,13 +161,8 @@ class EventCommands(Cog, name="Event Commands"):
                     signups = Signup.fetch_signups_list(event.event_id)
                 signups = list(filter(lambda sign: sign.can_play, signups))
                 if signups:
-                    tag_str = ""
-                    for signup in signups:
-                        user = self.bot.get_user(signup.user_id)
-                        tag_str += f"@{user} \n"
-                    await success_embed(self.bot.get_channel(event.signup_channel), f"Signups on signup deadline:"
-                                                                                    f"\n```{tag_str}```\n"
-                                                                                    f"{event.title}")
+                    await self.bot.get_channel(event.signup_channel).send(embed=generate_signups_embed(self.bot,
+                                                                                                       signups, event))
                 else:
                     await error_embed(self.bot.get_channel(event.signup_channel), "No signups on signup deadline :(\n"
                                                                                   f"{event.title}")
@@ -196,31 +191,40 @@ class EventCommands(Cog, name="Event Commands"):
 
             [signups, change] = reaction_changes(signups, can_play_users, is_muted_users, can_sub_users, event.event_id)
             if change:
+                logging.info(f"{event.title}: Reaction change detected")
                 save_signups(self.signups[event.event_id], signups)
+                logging.info(f"{event.title}: Signups saved")
                 self.signups[event.event_id] = signups
                 can_play = [user for user in signups if user.can_play]
                 can_sub = [user for user in signups if user.can_sub]
                 guild = self.bot.get_guild(event.guild_id)
                 signup_role = guild.get_role(event.signup_role)
-                for members in signup_role.members:
-                    if members not in can_play_users:
-                        await members.remove_roles(signup_role)
+                for member in signup_role.members:
+                    if member.id not in can_play_users:
+                        await member.remove_roles(signup_role)
+                        logging.info(f"{event.title}: Removing roles for member {member}")
                 [await guild.get_member(signup.user_id).add_roles(signup_role) for signup in can_play]
+                logging.info(f"{event.title}: Finished allocating {len(can_play)} roles") if can_play else logging.info(
+                    f"{event.title}: No roles were allocated"
+                )
                 embed = signup_message.embeds[0]
                 if can_play:
                     value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
                              for index, user in enumerate(can_play)]
                     embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value="\n".join(value),
                                        inline=False)
+                    logging.info(f"{event.title}: Generated new can_play field")
                 else:
                     embed.set_field_at(index=0, name=f"✅ Players: 0", value="No one :(", inline=False)
                 if can_sub:
                     value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
                              for index, user in enumerate(can_sub)]
                     embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub)}", value="\n".join(value), inline=False)
+                    logging.info(f"{event.title}: Generated new can_sub field")
                 else:
                     embed.set_field_at(index=1, name=f"🛗 Subs: 0", value="No one :(", inline=False)
                 await signup_message.edit(embed=embed)
+                logging.info(f"{event.title}: Finished editing signup message")
 
             if not event.is_active:
                 del self.events[event.event_id]
@@ -287,40 +291,13 @@ class EventCommands(Cog, name="Event Commands"):
             await error_embed(ctx, "Please enter an integer")
             return
         signups = Signup.fetch_signups_list(event_id)
-        playing_signups = []
-        sub_signups = []
-        unregistered_signups = [signup for signup in signups if not Player.exists_discord_id(signup.user_id)]
         try:
             event = Event.from_event_id(event_id)
         except EventDoesNotExistError:
             await error_embed(ctx, "This event does not exist")
             return False
-        embed = Embed(title=f"Signups - {event.title}", colour=Colour.dark_purple())
         if signups:
-            for signup in signups:
-                if signup.can_play:
-                    playing_signups.append(signup)
-                if signup.can_sub:
-                    sub_signups.append(signup)
-            signups_tag_str = ""
-            subs_tag_str = ""
-            if len(playing_signups) > 0:
-                for signup in playing_signups:
-                    user = self.bot.get_user(signup.user_id)
-                    signups_tag_str += f"@{user} \n"
-            else:
-                signups_tag_str = "Nobody :("
-            if len(sub_signups) > 0:
-                for signup in sub_signups:
-                    user = self.bot.get_user(signup.user_id)
-                    subs_tag_str += f"@{user} \n"
-            else:
-                subs_tag_str = "Nobody :("
-            embed.add_field(name="Signed", value=f"```{signups_tag_str}```", inline=False)
-            embed.add_field(name="Can Sub", value=f"```{subs_tag_str}```", inline=False)
-            if unregistered_signups:
-                tags = "\n".join([f"@{self.bot.get_user(signup.user_id)} " for signup in unregistered_signups])
-                embed.add_field(name="Unregistered:", value=f"```{tags}```", inline=False)
+            embed = generate_signups_embed(self.bot, signups, event)
             await ctx.send(embed=embed)
         else:
             await error_embed(ctx, "There are no signups for this event")

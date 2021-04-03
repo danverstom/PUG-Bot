@@ -12,6 +12,37 @@ from utils.utils import error_embed
 from random import shuffle
 
 
+def generate_signups_embed(bot, signups, event):
+    embed = Embed(title=f"Signups - {event.title}", colour=Colour.dark_purple())
+    playing_signups = []
+    sub_signups = []
+    unregistered_signups = [signup for signup in signups if not Player.exists_discord_id(signup.user_id)]
+    for signup in signups:
+        if signup.can_play:
+            playing_signups.append(signup)
+        if signup.can_sub:
+            sub_signups.append(signup)
+    signups_tag_str = ""
+    subs_tag_str = ""
+    if len(playing_signups) > 0:
+        for signup in playing_signups:
+            user = bot.get_user(signup.user_id)
+            signups_tag_str += f"@{user} \n"
+    else:
+        signups_tag_str = "Nobody :("
+    if len(sub_signups) > 0:
+        for signup in sub_signups:
+            user = bot.get_user(signup.user_id)
+            subs_tag_str += f"@{user} \n"
+    else:
+        subs_tag_str = "Nobody :("
+    embed.add_field(name="Signed", value=f"```{signups_tag_str}```", inline=False)
+    embed.add_field(name="Can Sub", value=f"```{subs_tag_str}```", inline=False)
+    if unregistered_signups:
+        tags = "\n".join([f"@{bot.get_user(signup.user_id)} " for signup in unregistered_signups])
+        embed.add_field(name="Unregistered:", value=f"```{tags}```", inline=False)
+    return embed
+
 def get_embed_time_string(time):
     # Get string of event time
     if time.hour >= 13:
