@@ -202,11 +202,13 @@ class EventCommands(Cog, name="Event Commands"):
                 for member in signup_role.members:
                     if member.id not in can_play_users:
                         await member.remove_roles(signup_role)
-                        logging.info(f"{event.title}: Removing roles for member {member}")
-                [await guild.get_member(signup.user_id).add_roles(signup_role) for signup in can_play]
-                logging.info(f"{event.title}: Finished allocating {len(can_play)} roles") if can_play else logging.info(
-                    f"{event.title}: No roles were allocated"
-                )
+                        logging.info(f"{event.title}: Removed role {signup_role.name} from {member}")
+                reaction_member_ids = [member.id for member in signup_role.members]
+                for user_id in can_play_users:
+                    if user_id not in reaction_member_ids:
+                        member = guild.get_member(user_id)
+                        await member.add_roles(signup_role)
+                        logging.info(f"{event.title}: Allocated role {signup_role.name} to {member}")
                 embed = signup_message.embeds[0]
                 if can_play:
                     value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
