@@ -8,7 +8,7 @@ from discord_slash.cog_ext import cog_slash, cog_subcommand
 from discord_slash.utils import manage_commands as mc
 
 from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
-    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT, TIMEZONE
+    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT, TIMEZONE, SPECTATOR_ROLE_NAME
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
     priority_rng_signups, get_embed_time_string, generate_signups_embed
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
@@ -143,7 +143,7 @@ class EventCommands(Cog, name="Event Commands"):
         for event in list(self.events.values()):
             event.update()
             # print(f"Event: \n{event.title} Active: {event.is_active}\nTime: {event.time_est}\nDeadline: {event.signup_deadline}")
-            if datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.time_est) + timedelta(days=1):
+            if datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.time_est) + timedelta(hours=3):
                 event.set_is_active(False)
                 await success_embed(self.bot.get_channel(event.signup_channel),
                                     f"Set event {event.event_id} / {event.title} to **inactive**")
@@ -152,6 +152,10 @@ class EventCommands(Cog, name="Event Commands"):
                 embed.description = "This event is no longer active."
                 await message.edit(embed=embed)
                 await message.clear_reactions()
+                spectator_role = get(message.guild.roles, name=SPECTATOR_ROLE_NAME)
+                for member in spectator_role.members:
+                    await member.remove_roles(spectator_role, reason=f"Removing spectator role after {event.title}")
+                    logging.info(f"{event.title}: Removed spectator role from {member}")
             elif not event.is_signups_active:
                 continue
             elif datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.signup_deadline):
@@ -359,6 +363,7 @@ class EventCommands(Cog, name="Event Commands"):
         if selected_players:
             results_embed.add_field(name=f"Playing ({len(selected_players)})", value='\n'.join(
                 [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') +
+                 ('🛗' if signup.can_sub else '') +
                  ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
                  selected_players]))
             if do_priority:
@@ -369,6 +374,7 @@ class EventCommands(Cog, name="Event Commands"):
         if benched_players:
             results_embed.add_field(name=f"Not Playing ({len(benched_players)})", value='\n'.join(
                 [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') +
+                 ('🛗' if signup.can_sub else '') +
                  ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
                  benched_players]))
             if do_priority:
