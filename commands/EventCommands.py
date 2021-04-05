@@ -396,7 +396,7 @@ class EventCommands(Cog, name="Event Commands"):
             for signup in selected_players:
                 user = self.bot.get_user(signup.user_id)
                 player = Player.exists_discord_id(signup.user_id)
-                tag_str += f"@{user} ({player.minecraft_username if Player else ''})\n"
+                tag_str += f"@{user} ({player.minecraft_username if player else 'Unregistered'})\n"
             await self.bot_channel.send(f"{ctx.author.mention} here is a list of tags to make the setroles process easy."
                                         f"\n```{tag_str}```")
         else:
