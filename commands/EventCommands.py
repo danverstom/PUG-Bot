@@ -143,7 +143,7 @@ class EventCommands(Cog, name="Event Commands"):
         for event in list(self.events.values()):
             event.update()
             # print(f"Event: \n{event.title} Active: {event.is_active}\nTime: {event.time_est}\nDeadline: {event.signup_deadline}")
-            if datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.time_est) + timedelta(seconds=30):
+            if datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.time_est) + timedelta(hours=3):
                 event.set_is_active(False)
                 await success_embed(self.bot.get_channel(event.signup_channel),
                                     f"Set event {event.event_id} / {event.title} to **inactive**")
