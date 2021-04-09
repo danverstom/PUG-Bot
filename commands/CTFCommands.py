@@ -15,6 +15,7 @@ from os import path
 import aiohttp
 from asyncio import sleep as async_sleep
 import logging
+from utils.plot_utils import *
 
 # ss
 import os
@@ -446,14 +447,13 @@ class CTFCommands(Cog, name="CTF Commands"):
                                                                    f" data, sorry")
                                 return
                             else:
-                                await discord_message.edit(content="Data loaded, creating stats embed...")
+                                await discord_message.edit(content="Data loaded")
                         else:
                             await error_embed(ctx, text)
                             return
                     else:
                         await error_embed(ctx, "Request to load new player data failed")
                         return
-
         class_stats_list = []
         link = "https://www.nineonefive.xyz/stats/"
         for class_name in data[mode].keys():
@@ -481,6 +481,15 @@ class CTFCommands(Cog, name="CTF Commands"):
 
             class_stats_string += f"\n\n[Stats sourced from 915's brilliant website]({link})"
             class_stats_list.append(class_stats_string)
+
+        await ctx.send(content="Plotting a beautiful graph")
+        sizes = [int(data[mode][key]["playtime"]) for key in data[mode].keys()]
+        avg_size = sum(sizes) / len(sizes)
+        labels = [(key.title() if float(data[mode][key]["playtime"]) > avg_size else "") for key in data[mode].keys()]
+        # TODO: sort these lists to make the pie chart look better
+        data_stream = pie_chart(labels, sizes, explode=[0.1 if label else 0 for label in labels])
+        data_stream.seek(0)
+        chart_file = File(data_stream, filename="pie_chart.png")
         await create_list_pages(self.bot, ctx, info=class_stats_list, title=f"{mode.title()} stats | {username}",
                                 elements_per_page=1, thumbnails=[f"https://cravatar.eu/helmavatar/{username}/128.png"],
-                                can_be_reversed=True)
+                                can_be_reversed=True, image=("attachment://pie_chart.png", chart_file))

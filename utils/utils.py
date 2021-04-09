@@ -54,7 +54,7 @@ async def response_embed(ctx, title, description):
 
 
 async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "Empty List", sep: str = "\n",
-                            elements_per_page: int = 10, thumbnails=None, can_be_reversed=False):
+                            elements_per_page: int = 10, thumbnails=None, can_be_reversed=False, image=None):
     if not info:
         await ctx.send(embed=Embed(title=title, description=if_empty, colour=Colour.dark_red()))
         return
@@ -79,7 +79,10 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
         else:
             embed.set_thumbnail(url=thumbnails[current_page - 1])
 
-    message = await ctx.send(embed=embed)
+    if image:
+        embed.set_image(url=image[0])
+
+    message = await ctx.send(embed=embed, file=image[1] if image else None)
 
     await message.add_reaction("◀")
     await message.add_reaction("▶")
