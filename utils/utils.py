@@ -3,7 +3,17 @@ from discord.utils import get
 from math import ceil
 from asyncio import TimeoutError
 from json import load, dump
+import aiohttp
 
+
+async def request_async_json(url, content_type):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as r:
+            if r.status == 200:
+                json = await r.json(content_type=content_type)
+                return r, json
+            else:
+                return False
 
 def has_permissions(ctx, required_role_name):
     server = ctx.bot.get_guild(ctx.guild_id)
@@ -150,6 +160,8 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
             else:
                 await message.remove_reaction(reaction, user)
         except TimeoutError:
-            await message.edit(content="Message Expired", embed=None)
             await message.clear_reactions()
+            embed.title = embed.title + " (Saved)"
+            embed.set_footer(text=f"Page {current_page}/{num_pages} (Saved)")
+            await message.edit(embed=embed)
             break
