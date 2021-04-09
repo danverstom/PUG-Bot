@@ -7,4 +7,8 @@ discord_py_slash_command==1.1.0
 beautifulsoup4==4.9.3
 discord==1.0.1
 lxml
-gspread
+gspread~=3.6.0
+asyncio~=3.4.3
+aiohttp~=3.6.2
+bs4~=0.0.1
+python-dateutil~=2.8.1
