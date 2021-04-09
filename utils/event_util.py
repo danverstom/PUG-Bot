@@ -5,11 +5,14 @@ from re import fullmatch
 from discord import Embed, Colour
 from pytz import timezone
 from utils.config import TIMEZONE
+import os
+
 
 from database.Player import Player, PlayerDoesNotExistError
 from database.Signup import Signup
 from utils.utils import error_embed
 from random import shuffle
+from dateutil import parser
 
 
 def generate_signups_embed(bot, signups, event):
@@ -111,133 +114,77 @@ async def check_if_cancel(ctx, response):
         return False
 
 
-async def get_event_time(ctx, event_time, event_date, deadline):
+async def get_event_time(ctx, time_string, date_string, deadline):
     current_datetime = datetime.now(timezone(TIMEZONE))
-
     # Get time of event
-    hour = 0
-    minute = 0
-    if fullmatch("^((0?[1-9])|(1[0-2]))(:[0-5][0-9])?[ap]m$", event_time):
-        is_hour = True
-        is_minute = False
-        if_m = False
-        for c in event_time:
-            if is_hour:
-                if c == ':':
-                    is_minute = True
-                    is_hour = False
-                elif c == 'a' or c == 'p':
-                    if_m = True
-                    is_hour = False
-                else:
                     hour *= 10
-                    hour += int(c)
             elif is_minute:
-                if c == 'a' or c == 'p':
-                    if_m = True
-                    is_minute = False
-                else:
-                    minute *= 10
-                    minute += int(c)
-            if if_m:
-                if c == 'p' and hour != 12:
-                    hour += 12
-                    if hour == 24:
-                        hour = 0
-    elif fullmatch("^(([01]?[0-9])|(2[0-3]))(:[0-5][0-9])?$", event_time):
-        is_hour = True
-        is_minute = False
-        for c in event_time:
-            if is_hour:
-                if c == ':':
-                    is_minute = True
-                    is_hour = False
-                else:
-                    hour *= 10
-                    hour += int(c)
-            elif is_minute:
-                minute *= 10
-                minute += int(c)
-    else:
+    event_time = None
+    try:
+        event_time = parser.parse(time_string, tzinfos={"EST": "UTC-4"})
+    except Exception as e:
         await error_embed(ctx, "Event time is not in a valid format.  Use HH:MMam/pm or HH:MM")
         return False
-    event_time = time(hour=hour, minute=minute)
 
     # Get date of event
-    if not event_date:
+    event_date = None
+    if not date_string:
         event_date = date(current_datetime.year, current_datetime.month, current_datetime.day)
-        if event_time.hour < current_datetime.hour:
-            event_date += timedelta(days=1)
-        elif event_time.hour == current_datetime.hour and event_time.minute <= current_datetime.minute:
+        if (event_time.hour < current_datetime.hour) or (event_time.hour == current_datetime.hour and event_time.minute <= current_datetime.minute):
             event_date += timedelta(days=1)
     else:
         try:
-            event_date = date.fromisoformat(event_date)
-        except ValueError:
             await error_embed(ctx, "Event date is not in a valid format.  Use YYYY-MM-DD")
+        except Exception as e:
             return False
-    event_datetime = timezone(TIMEZONE).localize(datetime.combine(event_date, event_time))
+        
+    event_datetime = datetime.combine(event_date, event_time.time())
+                                                                      #have to specify what timezone the product is?
 
     if event_datetime < current_datetime:
         await error_embed(ctx, "Event time is before the current time.")
         return False
 
     # Get string of event time
-    if event_datetime.hour >= 13:
-        hour = event_datetime.hour - 12
-        time_suffix = "pm"
-    elif event_datetime.hour == 12:
-        hour = event_datetime.hour
-        time_suffix = "pm"
     elif event_datetime.hour > 0:
-        hour = event_datetime.hour
-        time_suffix = "am"
-    else:
-        hour = event_datetime.hour + 12
-        time_suffix = "am"
     if event_datetime.minute == 0:
         minute = ""
     elif event_datetime.minute < 10:
         minute = f":0{event_datetime.minute}"
     else:
         minute = f":{event_datetime.minute}"
-    if event_datetime.date() == current_datetime.date():
-        date_string = ""
-    elif event_datetime.year == current_datetime.year:
-        date_string = f" - {month_name[event_datetime.month]} {event_datetime.day}"
+    event_string = ""
+    if os.name == "nt":
+        event_string += event_datetime.strftime("%#I:%M%p") 
+        if date_string:
+            event_string += " " + event_date.strftime("%B %#d")
+
     else:
-        date_string = f" - {month_name[event_datetime.month]} {event_datetime.day}, {event_datetime.year}"
-    event_string = f"{hour}{minute}{time_suffix}{date_string}"
+        event_string += event_datetime.strftime("%-I:%M%p")
+        if date_string:
+            event_string += " " + event_date.strftime("%B %-d")
 
     # Get string of signup deadline
+    deadline_string = ""
     signup_deadline = event_datetime - timedelta(minutes=deadline)
     if signup_deadline <= current_datetime:
         signup_deadline = event_datetime
-    if signup_deadline.hour >= 13:
-        hour = signup_deadline.hour - 12
-        time_suffix = "pm"
-    elif signup_deadline.hour == 12:
-        hour = signup_deadline.hour
-        time_suffix = "pm"
     elif signup_deadline.hour > 0:
-        hour = signup_deadline.hour
-        time_suffix = "am"
-    else:
-        hour = signup_deadline.hour + 12
-        time_suffix = "am"
     if signup_deadline.minute == 0:
         minute = ""
-    elif signup_deadline.minute < 10:
         minute = f":0{signup_deadline.minute}"
     else:
         minute = f":{signup_deadline.minute}"
-    if signup_deadline.date() == current_datetime.date():
-        date_string = ""
-    elif signup_deadline.year == current_datetime.year:
-        date_string = f" - {month_name[signup_deadline.month]} {signup_deadline.day}"
+
+    if os.name == "nt":
+        deadline_string += signup_deadline.strftime("%#I:%M%p")
+        if date_string:
+            deadline_string += " " + signup_deadline.strftime("%B %#d")
     else:
-        date_string = f" - {month_name[signup_deadline.month]} {signup_deadline.day}, {signup_deadline.year}"
-    deadline_string = f"{hour}{minute}{time_suffix}{date_string}"
+        deadline_string += " " + signup_deadline.strftime("%-I:%M%p")
+        if date_string:
+            deadline_string += signup_deadline.strftime("%B %-d")
+
 
     return [(event_datetime, event_string), (signup_deadline, deadline_string)]
 
