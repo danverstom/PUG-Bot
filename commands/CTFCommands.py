@@ -395,6 +395,7 @@ class CTFCommands(Cog, name="CTF Commands"):
                 manage_commands.create_choice(name="Casual", value="casual")])
     ])
     async def playerstats(self, ctx, ign=None, mode="competitive"):
+        """Gets player stats using 915's stats website"""
         await ctx.defer()
         get_player_id_url = "https://by48xt0cuf.execute-api.us-east-1.amazonaws.com/default/request-player?name={}"
         stats_from_id_url = "https://by48xt0cuf.execute-api.us-east-1.amazonaws.com/default/request-player?id={}"
