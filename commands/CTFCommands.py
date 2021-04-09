@@ -455,11 +455,13 @@ class CTFCommands(Cog, name="CTF Commands"):
                         return
 
         class_stats_list = []
+        link = "https://www.nineonefive.xyz/stats/"
         for class_name in data[mode].keys():
             class_stats = data[mode][class_name]
             class_stats_string = f"**{class_name.title()}**\n\n" + "\n"\
                 .join([f"**{stat_key.replace('_', ' ').title()}**: `{int(round(float(class_stats[stat_key]), 0))}`"
-                       for stat_key in class_stats.keys() if class_stats[stat_key] != "0"])
+                       for stat_key in class_stats.keys() if class_stats[stat_key] != "0"]) + \
+                                 f"\n\n[Stats sourced from 915's brilliant website]({link})"
             class_stats_list.append(class_stats_string)
         await create_list_pages(self.bot, ctx, info=class_stats_list, title=f"{mode.title()} stats | {username}",
                                 elements_per_page=1, thumbnails=[f"https://cravatar.eu/helmavatar/{username}/128.png"],
