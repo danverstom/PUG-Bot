@@ -44,6 +44,7 @@ def generate_signups_embed(bot, signups, event):
         embed.add_field(name="Unregistered:", value=f"```{tags}```", inline=False)
     return embed
 
+
 def get_embed_time_string(time):
     # Get string of event time
     if time.hour >= 13:

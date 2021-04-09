@@ -460,8 +460,26 @@ class CTFCommands(Cog, name="CTF Commands"):
             class_stats = data[mode][class_name]
             class_stats_string = f"**{class_name.title()}**\n\n" + "\n"\
                 .join([f"**{stat_key.replace('_', ' ').title()}**: `{int(round(float(class_stats[stat_key]), 0))}`"
-                       for stat_key in class_stats.keys() if class_stats[stat_key] != "0"]) + \
-                                 f"\n\n[Stats sourced from 915's brilliant website]({link})"
+                       for stat_key in class_stats.keys() if class_stats[stat_key] != "0"]) + "\n"
+
+            # Damage per 20 minutes
+            if float(class_stats["damage_dealt"]) > 1000 and float(class_stats["playtime"]) > 1000:
+                dmg = float(class_stats["damage_dealt"])
+                n_20 = float(class_stats["playtime"]) / 1200
+                dmg_per_20 = int(round(dmg / n_20, 0))
+                class_stats_string += f"\n**Damage per 20m**: `{dmg_per_20}`"
+
+            # KDR
+            if float(class_stats["kills"]) > 0 and float(class_stats["deaths"]) > 0:
+                kdr = round(float(class_stats["kills"])/float(class_stats["deaths"]), 3)
+                class_stats_string += f"\n**KDR**: `{kdr}`"
+
+            # Cap success
+            if float(class_stats["flags_captured"]) > 0 and float(class_stats["flags_stolen"]) > 0:
+                cap_eff = round(float(class_stats["flags_captured"]) / float(class_stats["flags_stolen"]) * 100, 2)
+                class_stats_string += f"\n**Capture Success**: `{cap_eff}%`"
+
+            class_stats_string += f"\n\n[Stats sourced from 915's brilliant website]({link})"
             class_stats_list.append(class_stats_string)
         await create_list_pages(self.bot, ctx, info=class_stats_list, title=f"{mode.title()} stats | {username}",
                                 elements_per_page=1, thumbnails=[f"https://cravatar.eu/helmavatar/{username}/128.png"],
