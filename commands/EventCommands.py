@@ -72,7 +72,7 @@ class EventCommands(Cog, name="Event Commands"):
                                          option_type=4, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
     async def event(self, ctx, title, announcement_channel, mention_role, signup_channel, signup_role, event_time,
-                    event_date="", signup_deadline=20):
+                    event_date="", signup_deadline=30):
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
