@@ -27,7 +27,8 @@ def generate_signups_embed(bot, signups, event):
     if len(playing_signups) > 0:
         for signup in playing_signups:
             user = bot.get_user(signup.user_id)
-            signups_tag_str += f"@{user} \n"
+            player = Player.exists_discord_id(signup.user_id)
+            signups_tag_str += f"@{user} ({player.minecraft_username if player else 'Unregistered'})\n"
     else:
         signups_tag_str = "Nobody :("
     if len(sub_signups) > 0:
@@ -42,6 +43,7 @@ def generate_signups_embed(bot, signups, event):
         tags = "\n".join([f"@{bot.get_user(signup.user_id)} " for signup in unregistered_signups])
         embed.add_field(name="Unregistered:", value=f"```{tags}```", inline=False)
     return embed
+
 
 def get_embed_time_string(time):
     # Get string of event time
