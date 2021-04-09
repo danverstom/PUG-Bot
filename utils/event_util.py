@@ -15,6 +15,7 @@ from random import shuffle
 from dateutil import parser
 
 
+
 def generate_signups_embed(bot, signups, event):
     embed = Embed(title=f"Signups - {event.title}", colour=Colour.dark_purple())
     playing_signups = []
@@ -117,8 +118,6 @@ async def check_if_cancel(ctx, response):
 async def get_event_time(ctx, time_string, date_string, deadline):
     current_datetime = datetime.now(timezone(TIMEZONE))
     # Get time of event
-                    hour *= 10
-            elif is_minute:
     event_time = None
     try:
         event_time = parser.parse(time_string, tzinfos={"EST": "UTC-4"})
@@ -134,11 +133,13 @@ async def get_event_time(ctx, time_string, date_string, deadline):
             event_date += timedelta(days=1)
     else:
         try:
-            await error_embed(ctx, "Event date is not in a valid format.  Use YYYY-MM-DD")
+            event_date = parser.parse(date_string, dayfirst=True, tzinfos={"EST": "UTC-4"})
         except Exception as e:
+            await error_embed(ctx, "Event date is not in a valid format. Use DD-MM-YYYY")
             return False
         
     event_datetime = datetime.combine(event_date, event_time.time())
+    event_datetime = timezone(TIMEZONE).localize(event_datetime) # combined two timezone aware objects and now
                                                                       #have to specify what timezone the product is?
 
     if event_datetime < current_datetime:
@@ -146,13 +147,6 @@ async def get_event_time(ctx, time_string, date_string, deadline):
         return False
 
     # Get string of event time
-    elif event_datetime.hour > 0:
-    if event_datetime.minute == 0:
-        minute = ""
-    elif event_datetime.minute < 10:
-        minute = f":0{event_datetime.minute}"
-    else:
-        minute = f":{event_datetime.minute}"
     event_string = ""
     if os.name == "nt":
         event_string += event_datetime.strftime("%#I:%M%p") 
@@ -169,12 +163,6 @@ async def get_event_time(ctx, time_string, date_string, deadline):
     signup_deadline = event_datetime - timedelta(minutes=deadline)
     if signup_deadline <= current_datetime:
         signup_deadline = event_datetime
-    elif signup_deadline.hour > 0:
-    if signup_deadline.minute == 0:
-        minute = ""
-        minute = f":0{signup_deadline.minute}"
-    else:
-        minute = f":{signup_deadline.minute}"
 
     if os.name == "nt":
         deadline_string += signup_deadline.strftime("%#I:%M%p")
