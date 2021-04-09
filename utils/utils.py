@@ -155,8 +155,9 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                 await message.edit(embed=embed)
                 await message.remove_reaction(reaction, user)
             elif str(reaction.emoji) == "❌":
-                raise TimeoutError
-
+                await message.edit(content="Message Expired", embed=None)
+                await message.clear_reactions()
+                break
             else:
                 await message.remove_reaction(reaction, user)
         except TimeoutError:
