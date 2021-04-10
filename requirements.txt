@@ -2,10 +2,9 @@ mojang
 requests
 pytz
 pandas
-discord.py==1.5.1
-discord_py_slash_command==1.1.0
+discord.py==1.7.1
+discord_py_slash_command==1.1.1
 beautifulsoup4
-discord
 lxml
 gspread
 asyncio

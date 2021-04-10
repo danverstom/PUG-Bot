@@ -101,6 +101,7 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                 current_page += 1
                 embed = Embed(title=title, description=contents[current_page - 1],
                               colour=Colour.dark_purple())
+                embed.set_image(url=image[0])
 
                 if thumbnails:
                     if len(thumbnails) == 1:
@@ -158,7 +159,7 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                 await message.edit(embed=embed)
                 await message.remove_reaction(reaction, user)
             elif str(reaction.emoji) == "❌":
-                await message.edit(content="Message Expired", embed=None)
+                await message.edit(content="Message Expired", embed=None, file=None)
                 await message.clear_reactions()
                 break
             else:

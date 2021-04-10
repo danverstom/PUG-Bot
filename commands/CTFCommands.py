@@ -397,7 +397,8 @@ class CTFCommands(Cog, name="CTF Commands"):
     ])
     async def playerstats(self, ctx, ign=None, mode="competitive"):
         """Gets player stats using 915's stats website"""
-        await ctx.defer()
+        if not ctx.responded:
+            await ctx.defer()
         get_player_id_url = "https://by48xt0cuf.execute-api.us-east-1.amazonaws.com/default/request-player?name={}"
         stats_from_id_url = "https://by48xt0cuf.execute-api.us-east-1.amazonaws.com/default/request-player?id={}"
         new_player_request_url = "https://qe824lieck.execute-api.us-east-1.amazonaws.com/default/new-player?id={}"
@@ -423,28 +424,28 @@ class CTFCommands(Cog, name="CTF Commands"):
         else:
             await error_embed(ctx, f"Failed to get player ID for name `{username}`")
             return
+        discord_message = await ctx.send(content="Grabbing your data")
         stats_response = await request_async_json(stats_from_id_url.format(player_id), 'text/plain')
         json_response = stats_response[1]
         if json_response["data"]:
             data = json_response["data"]
-            logging.info(data)
         else:
             logging.info(f"Player data for `{username}` is not loaded yet")
-            discord_message = await ctx.send(content="Your data is not loaded yet, hold tight")
+            await discord_message.edit(content="Your data is not loaded yet, hold tight")
             async with aiohttp.ClientSession() as session:
                 async with session.get(new_player_request_url.format(player_id)) as r:
                     if r.status == 200:
                         text = await r.text()
                         if text == "Success":
                             logging.info("Successfully loaded new data")
+                            await discord_message.edit(content="Your data is being loaded.")
                             await async_sleep(10)
                             stats_response = await request_async_json(stats_from_id_url.format(player_id), 'text/plain')
                             json_response = stats_response[1]
                             data = json_response["data"]
-                            logging.info(data)
                             if not data:
                                 await discord_message.edit(content=f"Account `{username}` doesn't appear to have any"
-                                                                   f" data, sorry")
+                                                                   f" data, sorry. Try again later.")
                                 return
                             else:
                                 await discord_message.edit(content="Data loaded")
@@ -452,7 +453,7 @@ class CTFCommands(Cog, name="CTF Commands"):
                             await error_embed(ctx, text)
                             return
                     else:
-                        await error_embed(ctx, "Request to load new player data failed")
+                        await discord_message.edit(content="Request to load new player data failed")
                         return
         class_stats_list = []
         link = "https://www.nineonefive.xyz/stats/"
@@ -482,14 +483,19 @@ class CTFCommands(Cog, name="CTF Commands"):
             class_stats_string += f"\n\n[Stats sourced from 915's brilliant website]({link})"
             class_stats_list.append(class_stats_string)
 
-        await ctx.send(content="Plotting a beautiful graph")
+        await discord_message.edit(content="Plotting a beautiful graph")
+        if not len(data[mode].keys()) > 0:
+            await discord_message.edit(content=f"{username} has not played {mode}")
+            return
         sizes = [int(data[mode][key]["playtime"]) for key in data[mode].keys()]
         avg_size = sum(sizes) / len(sizes)
         labels = [(key.title() if float(data[mode][key]["playtime"]) > avg_size else "") for key in data[mode].keys()]
         # TODO: sort these lists to make the pie chart look better
-        data_stream = pie_chart(labels, sizes, explode=[0.1 if label else 0 for label in labels])
+        data_stream = pie_chart(labels, sizes, explode=[0.1 if label else 0 for label in labels],
+                                title="Playtime by class")
         data_stream.seek(0)
         chart_file = File(data_stream, filename="pie_chart.png")
+        await discord_message.edit(content="Done! Sending results...")
         await create_list_pages(self.bot, ctx, info=class_stats_list, title=f"{mode.title()} stats | {username}",
                                 elements_per_page=1, thumbnails=[f"https://cravatar.eu/helmavatar/{username}/128.png"],
                                 can_be_reversed=True, image=("attachment://pie_chart.png", chart_file))
