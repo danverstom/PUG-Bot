@@ -3,7 +3,17 @@ from discord.utils import get
 from math import ceil
 from asyncio import TimeoutError
 from json import load, dump
+import aiohttp
 
+
+async def request_async_json(url, content_type):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as r:
+            if r.status == 200:
+                json = await r.json(content_type=content_type)
+                return r, json
+            else:
+                return False
 
 def has_permissions(ctx, required_role_name):
     server = ctx.bot.get_guild(ctx.guild_id)
@@ -44,7 +54,7 @@ async def response_embed(ctx, title, description):
 
 
 async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "Empty List", sep: str = "\n",
-                            elements_per_page: int = 10, thumbnails=None, can_be_reversed=False):
+                            elements_per_page: int = 10, thumbnails=None, can_be_reversed=False, image=None):
     if not info:
         await ctx.send(embed=Embed(title=title, description=if_empty, colour=Colour.dark_red()))
         return
@@ -69,7 +79,10 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
         else:
             embed.set_thumbnail(url=thumbnails[current_page - 1])
 
-    message = await ctx.send(embed=embed)
+    if image:
+        embed.set_image(url=image[0])
+
+    message = await ctx.send(embed=embed, file=image[1] if image else None)
 
     await message.add_reaction("◀")
     await message.add_reaction("▶")
@@ -145,11 +158,14 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                 await message.edit(embed=embed)
                 await message.remove_reaction(reaction, user)
             elif str(reaction.emoji) == "❌":
-                raise TimeoutError
-
+                await message.edit(content="Message Expired", embed=None)
+                await message.clear_reactions()
+                break
             else:
                 await message.remove_reaction(reaction, user)
         except TimeoutError:
-            await message.edit(content="Message Expired", embed=None)
             await message.clear_reactions()
+            embed.title = embed.title + " (Saved)"
+            embed.set_footer(text=f"Page {current_page}/{num_pages} (Saved)")
+            await message.edit(embed=embed)
             break
