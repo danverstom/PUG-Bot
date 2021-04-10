@@ -43,6 +43,7 @@ class LifetimeStatsGame(Cog, name="CTF Commands"):
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
     async def gameofstats(self, ctx):
+        """Compete with other members to guess the player from their stats"""
         if self.in_progress:
             await error_embed(ctx, "There is already a game in progress")
             return
