@@ -50,20 +50,73 @@ def generate_signups_embed(bot, signups, event):
 def get_embed_time_string(datetime):
     # Get string of event time
     current_datetime = datetime.now(timezone(TIMEZONE))
-    string = ""
     r = "-"
     if os.name == "nt":
-        r = "#"
-    string += datetime.strftime(f"%{r}I:%M%p")
+        r = "#" # TODO better ways of removing padding?
+    string = datetime.strftime(f"%{r}I:%M%p")
 
-    if datetime.date() == current_datetime.date():
-        string += "" 
-    elif current_datetime.year == datetime.year:
+    if datetime.date() == current_datetime.date(): # if dd-mm-yyyy is the same
+        pass
+    elif current_datetime.year == datetime.year: # both in the same year
         string += " " + datetime.strftime(f"%B %{r}d")
-    else:
-        string += " " + datetime.strftime(f'%B %{r}d %Y')
+    else: 
+        string += " " + datetime.strftime(f"%B %{r}d %Y")
+    return string
 
-    return str(string)
+async def get_event_time(ctx, time_string, date_string, deadline):
+    current_datetime = datetime.now(timezone(TIMEZONE))
+    # Get time of event
+    event_time = None
+    try:
+        event_time = parser.parse(time_string)
+    except Exception as e:
+        await error_embed(ctx, "Event time is not in a valid format.  Use HH:MMam/pm or HH:MM")
+        return False
+
+    # Get date of event
+    event_date = None
+    if not date_string:
+        event_date = date(current_datetime.year, current_datetime.month, current_datetime.day)
+        if (event_time.hour < current_datetime.hour) or (event_time.hour == current_datetime.hour and event_time.minute <= current_datetime.minute):
+            event_date += timedelta(days=1)
+    else:
+        try:
+            event_date = parser.parse(date_string, dayfirst=True) # could remove dayfirst for MM-DD-YYYY for the americans
+        except Exception as e:
+            await error_embed(ctx, "Event date is not in a valid format. Use DD-MM-YYYY")
+            return False
+        
+    event_datetime = datetime.combine(event_date, event_time.time())
+    event_datetime = timezone(TIMEZONE).localize(event_datetime) # turn into offset-aware datetime object
+
+    if event_datetime < current_datetime:
+        await error_embed(ctx, "Event time is before the current time.")
+        return False
+
+    r = "-"
+    if os.name == "nt":
+        r = "#" # TODO better ways of removing padding?
+        
+    # Get string of event time
+    event_string = event_datetime.strftime(f"%{r}I:%M%p") 
+    if date_string:
+        if current_datetime.year == event_datetime.year:
+            event_string += " " + event_date.strftime(f"%B %{r}d")
+        else:
+            event_string += " " + event_date.strftime(f"%B %{r}d %Y")
+
+    # Get string of signup deadline
+    signup_deadline = event_datetime - timedelta(minutes=deadline)
+    if signup_deadline <= current_datetime:
+        signup_deadline = event_datetime
+    
+    deadline_string = signup_deadline.strftime(f"%{r}I:%M%p")
+    if date_string:
+        if current_datetime.year == event_datetime.year:
+            deadline_string += " " + event_date.strftime(f"%B %{r}d")
+        else:
+            deadline_string += " " + event_date.strftime(f"%B %{r}d %Y")
+    return [(event_datetime, event_string), (signup_deadline, deadline_string)]
 
 
 def priority_rng_signups(playing_signups_list, size):
@@ -102,68 +155,6 @@ async def check_if_cancel(ctx, response):
         return True
     else:
         return False
-
-
-async def get_event_time(ctx, time_string, date_string, deadline):
-    current_datetime = datetime.now(timezone(TIMEZONE))
-    # Get time of event
-    event_time = None
-    try:
-        event_time = parser.parse(time_string, tzinfos={"EST": "UTC-4"})
-    except Exception as e:
-        await error_embed(ctx, "Event time is not in a valid format.  Use HH:MMam/pm or HH:MM")
-        return False
-
-    # Get date of event
-    event_date = None
-    if not date_string:
-        event_date = date(current_datetime.year, current_datetime.month, current_datetime.day)
-        if (event_time.hour < current_datetime.hour) or (event_time.hour == current_datetime.hour and event_time.minute <= current_datetime.minute):
-            event_date += timedelta(days=1)
-    else:
-        try:
-            event_date = parser.parse(date_string, dayfirst=True, tzinfos={"EST": "UTC-4"})
-        except Exception as e:
-            await error_embed(ctx, "Event date is not in a valid format. Use DD-MM-YYYY")
-            return False
-        
-    event_datetime = datetime.combine(event_date, event_time.time())
-    event_datetime = timezone(TIMEZONE).localize(event_datetime) # combined two timezone aware objects and now
-                                                                      #have to specify what timezone the product is?
-
-    if event_datetime < current_datetime:
-        await error_embed(ctx, "Event time is before the current time.")
-        return False
-
-    # Get string of event time
-    event_string = ""
-    if os.name == "nt":
-        event_string += event_datetime.strftime("%#I:%M%p") 
-        if date_string:
-            event_string += " " + event_date.strftime("%B %#d")
-
-    else:
-        event_string += event_datetime.strftime("%-I:%M%p")
-        if date_string:
-            event_string += " " + event_date.strftime("%B %-d")
-
-    # Get string of signup deadline
-    deadline_string = ""
-    signup_deadline = event_datetime - timedelta(minutes=deadline)
-    if signup_deadline <= current_datetime:
-        signup_deadline = event_datetime
-
-    if os.name == "nt":
-        deadline_string += signup_deadline.strftime("%#I:%M%p")
-        if date_string:
-            deadline_string += " " + signup_deadline.strftime("%B %#d")
-    else:
-        deadline_string += " " + signup_deadline.strftime("%-I:%M%p")
-        if date_string:
-            deadline_string += signup_deadline.strftime("%B %-d")
-
-
-    return [(event_datetime, event_string), (signup_deadline, deadline_string)]
 
 
 def save_signups(db_signups, signups):

@@ -539,6 +539,7 @@ class EventCommands(Cog, name="Event Commands"):
                         ])
     async def postpone(self, ctx, event_id, minutes, hours=0, days=0):
         """Postpones an event"""
+        await ctx.defer()
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
@@ -572,15 +573,16 @@ class EventCommands(Cog, name="Event Commands"):
         event.set_is_signup_active(True)
         event.update()
         embed = announcement_message.embeds[0]
-        embed.description = f"**Time:**\n{get_embed_time_string(new_event_time)}\n\n**Signup Deadline:**" \
+        new_time_string = get_embed_time_string(new_event_time)
+        embed.description = f"**Time:**\n{new_time_string}\n\n**Signup Deadline:**" \
                             f"\n{get_embed_time_string(new_signup_deadline)}\n\n{event.description}\n\nReact with ✅ to play" \
                             f"\nReact with 🔇 if you cannot speak\nReact with 🛗 if you are able to sub"
         embed.title += " (POSTPONED)" if "(POSTPONED)" not in embed.title else ""
         signup_role = ctx.guild.get_role(event.signup_role)
         await announcement_message.edit(embed=embed)
         await announcement_channel.send(f"{signup_role.mention} **{event.title}** has been **postponed** to"
-                                        f" **{get_embed_time_string(new_event_time)} (EST)**")
-        await success_embed(ctx, f"**{event.title}** has been **postponed** to **{get_embed_time_string(new_event_time)}"
+                                        f" **{new_time_string} (EST)**")
+        await success_embed(ctx, f"**{event.title}** has been **postponed** to **{new_time_string}"
                                  f" (EST)**")
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
