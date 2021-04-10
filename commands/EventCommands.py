@@ -64,7 +64,7 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="Time (in EST) of the event.",
                                          option_type=3, required=True),
                         mc.create_option(name="event_date",
-                                         description="Date of the event.  Must be in YYYY-MM-DD format",
+                                         description="Date of the event.  Must be in DD-MM-YYYY format",
                                          option_type=3, required=False),
                         mc.create_option(name="signup_deadline",
                                          description="Amount of time (in minutes) before the event for signup "
