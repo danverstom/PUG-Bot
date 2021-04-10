@@ -47,34 +47,23 @@ def generate_signups_embed(bot, signups, event):
         embed.add_field(name="Unregistered:", value=f"```{tags}```", inline=False)
     return embed
 
-def get_embed_time_string(time):
+def get_embed_time_string(datetime):
     # Get string of event time
-    if time.hour >= 13:
-        hour = time.hour - 12
-        time_suffix = "pm"
-    elif time.hour == 12:
-        hour = time.hour
-        time_suffix = "pm"
-    elif time.hour > 0:
-        hour = time.hour
-        time_suffix = "am"
+    current_datetime = datetime.now(timezone(TIMEZONE))
+    string = ""
+    r = "-"
+    if os.name == "nt":
+        r = "#"
+    string += datetime.strftime(f"%{r}I:%M%p")
+
+    if datetime.date() == current_datetime.date():
+        string += "" 
+    elif current_datetime.year == datetime.year:
+        string += " " + datetime.strftime(f"%B %{r}d")
     else:
-        hour = time.hour + 12
-        time_suffix = "am"
-    if time.minute == 0:
-        minute = ""
-    elif time.minute < 10:
-        minute = f":0{time.minute}"
-    else:
-        minute = f":{time.minute}"
-    if time.date() == time.date():
-        date_string = ""
-    elif time.year == time.year:
-        date_string = f" - {month_name[time.month]} {time.day}"
-    else:
-        date_string = f" - {month_name[time.month]} {time.day}, {time.year}"
-    event_string = f"{hour}{minute}{time_suffix}{date_string}"
-    return event_string
+        string += " " + datetime.strftime(f'%B %{r}d %Y')
+
+    return str(string)
 
 
 def priority_rng_signups(playing_signups_list, size):
