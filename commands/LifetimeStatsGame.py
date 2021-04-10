@@ -50,7 +50,7 @@ class LifetimeStatsGame(Cog, name="CTF Commands"):
         self.in_progress = True
         winners = []
         attempts = 0
-        await ctx.send("Welcome to Game of Stats! Respond with `guess [IGN]` to guess the player. Old names work too.")
+        await ctx.send("Welcome to Game of Stats! Respond with `>[IGN]` to guess the player. Old names work too.")
         for round_num in range(1, 6):
             while True:
                 random_player = Player.fetch_random_player()
@@ -66,8 +66,11 @@ class LifetimeStatsGame(Cog, name="CTF Commands"):
                     guessed = False
                     while not guessed:
                         response = await self.bot.wait_for("message")
-                        if response.content.startswith("guess "):
-                            if response.content.strip("guess ").lower() in all_names:
+                        content = response.content.lower()
+                        if content.startswith(">"):
+                            logging.info(content.strip(">"))
+                            logging.info(all_names)
+                            if content.strip(">") in all_names:
                                 await response.add_reaction("✅")
                                 await response.reply(f"You guessed correctly! ({random_ign})")
                                 winners.append(response.author)
