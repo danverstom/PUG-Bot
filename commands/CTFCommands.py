@@ -496,6 +496,7 @@ class CTFCommands(Cog, name="CTF Commands"):
         data_stream.seek(0)
         chart_file = File(data_stream, filename="pie_chart.png")
         await discord_message.edit(content="Done! Sending results...")
+        await ctx.send(file=chart_file)
         await create_list_pages(self.bot, ctx, info=class_stats_list, title=f"{mode.title()} stats | {username}",
                                 elements_per_page=1, thumbnails=[f"https://cravatar.eu/helmavatar/{username}/128.png"],
-                                can_be_reversed=True, image=("attachment://pie_chart.png", chart_file))
+                                can_be_reversed=True)
