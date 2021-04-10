@@ -111,8 +111,8 @@ class EventCommands(Cog, name="Event Commands"):
         if await check_if_cancel(ctx, response):
             return
         description = response.content
-        await message.delete()
-        await response.delete()
+        # await message.delete()
+        # await response.delete()
 
         embed_description = f"**Title:** {title}\n**Time:** {event_time_package[0][1]}\n**Signup Deadline:** " \
                             f"{event_time_package[1][1]}\n**Description:**\n{description}\n**Announcement Channel:** " \
@@ -122,8 +122,8 @@ class EventCommands(Cog, name="Event Commands"):
                                              color=Colour.dark_purple()))
         response = await self.bot.wait_for("message", check=check)
         is_correct = response.content.lower() == "y" or response.content.lower() == "yes"
-        await message.delete()
-        await response.delete()
+        # await message.delete()
+        # await response.delete()
         if not is_correct:
             await ctx.send(embed=Embed(description="❌ Event Creation Cancelled", color=Colour.dark_red()))
             return
