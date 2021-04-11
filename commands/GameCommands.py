@@ -30,6 +30,7 @@ class GameCommands(Cog, name="CTF Commands"):
         self.in_progress = False
         self.maps_dir = "assets/map_closeups/"
         self.timeout = 300
+        self.repost_guesses = 15
 
     @staticmethod
     async def comp_playtime_pie(ign):
@@ -75,6 +76,7 @@ class GameCommands(Cog, name="CTF Commands"):
                 file = File(path, filename="random_map.jpg")
                 round_message = await ctx.send(content=f"Round {round_num}:", file=file)
                 guessed = False
+                n_guesses = 0
                 while not guessed:
                     logging.info([name for name in map_names if maps[name] == map_id])
                     try:
@@ -97,6 +99,9 @@ class GameCommands(Cog, name="CTF Commands"):
                                 await response.add_reaction("❌")
                         else:
                             await response.add_reaction("❌")
+                        if n_guesses >= self.repost_guesses:
+                            await round_message.reply(content=round_message.attachments[0].url)
+                        n_guesses += 1
                 break
         if winners:
             await ctx.send("Game finished! Congratulations to the winners - " +
@@ -132,6 +137,7 @@ class GameCommands(Cog, name="CTF Commands"):
                 if pie_file:
                     round_message = await ctx.send(content=f"Round {round_num}:", file=pie_file)
                     guessed = False
+                    n_guesses = 0
                     while not guessed:
                         try:
                             response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
@@ -149,6 +155,9 @@ class GameCommands(Cog, name="CTF Commands"):
                                 guessed = True
                             else:
                                 await response.add_reaction("❌")
+                            if n_guesses >= self.repost_guesses:
+                                await round_message.reply(content=round_message.attachments[0].url)
+                            n_guesses += 1
                     break
                 else:
                     if attempts > 5:
