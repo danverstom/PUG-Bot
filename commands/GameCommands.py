@@ -59,7 +59,7 @@ class GameCommands(Cog, name="CTF Commands"):
             return
 
         def check(message):
-            return message.content.startswith(">")
+            return message.content.startswith(">") and message.channel == ctx.channel
 
         with open("utils/maps.json") as file:
             maps = load(file)
@@ -119,7 +119,7 @@ class GameCommands(Cog, name="CTF Commands"):
             return
 
         def check(message):
-            return message.content.startswith(">")
+            return message.content.startswith(">") and message.channel == ctx.channel
 
         self.in_progress = True
         winners = []
