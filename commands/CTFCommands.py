@@ -100,46 +100,50 @@ class CTFCommands(Cog, name="CTF Commands"):
         await ctx.channel.send(file=file, embed=embed)
         await response.delete()
 
-    @cog_slash(name="maps", description="Lists all maps in rotation that contains the given search",
-               options=[manage_commands.create_option(name="search",
-                                                      description="The string to search with",
-                                                      option_type=3, required=False),
-                        manage_commands.create_option(name="search_2",
-                                                      description="A second map to search for",
-                                                      option_type=3, required=False),
-                        manage_commands.create_option(name="search_3",
-                                                      description="A third map to search for",
+
+    @cog_slash(name="maps", description="Lists all maps or searches for maps by name",
+               options=[manage_commands.create_option(name="searches",
+                                                      description="Separate with commas (blackout, pagodas III)",
                                                       option_type=3, required=False)
                         ], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def maps(self, ctx, search="", search_2="", search_3=""):
+    async def maps(self, ctx, searches=""):
         """
-        Finds all maps in rotation that contains the input
+        Lists all maps  in rotation when no searches are provided
+        Searches for maps when searches are given
         """
+        await ctx.defer()
         with open("utils/maps.json") as file:
             maps = load(file)
-
         map_str = list()
+        args = list(map(lambda x: x.strip(), filter(None, searches.lower().split(","))))
 
-        if search:
-            list_maps = [(map_name, maps[map_name]) for map_name in list(maps.keys()) if
-                         search.lower() in map_name.lower()]
-        else:
+        list_maps = None
+        if not searches:
             list_maps = list(maps.items())
-
-        if search_2:
-            list_maps_2 = [(map_name, maps[map_name]) for map_name in list(maps.keys()) if
-                           search_2.lower() in map_name.lower()]
-            list_maps += list_maps_2
-
-        if search_3:
-            list_maps_3 = [(map_name, maps[map_name]) for map_name in list(maps.keys()) if
-                           search_3.lower() in map_name.lower()]
-            list_maps += list_maps_3
-
+        else:
+            list_maps = []
+            for search in args:
+                for k, v in maps.items():
+                    if search in k.lower() or search in str(v):
+                        list_maps.append([k, v])
+        
+        if len(args) == 1:
+            if not list_maps:
+                return await error_embed(ctx, "No maps found. Did you forget to separate maps with commas (blackout, paogdas III)?")
+            map_id = list_maps[0][1]
+            map_name = list_maps[0][0]
+            file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
+            embed = Embed(title="Maps Found:", description=f"**[{map_name}]** [({map_id})](https://www.brawl.com/games/ctf/maps/{map_id})",
+              color=Colour.dark_purple())
+            embed.set_image(url=f"attachment://{map_id}.png")
+            response = await ctx.send("fetching maps...")
+            await ctx.channel.send(embed=embed, file=file)
+            return await response.delete()
+        
         for (map_name, map_id) in list_maps:
             map_str.append(f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})")
-
-        if len(list_maps) == 3:  # Shows map ids only if there are 3 results
+            
+        if len(list_maps) <= 5:  # Shows map ids only if there are 3 results
             map_str.append(f"\n*For match server:*\n`{' '.join(str(item[1]) for item in list_maps)}`")
 
         await create_list_pages(self.bot, ctx, "Maps Found:", map_str, "No Maps were found")
