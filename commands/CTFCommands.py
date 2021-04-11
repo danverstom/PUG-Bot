@@ -152,8 +152,12 @@ class CTFCommands(Cog, name="CTF Commands"):
                                       required=True, option_type=4)
     ])
     async def editmaps(self, ctx, operation="", map_id=0):
+        if not has_permissions(ctx, ADMIN_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         def check(m):
             return m.author == ctx.author and m.channel == ctx.channel
+        map_id = int(map_id)
 
         if operation == "add":
             embed = Embed(title="Adding map to database", description="Enter the name of the map", color=Colour.dark_purple())
@@ -176,19 +180,19 @@ class CTFCommands(Cog, name="CTF Commands"):
             if not response.attachments:
                 return await error_embed(ctx, "No image attached")
             if not response.attachments[0].content_type.startswith("image"):
-                return await error_embed(ctx, "Not an image")
+                return await error_embed(ctx, "File uploaded is not image")
 
             attachment = response.attachments[0]
 
-            embed = Embed(title="Confirm (y/n)", description=f"**{name}**: {map_id}", color=Colour.dark_purple())
+            embed = Embed(title="Confirm addition (y/n)", description=f"Are you sure you want to add {name} ({map_id})?", color=Colour.dark_purple())
             embed.set_image(url=attachment.url)
+
             message = await ctx.send(embed=embed)
             response = await self.bot.wait_for("message", check=check)
             is_correct = response.content.lower() == "y" or response.content.lower() == "yes"
             if not is_correct:
                 return await ctx.send(embed=Embed(description="❌ Adding map cancelled", color=Colour.dark_red()))
                 
-            map_id = int(map_id)
 
             new_data = {name: map_id}
             data = None
@@ -202,21 +206,23 @@ class CTFCommands(Cog, name="CTF Commands"):
             await attachment.save(f"assets/map_screenshots/{map_id}.jpg")
             await response_embed(ctx, "✅ Map added", "")
         elif operation == "del":
-            map_id = int(map_id)
             name = None
             with open("utils/maps.json", "r+") as file:
                 data = load(file)
  
                 for k, v in data.items():
                     if int(v) == map_id:
-                        print(k)
                         name = k
                         data.pop(k)
                         break
+                if name is None:
+                    return await error_embed(ctx, "Map not found")
+                    
+                file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
+                embed = Embed(file=file, title="Confirm deletion (y/n)", description=f"Are you sure you want to delete {name} ({map_id})?", color=Colour.dark_purple())
+                embed.set_image(url=f"attachment://{map_id}.png")
 
-
-                embed = Embed(title="Confirm deletion (y/n)", description=f"Are you sure you want to delete {name} ({map_id})?", color=Colour.dark_purple())
-                message = await ctx.send(embed=embed)
+                message = await ctx.send(file=file, embed=embed)
                 response = await self.bot.wait_for("message", check=check)
                 
                 is_correct = response.content.lower() == "y" or response.content.lower() == "yes"
