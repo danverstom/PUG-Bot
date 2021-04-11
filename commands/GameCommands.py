@@ -30,7 +30,7 @@ class GameCommands(Cog, name="CTF Commands"):
         self.in_progress = False
         self.maps_dir = "assets/map_closeups/"
         self.timeout = 300
-        self.repost_guesses = 15
+        self.repost_guesses = 10
 
     @staticmethod
     async def comp_playtime_pie(ign):
