@@ -101,6 +101,7 @@ class GameCommands(Cog, name="CTF Commands"):
                             await response.add_reaction("❌")
                         if n_guesses >= self.repost_guesses:
                             await round_message.reply(content=round_message.attachments[0].url)
+                            n_guesses = 0
                         n_guesses += 1
                 break
         if winners:
@@ -157,6 +158,7 @@ class GameCommands(Cog, name="CTF Commands"):
                                 await response.add_reaction("❌")
                             if n_guesses >= self.repost_guesses:
                                 await round_message.reply(content=round_message.attachments[0].url)
+                                n_guesses = 0
                             n_guesses += 1
                     break
                 else:
