@@ -166,7 +166,7 @@ class CTFCommands(Cog, name="CTF Commands"):
             response = await self.bot.wait_for("message", check=check)
             if not response.content:
                 return await error_embed(ctx, "Not a string")
-            if response == "cancel":
+            if response.content.lower() == "cancel":
                 return await ctx.send(embed=Embed(description="❌ Adding map cancelled", color=Colour.dark_red()))
                 
             name = response.content
@@ -175,13 +175,12 @@ class CTFCommands(Cog, name="CTF Commands"):
             embed.set_footer(text="Type \"cancel\" to cancel the event")
             message = await ctx.send(embed=embed)
             response = await self.bot.wait_for("message", check=check)
-            if response == "cancel":
+            if response.content.lower() == "cancel":
                 return await ctx.send(embed=Embed(description="❌ Adding map cancelled", color=Colour.dark_red()))
             if not response.attachments:
                 return await error_embed(ctx, "No image attached")
             if not response.attachments[0].content_type.startswith("image"):
                 return await error_embed(ctx, "File uploaded is not image")
-
             attachment = response.attachments[0]
 
             embed = Embed(title="Confirm addition (y/n)", description=f"Are you sure you want to add {name} ({map_id})?", color=Colour.dark_purple())
