@@ -1,7 +1,7 @@
 import json
 import logging
 
-with open("utils/token.json") as file:
+with open("utils/app_credentials.json") as file:
     token_json = json.load(file)
 
 bot_token = token_json["bot_token"]

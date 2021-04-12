@@ -12,3 +12,6 @@ aiohttp
 bs4
 python-dateutil
 matplotlib
+discord
+Pillow
+Quart

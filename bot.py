@@ -23,6 +23,9 @@ from commands.AdminCommands import AdminCommands
 from commands.GameCommands import GameCommands
 
 
+# Importing Quart app for web dashboard
+from webserver.app import app
+
 # Adding commands to the bot now that its ready
 bot.add_cog(BaseCommands(bot))
 bot.add_cog(RegistrationCommands(bot))
@@ -52,5 +55,5 @@ async def on_slash_command_error(ctx, error):
     else:
         await error_embed(ctx, f"`{type(error).__name__}: {error}`")
 
-
+bot.loop.create_task(app.run_task())
 bot.run(bot_token)
