@@ -3,7 +3,7 @@ from discord import File, Embed, Colour
 
 from database.Player import Player
 from utils.CTFGame import get_server_games, CTFGame
-from utils.utils import response_embed, success_embed, create_list_pages, error_embed, request_async_json
+from utils.utils import response_embed, success_embed, create_list_pages, error_embed, request_async_json, has_permissions
 from random import choice
 from json import load, dump
 from re import split
@@ -27,7 +27,7 @@ from pytz import timezone
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
-from utils.config import SLASH_COMMANDS_GUILDS
+from utils.config import SLASH_COMMANDS_GUILDS, ADMIN_ROLE
 
 
 class Match:
@@ -56,9 +56,6 @@ class Match:
 
     def __lt__(self, other):
         return self.datetime < other.datetime
-
-    # i really didnt have to make this class
-
 
 class CTFCommands(Cog, name="CTF Commands"):
     """
@@ -143,6 +140,7 @@ class CTFCommands(Cog, name="CTF Commands"):
             map_str.append(f"\n*For match server:*\n`{' '.join(str(item[1]) for item in list_maps)}`")
 
         await create_list_pages(self.bot, ctx, "Maps Found:", map_str, "No Maps were found")
+
 
     @cog_slash(name="stats", description="Gets most recent stats from match 1 and 2",
                guild_ids=SLASH_COMMANDS_GUILDS, options=[])
