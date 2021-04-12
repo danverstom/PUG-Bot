@@ -82,8 +82,10 @@ class GameCommands(Cog, name="CTF Commands"):
                     try:
                         response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
                     except TimeoutError:
-                        await round_message.reply("Round timed out. You took too long to answer.")
-                        break
+                        self.in_progress = False
+                        await round_message.reply("Game timed out; you took too long to answer. "
+                                                  "Start a new game to play again.")
+                        return
                     content = response.content.lower()
                     if content.startswith(">"):
                         logging.info(content.strip(">"))
@@ -143,8 +145,10 @@ class GameCommands(Cog, name="CTF Commands"):
                         try:
                             response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
                         except TimeoutError:
-                            await round_message.reply("Round timed out. You took too long to answer.")
-                            break
+                            self.in_progress = False
+                            await round_message.reply("Game timed out; you took too long to answer. "
+                                                      "Start a new game to play again.")
+                            return
                         content = response.content.lower()
                         if content.startswith(">"):
                             logging.info(content.strip(">"))
