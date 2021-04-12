@@ -130,12 +130,13 @@ class CTFCommands(Cog, name="CTF Commands"):
             map_id = list_maps[0][1]
             map_name = list_maps[0][0]
             file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
-            embed = Embed(title="Maps Found:", description=f"**[{map_name}]** [({map_id})](https://www.brawl.com/games/ctf/maps/{map_id})",
+            embed = Embed(title="Maps Found:", description=f"**{map_name}** [({map_id})](https://www.brawl.com/games/ctf/maps/{map_id})",
               color=Colour.dark_purple())
             embed.set_image(url=f"attachment://{map_id}.png")
-            response = await ctx.send("fetching maps...")
+            response = await ctx.send("Fetching maps...")
+            await response.edit(content="Done!")
             await ctx.channel.send(embed=embed, file=file)
-            return await response.delete()
+            return
         
         for (map_name, map_id) in list_maps:
             map_str.append(f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})")
