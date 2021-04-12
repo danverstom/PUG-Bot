@@ -1,5 +1,5 @@
 from mojang import MojangAPI
-from random import choice
+from random import choice, seed
 
 from utils.config import ELO_FLOOR
 from database.database import fetch_players_minecraft_id, fetch_players_minecraft_username, fetch_players_discord_id, \
@@ -172,5 +172,6 @@ class Player:
 
     @classmethod
     def fetch_random_player(cls):
+        seed()
         return choice(Player.fetch_players_list())
 

@@ -16,7 +16,7 @@ from database.Event import Event, EventDoesNotExistError
 from database.Signup import Signup
 from database.Player import Player, PlayerDoesNotExistError
 from asyncio import TimeoutError
-from random import shuffle
+from random import shuffle, seed
 import logging
 from datetime import datetime, timedelta
 from pytz import timezone
@@ -329,6 +329,7 @@ class EventCommands(Cog, name="Event Commands"):
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
+        seed()
         try:
             event_id = int(event_id)
             event = Event.from_event_id(event_id)

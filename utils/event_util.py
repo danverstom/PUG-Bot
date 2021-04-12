@@ -11,7 +11,7 @@ import os
 from database.Player import Player, PlayerDoesNotExistError
 from database.Signup import Signup
 from utils.utils import error_embed
-from random import shuffle
+from random import shuffle, seed
 from dateutil import parser
 
 
@@ -131,6 +131,7 @@ def priority_rng_signups(playing_signups_list, size):
     :param size: The amount of players you would like to include in the output list
     :return: (selected_players, benched_players, unregistered_signups)
     """
+    seed()
     players = []
     unregistered_signups = []
     for signup in playing_signups_list:

@@ -18,7 +18,6 @@ from discord_slash.cog_ext import cog_slash, manage_commands
 from utils.config import SLASH_COMMANDS_GUILDS
 
 
-
 class GameCommands(Cog, name="CTF Commands"):
     """
     A game where you guess the player from plots of the stats
