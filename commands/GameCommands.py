@@ -18,7 +18,6 @@ from discord_slash.cog_ext import cog_slash, manage_commands
 from utils.config import SLASH_COMMANDS_GUILDS
 
 
-
 class GameCommands(Cog, name="CTF Commands"):
     """
     A game where you guess the player from plots of the stats
@@ -30,7 +29,7 @@ class GameCommands(Cog, name="CTF Commands"):
         self.in_progress = False
         self.maps_dir = "assets/map_closeups/"
         self.timeout = 300
-        self.repost_guesses = 15
+        self.repost_guesses = 10
 
     @staticmethod
     async def comp_playtime_pie(ign):
@@ -59,7 +58,7 @@ class GameCommands(Cog, name="CTF Commands"):
             return
 
         def check(message):
-            return message.content.startswith(">")
+            return message.content.startswith(">") and message.channel == ctx.channel
 
         with open("utils/maps.json") as file:
             maps = load(file)
@@ -82,8 +81,10 @@ class GameCommands(Cog, name="CTF Commands"):
                     try:
                         response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
                     except TimeoutError:
-                        await round_message.reply("Round timed out. You took too long to answer.")
-                        break
+                        self.in_progress = False
+                        await round_message.reply("Game timed out; you took too long to answer. "
+                                                  "Start a new game to play again.")
+                        return
                     content = response.content.lower()
                     if content.startswith(">"):
                         logging.info(content.strip(">"))
@@ -119,7 +120,7 @@ class GameCommands(Cog, name="CTF Commands"):
             return
 
         def check(message):
-            return message.content.startswith(">")
+            return message.content.startswith(">") and message.channel == ctx.channel
 
         self.in_progress = True
         winners = []
@@ -143,8 +144,10 @@ class GameCommands(Cog, name="CTF Commands"):
                         try:
                             response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
                         except TimeoutError:
-                            await round_message.reply("Round timed out. You took too long to answer.")
-                            break
+                            self.in_progress = False
+                            await round_message.reply("Game timed out; you took too long to answer. "
+                                                      "Start a new game to play again.")
+                            return
                         content = response.content.lower()
                         if content.startswith(">"):
                             logging.info(content.strip(">"))
