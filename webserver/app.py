@@ -1,14 +1,22 @@
-from quart import Quart, redirect, url_for, render_template
+from quart import Quart, redirect, url_for, render_template, jsonify, request
+import quart_discord.exceptions
 from quart_discord import DiscordOAuth2Session, requires_authorization, Unauthorized
 from json import load
 from os import getcwd
+from bot import bot
+from utils.config import *
+from database.database import get_sorted_elo, fetch_players_list_discord_id
+from database.Event import Event, EventDoesNotExistError
+from database.Player import Player
+from database.Signup import Signup
+from discord import Status
 
 with open("utils/app_credentials.json") as file:
     bot_credentials = load(file)
 
 app = Quart(__name__)
 
-app.secret_key = b"asfglokmasgpkloasmgplkasmgplkasmgpmaspgmlpkasgmplkamsg"  # do this better
+app.secret_key = b"testing secret key"  # do this better
 
 app.config["DISCORD_CLIENT_ID"] = bot_credentials["oauth2_client_id"]  # Discord client ID.
 app.config["DISCORD_CLIENT_SECRET"] = bot_credentials["oauth2_client_secret"]  # Discord client secret.
@@ -21,10 +29,58 @@ discord = DiscordOAuth2Session(app)
 
 
 @app.route("/")
-@requires_authorization
 async def home():
-    return await render_template("home.html", user=await discord.fetch_user())
+    guilds = ', '.join([bot.get_guild(guild_id).name for guild_id in SLASH_COMMANDS_GUILDS])
+    registered_users = len(fetch_players_list_discord_id())
+    online_members = sum(member.status != Status.offline and not member.bot for member in
+                         bot.get_guild(SLASH_COMMANDS_GUILDS[0]).members)
+    return await render_template("home.html", discord_invite=PUG_INVITE_LINK, guilds=guilds,
+                                 registered_users=registered_users, online_members=online_members)
 
+
+@app.route("/leaderboard")
+@requires_authorization
+async def leaderboard():
+    user_details = await discord.fetch_user()
+    player = Player.exists_discord_id(user_details.id)
+    if player:
+        player.leaderboard_position = False
+    data = get_sorted_elo()
+    position = 1
+    for item in data:
+        data[position-1] = (item[0], item[1], item[2], position)
+        if player:
+            if item[0] == player.minecraft_username:
+                player.leaderboard_position = position
+        position += 1
+    return await render_template("leaderboard.html", data=data, user=user_details, player=player)
+
+
+@app.route("/events")
+async def events():
+    all_events = Event.fetch_events_list()
+    active_events = [event for event in all_events if event.is_active]
+    inactive_events = [event for event in all_events if not event.is_active]
+    return await render_template("events.html", active_events=active_events, inactive_events=inactive_events,
+                                 total_active_events=len(active_events))
+
+
+@app.route("/event/<event_id>")
+@requires_authorization
+async def event(event_id: int):
+    user_details = await discord.fetch_user()
+    try:
+        event_from_id = Event.from_event_id(event_id)
+        player = Player.exists_discord_id(user_details.id)
+        signed = False
+        if player:
+            signups = Signup.fetch_signups_list(event_id)
+            if player.discord_id in [signup.user_id for signup in signups]:
+                signed = True
+    except EventDoesNotExistError:
+        return await render_template("page_not_found.html"), 404
+    else:
+        return await render_template("event.html", event=event_from_id, signed=signed)
 
 
 @app.route("/login/")
@@ -34,13 +90,21 @@ async def login():
 
 @app.route("/callback/")
 async def callback():
-    await discord.callback()
+    try:
+        await discord.callback()
+    except quart_discord.exceptions.AccessDenied:
+        redirect(url_for("home"))
     return redirect(url_for("home"))
 
 
 @app.errorhandler(Unauthorized)
 async def redirect_unauthorized(e):
     return redirect(url_for("login"))
+
+
+@app.errorhandler(404)
+async def page_not_found(e):
+    return await render_template("page_not_found.html"), 404
 
 
 @app.route("/me/")

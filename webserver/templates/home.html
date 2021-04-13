@@ -1,24 +1,72 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Winston - Home</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.2/css/bulma.min.css">
-</head>
-<body>
-<section class="section">
-    <div class="container">
-        <h1 class="title">
-            Home Page
-        </h1>
-        <p class="subtitle">
-            Welcome, {{user.username}}
+{% extends 'page_template.html' %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<section class="hero is-primary">
+    <div class="hero-body">
+        <p class="title">
+            Winston - the MCCTF PUG Bot
         </p>
-        <figure class="image is-128x128">
-            <img src={{user.avatar_url}}>
-        </figure>
     </div>
 </section>
-</body>
-</html>
+<div class="columns">
+    <div class="column is-two-thirds">
+        <section class="section">
+            <nav class="level">
+            <div class="level-item has-text-centered">
+                <div>
+                    <p class="heading">Registered Users</p>
+                    <p class="title">{{registered_users}}</p>
+                </div>
+            </div>
+            <div class="level-item has-text-centered">
+                <div>
+                    <p class="heading">Watching Server</p>
+                    <p class="title">{{guilds}}</p>
+                </div>
+            </div>
+            <div class="level-item has-text-centered">
+                <div>
+                    <p class="heading">Online Members</p>
+                    <p class="title">{{online_members}}</p>
+                </div>
+            </div>
+        </nav>
+            <div class="content">
+                <h1>About</h1>
+                <p>Winston is a discord bot created for the Brawl Capture the Flag PUG discord server.
+                    Offers tools for event creation, brawl related utilities & many more!</p>
+                <h2>What are PUGs?</h2>
+                <p>PUG stands for "Pick Up Game". The purpose of the CTF PUG server is to provide players with a way to
+                    play
+                    high level competitive games and keep track of their progress.</p>
+                <ul>
+                    <li><a href="{{discord_invite}}" target="_blank">Click here to join</a></li>
+                </ul>
+                <h2>Running PUG Bot yourself</h2>
+                <code>git clone https://github.com/TomD53/PUG-Bot</code><br>
+                <code>pip install -r requirements.txt</code><br>
+                <code>python init.py</code>
+                <p>Create a new file <code>utils/app_credentials.json</code></p>
+                <pre>{
+  "bot_token": "",
+  "oauth2_client_id": 12345,
+  "oauth2_client_secret": "",
+  "oauth2_callback": ""
+}</pre>
+
+            </div>
+        </section>
+    </div>
+    <div class="column">
+        <figure class="image">
+            <img src="{{url_for('static', filename='images/winston.jpg')}}">
+        </figure>
+    </div>
+</div>
+
+{% endblock %}
+
+
+
+
+

@@ -34,7 +34,7 @@ class RegistrationCommands(Cog, name="User Registration"):
     @Cog.listener()
     async def on_ready(self):
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
-        await success_embed(self.bot_channel, "Bot has started")
+        # await success_embed(self.bot_channel, "Bot has started")
         self.update_usernames.start()
 
     @cog_slash(name="list", description="Lists data",

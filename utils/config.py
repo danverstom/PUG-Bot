@@ -18,6 +18,7 @@ SIGNED_ROLE_NAME = "Signed"
 SPECTATOR_ROLE_NAME = "Spectator"
 GENERAL_CHAT = 753663185093132309
 TIMEZONE = "US/Eastern"
+PUG_INVITE_LINK = "https://discord.gg/Gqpv5yUhAd"
 
 debug = False
 

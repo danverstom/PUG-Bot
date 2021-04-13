@@ -10,7 +10,7 @@ import traceback
 # Creating the bot object
 intents = discord.Intents.all()
 bot = Bot(command_prefix="-", intents=intents)
-slash = SlashCommand(bot, sync_commands=True)
+slash = SlashCommand(bot, sync_commands=False)
 
 
 # Importing files from the commands directory to be initialised
@@ -55,5 +55,5 @@ async def on_slash_command_error(ctx, error):
     else:
         await error_embed(ctx, f"`{type(error).__name__}: {error}`")
 
-bot.loop.create_task(app.run_task())
-bot.run(bot_token)
+
+
