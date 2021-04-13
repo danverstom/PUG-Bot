@@ -8,7 +8,7 @@ import logging
 from mojang import MojangAPI
 from asyncio import TimeoutError
 from os import listdir
-from random import choice
+from random import choice, shuffle
 from json import load
 from difflib import get_close_matches
 
@@ -41,8 +41,16 @@ class GameCommands(Cog, name="CTF Commands"):
             sizes = [int(data[mode][key]["playtime"]) for key in data[mode].keys()]
             avg_size = sum(sizes) / len(sizes)
             labels = [(key.title() if float(data[mode][key]["playtime"]) > avg_size else "") for key in data[mode].keys()]
+            print(sizes, labels)
+
+            ##Sorting lists as tuples
+            list_of_tuples = list(zip(labels, sizes))
+            shuffle(list_of_tuples)
+            unzipped_list = list(zip(*list_of_tuples))
+            new_labels, new_sizes = list(unzipped_list[0]), list(unzipped_list[1])
+
             # TODO: sort these lists to make the pie chart look better
-            data_stream = pie_chart(labels, sizes, explode=[0.1 if label else 0 for label in labels],
+            data_stream = pie_chart(new_labels, new_sizes, explode=[0.1 if label else 0 for label in labels],
                                     title="Playtime by class")
             data_stream.seek(0)
             chart_file = File(data_stream, filename="pie_chart.png")

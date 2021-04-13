@@ -130,12 +130,13 @@ class CTFCommands(Cog, name="CTF Commands"):
             map_id = list_maps[0][1]
             map_name = list_maps[0][0]
             file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
-            embed = Embed(title="Maps Found:", description=f"**[{map_name}]** [({map_id})](https://www.brawl.com/games/ctf/maps/{map_id})",
+            embed = Embed(title="Maps Found:", description=f"**{map_name}** [({map_id})](https://www.brawl.com/games/ctf/maps/{map_id})",
               color=Colour.dark_purple())
             embed.set_image(url=f"attachment://{map_id}.png")
-            response = await ctx.send("fetching maps...")
+            response = await ctx.send("Fetching maps...")
+            await response.edit(content="Done!")
             await ctx.channel.send(embed=embed, file=file)
-            return await response.delete()
+            return
         
         for (map_name, map_id) in list_maps:
             map_str.append(f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})")
@@ -492,8 +493,15 @@ class CTFCommands(Cog, name="CTF Commands"):
         sizes = [int(data[mode][key]["playtime"]) for key in data[mode].keys()]
         avg_size = sum(sizes) / len(sizes)
         labels = [(key.title() if float(data[mode][key]["playtime"]) > avg_size else "") for key in data[mode].keys()]
-        # TODO: sort these lists to make the pie chart look better
-        data_stream = pie_chart(labels, sizes, explode=[0.1 if label else 0 for label in labels],
+
+        ##Sorting lists as tuples
+        list_of_tuples = list(zip(labels, sizes))
+        sorted_list = sorted(list_of_tuples, key=lambda tup: tup[1])
+        unzipped_list = list(zip(*sorted_list))
+        new_labels, new_sizes = list(unzipped_list[0]), list(unzipped_list[1])
+
+
+        data_stream = pie_chart(new_labels, new_sizes, explode=[0.1 if label else 0 for label in labels],
                                 title="Playtime by class")
         data_stream.seek(0)
         chart_file = File(data_stream, filename="pie_chart.png")

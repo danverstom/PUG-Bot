@@ -101,7 +101,7 @@ class AdminCommands(Cog, name="Admin Commands"):
 
         if operation == "add":
             embed = Embed(title="Adding map to database", description="Enter the name of the map", color=Colour.dark_purple())
-            embed.set_footer(text="Type \"cancel\" to cancel the event")
+            embed.set_footer(text="Type \"cancel\" to cancel")
             message = await ctx.send(embed=embed)
             response = await self.bot.wait_for("message", check=check)
             if not response.content:
@@ -112,7 +112,7 @@ class AdminCommands(Cog, name="Admin Commands"):
             name = response.content
 
             embed = Embed(title="Adding map to database", description="Add an image for the map\nThis can be a direct upload, or a direct link to an image (not supported yet)", color=Colour.dark_purple())
-            embed.set_footer(text="Type \"cancel\" to cancel the event")
+            embed.set_footer(text="Type \"cancel\" to cancel")
             message = await ctx.send(embed=embed)
             response = await self.bot.wait_for("message", check=check)
             if response.content.lower() == "cancel":
