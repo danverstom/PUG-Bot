@@ -2,7 +2,7 @@ from quart import Quart, redirect, url_for, render_template, jsonify, request
 import quart_discord.exceptions
 from quart_discord import DiscordOAuth2Session, requires_authorization, Unauthorized
 from json import load
-from os import getcwd
+from os import getcwd, environ
 from bot import bot
 from utils.config import *
 from database.database import get_sorted_elo, fetch_players_list_discord_id
@@ -22,6 +22,7 @@ app.config["DISCORD_CLIENT_ID"] = bot_credentials["oauth2_client_id"]  # Discord
 app.config["DISCORD_CLIENT_SECRET"] = bot_credentials["oauth2_client_secret"]  # Discord client secret.
 app.config["DISCORD_REDIRECT_URI"] = bot_credentials["oauth2_callback"]  # URL to your callback endpoint.
 app.config["DISCORD_BOT_TOKEN"] = bot_credentials["bot_token"]  # Required to access BOT resources.
+environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 # The above items need to be added to utils/app_credentials for this to work
 
