@@ -1,3 +1,4 @@
+hypercorn
 mojang
 requests
 pytz
