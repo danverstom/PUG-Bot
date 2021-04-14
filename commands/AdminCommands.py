@@ -88,7 +88,7 @@ class AdminCommands(Cog, name="Admin Commands"):
                 manage_commands.create_choice(name="del", value="del")
                                                         ]
                                       ),
-                manage_commands.create_option(name="ID", description="ID of map",
+                manage_commands.create_option(name="map_id", description="ID of map",
                                       required=True, option_type=4)
     ])
     async def editmaps(self, ctx, operation="", map_id=0):

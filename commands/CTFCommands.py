@@ -317,7 +317,7 @@ class CTFCommands(Cog, name="CTF Commands"):
     @cog_slash(name="ss", description="Shows upcoming matches", guild_ids=SLASH_COMMANDS_GUILDS,
                options=[
                    manage_commands.create_option(
-                       name="match",
+                       name="server",
                        description="Which match server to view",
                        option_type=3,
                        required=False,
@@ -493,8 +493,15 @@ class CTFCommands(Cog, name="CTF Commands"):
         sizes = [int(data[mode][key]["playtime"]) for key in data[mode].keys()]
         avg_size = sum(sizes) / len(sizes)
         labels = [(key.title() if float(data[mode][key]["playtime"]) > avg_size else "") for key in data[mode].keys()]
-        # TODO: sort these lists to make the pie chart look better
-        data_stream = pie_chart(labels, sizes, explode=[0.1 if label else 0 for label in labels],
+
+        ##Sorting lists as tuples
+        list_of_tuples = list(zip(labels, sizes))
+        sorted_list = sorted(list_of_tuples, key=lambda tup: tup[1])
+        unzipped_list = list(zip(*sorted_list))
+        new_labels, new_sizes = list(unzipped_list[0]), list(unzipped_list[1])
+
+
+        data_stream = pie_chart(new_labels, new_sizes, explode=[0.1 if label else 0 for label in labels],
                                 title="Playtime by class")
         data_stream.seek(0)
         chart_file = File(data_stream, filename="pie_chart.png")
