@@ -72,21 +72,8 @@ async def help_page():
     info = ""
     help_list = []
     for command in commands:
-
         options = commands[command].options
         guilds = ', '.join([bot.get_guild(guild_id).name for guild_id in commands[command].allowed_guild_ids])
-        if options:
-            options_string = ""
-            for option in options:
-                choices = ""
-                if option["choices"]:
-                    choices = f"\n> {', '.join('<code>' + c['name'] + '</code>' for c in option['choices'])}"
-                options_string += f"<code>{option['name']}</code> {'[REQUIRED]' if option['required'] else ''}\n" \
-                                  f"> *{option['description']}*{choices}\n"
-            options_string = options_string[:-1]
-            info += f"<p class='subtitle'>" \
-                    f"/{command}</p>" \
-                    f"{commands[command].description}<br><ul><>{options_string}<br><br>*Servers: {guilds}*"
         command_help = {
             "options": options,
             "guilds": guilds,
