@@ -18,7 +18,7 @@ class HelpCommand(Cog, name="Help Command"):
         self.slash = slash
 
     @cog_slash(name="help", description="Help command", guild_ids=SLASH_COMMANDS_GUILDS, options=[
-        manage_commands.create_option(name="command", description="Help regarding a specific command", option_type=3,
+        manage_commands.create_option(name="command_name", description="Help regarding a specific command", option_type=3,
                                       required=False)
     ])
     async def help(self, ctx, command_name=None):

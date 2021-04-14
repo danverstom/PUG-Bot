@@ -317,7 +317,7 @@ class CTFCommands(Cog, name="CTF Commands"):
     @cog_slash(name="ss", description="Shows upcoming matches", guild_ids=SLASH_COMMANDS_GUILDS,
                options=[
                    manage_commands.create_option(
-                       name="match",
+                       name="server",
                        description="Which match server to view",
                        option_type=3,
                        required=False,
