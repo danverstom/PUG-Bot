@@ -6,11 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{% endblock %} - Winston</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.2/css/bulma.min.css">
-    <meta content="{% block title %}{% endblock %} - Winston" property="og:title">
     <meta content="Winston is a discord bot created for the Brawl Capture the Flag PUG discord server. Offers tools for
      event creation, brawl related utilities & many more!" property="og:description">
     <meta content="{{url_for('.home')}}" property="og:url">
-    <meta content="{{url_for('static', filename='images/winston.jpg')}}" property="og:image">
+    <meta content="{{url_for('static', filename='images/winston-small.jpg')}}" property="og:image">
     <meta content="#71368a" data-react-helmet="true" name="theme-color">
     {% endblock %}
 </head>
