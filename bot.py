@@ -10,7 +10,7 @@ import traceback
 # Creating the bot object
 intents = discord.Intents.all()
 bot = Bot(command_prefix="-", intents=intents)
-slash = SlashCommand(bot, sync_commands=False)
+slash = SlashCommand(bot, sync_commands=True)
 
 
 # Importing files from the commands directory to be initialised
