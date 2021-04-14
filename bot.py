@@ -1,6 +1,6 @@
 import discord
 from discord.ext.commands import Bot
-from utils.config import bot_token, get_debug_status
+from utils.config import bot_token, get_debug_status, SYNC_COMMANDS
 from utils.utils import save_json_file, error_embed
 from discord_slash import SlashCommand
 from discord_slash.utils import manage_commands
@@ -10,7 +10,7 @@ import traceback
 # Creating the bot object
 intents = discord.Intents.all()
 bot = Bot(command_prefix="-", intents=intents)
-slash = SlashCommand(bot, sync_commands=True)
+slash = SlashCommand(bot, sync_commands=SYNC_COMMANDS)
 
 
 # Importing files from the commands directory to be initialised
