@@ -3,7 +3,7 @@ import quart_discord.exceptions
 from quart_discord import DiscordOAuth2Session, requires_authorization, Unauthorized
 from json import load
 from os import getcwd, environ
-from bot import bot
+from bot import bot, slash
 from utils.config import *
 from database.database import get_sorted_elo, fetch_players_list_discord_id
 from database.Event import Event, EventDoesNotExistError
@@ -64,6 +64,37 @@ async def events():
     inactive_events = [event for event in all_events if not event.is_active]
     return await render_template("events.html", active_events=active_events, inactive_events=inactive_events,
                                  total_active_events=len(active_events))
+
+
+@app.route("/help")
+async def help_page():
+    commands = slash.commands
+    info = ""
+    help_list = []
+    for command in commands:
+
+        options = commands[command].options
+        guilds = ', '.join([bot.get_guild(guild_id).name for guild_id in commands[command].allowed_guild_ids])
+        if options:
+            options_string = ""
+            for option in options:
+                choices = ""
+                if option["choices"]:
+                    choices = f"\n> {', '.join('<code>' + c['name'] + '</code>' for c in option['choices'])}"
+                options_string += f"<code>{option['name']}</code> {'[REQUIRED]' if option['required'] else ''}\n" \
+                                  f"> *{option['description']}*{choices}\n"
+            options_string = options_string[:-1]
+            info += f"<p class='subtitle'>" \
+                    f"/{command}</p>" \
+                    f"{commands[command].description}<br><ul><>{options_string}<br><br>*Servers: {guilds}*"
+        command_help = {
+            "options": options,
+            "guilds": guilds,
+            "description": commands[command].description,
+            "command_name": command
+        }
+        help_list.append(command_help)
+    return await render_template("help.html", help_list=help_list)
 
 
 @app.route("/event/<event_id>")
