@@ -236,22 +236,23 @@ class EventCommands(Cog, name="Event Commands"):
                 del self.events[event.event_id]
                 del self.signups[event.event_id]
 
-    @cog_slash(name="removeroles", options=[mc.create_option(name="roles",
+    @cog_slash(name="removeroles", options=[mc.create_option(name="roles_list",
                                                              description="Tag roles to remove from all members",
                                                              option_type=3, required=True)],
                guild_ids=SLASH_COMMANDS_GUILDS)
-    async def removeroles(self, ctx, *args):
+    async def removeroles(self, ctx, roles_list):
         """Remove multiple roles"""
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
         counter = {}
+        print(roles_list)
         roles = []
         total_to_remove = 0
         total_removed = 0
         expr = "\<(.*?)\>"  # Match between <>
 
-        for role_id in re.findall(expr, args[0]):
+        for role_id in re.findall(expr, roles_list):
             role_id = role_id.strip(" <@&!>")
             role = ctx.guild.get_role(int(role_id))
             if role:

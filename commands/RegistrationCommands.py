@@ -38,7 +38,7 @@ class RegistrationCommands(Cog, name="User Registration"):
         self.update_usernames.start()
 
     @cog_slash(name="list", description="Lists data",
-               options=[manage_commands.create_option(name="object_type",
+               options=[manage_commands.create_option(name="data_type",
                                                       description="The object you want to list",
                                                       option_type=3, required=True,
                                                       choices=["players", "register_requests"])],
@@ -156,10 +156,10 @@ class RegistrationCommands(Cog, name="User Registration"):
                     await channel.send("This user has PMs off, failed to send DM.")
 
     @cog_slash(name="unregister", description="Remove a user from the database",
-               options=[manage_commands.create_option(name="discord_tag",
+               options=[manage_commands.create_option(name="user",
                                                       description="The user's discord @",
                                                       option_type=6, required=True)], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def unregister(self, ctx, input_user: User = None):
+    async def unregister(self, ctx, user: User = None):
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
@@ -170,9 +170,8 @@ class RegistrationCommands(Cog, name="User Registration"):
         Example:
             unregister @Ninsanity
         """
-        if not input_user:
+        if not user:
             await error_embed(ctx, "Missing Argument <input_user>")
-        user = self.bot.get_user(input_user.id)
         try:
             player = Player.from_discord_id(user.id)
         except PlayerDoesNotExistError:
@@ -292,7 +291,7 @@ class RegistrationCommands(Cog, name="User Registration"):
         else:
             await error_embed(ctx, "Invalid action argument. Use 'get' or 'set'")
 
-    @cog_slash(name="profile", options=[manage_commands.create_option(name="discord_tag",
+    @cog_slash(name="profile", options=[manage_commands.create_option(name="user",
                                                       description="The user's discord @",
                                                       option_type=6, required=False)], guild_ids=SLASH_COMMANDS_GUILDS)
     async def profile(self, ctx, user: User = None):
