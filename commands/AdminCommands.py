@@ -64,21 +64,22 @@ class AdminCommands(Cog, name="Admin Commands"):
         if not has_permissions(ctx, ADMIN_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
+        msg = await ctx.send("`Bot is restarting`")
         if remove_commands:
-            message = await response_embed(ctx, "Removing commands", "Please wait, this process can take a while")
+            await msg.edit(content=msg.content + "\n`Removing commands - please wait, this process can take a while`")
             await manage_commands.remove_all_commands(self.bot.user.id, self.token, guild_ids=SLASH_COMMANDS_GUILDS)
-            await message.delete()
-            await success_embed(ctx, "Removed all commands from this bot")
-        await response_embed(ctx, "Info", "Bot is restarting")
+            await msg.edit(content=msg.content + "\n`Removed all commands from the bot`")
         if pull_changes:
+            await msg.edit(content=msg.content + "\n`Pulling latest changes`")
             output = subprocess.check_output("git pull", shell=True)
             await response_embed(ctx, "Update Summary", output.decode("utf8"))
-
         info("Triggering web server shutdown event")
         self.shutdown_event.set()
         info("Waiting for web server to shut down")
+        await msg.edit(content=msg.content + "\n`Waiting for web server to shut down`")
         await self.web_task
         info("Web server shutdown complete")
+        await msg.edit(content=msg.content + "\n`Web server shutdown complete. Bot restarting. Goodbye!`")
         info("Closing the bot")
         await self.bot.close()
         info("Bot has finished closing")
