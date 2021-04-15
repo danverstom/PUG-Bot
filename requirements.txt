@@ -17,3 +17,4 @@ discord
 Pillow
 Quart
 quart_discord
+Markdown

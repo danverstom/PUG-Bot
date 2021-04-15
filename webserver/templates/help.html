@@ -20,7 +20,7 @@
                 </p>
                 <code>/{{command["command_name"]}}</code>
                 {% for option in command["options"] %} <code>[{{option["name"]}}]</code>{% endfor %}
-                <p>{{command["description"]}}</p>
+                <p>{{command["description"]|safe}}</p>
                 {% if command["options"] %}
                 <hr>
                 {% endif %}

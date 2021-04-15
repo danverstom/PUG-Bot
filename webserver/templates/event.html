@@ -20,7 +20,8 @@
             <p><strong>Start Time:</strong> <code>{{event.time_est}}</code></p>
             <p><strong>Signup Deadline:</strong> <code>{{event.signup_deadline}}</code></p>
             <p><strong>ID:</strong> <code>{{event.event_id}}</code></p>
-            <pre>{{event.description}}</pre>
+            <hr>
+            {{event.description|safe}}
         </div>
     </div>
 </section>

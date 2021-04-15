@@ -10,6 +10,7 @@ from database.Event import Event, EventDoesNotExistError
 from database.Player import Player
 from database.Signup import Signup
 from discord import Status
+from markdown import markdown
 
 with open("utils/app_credentials.json") as file:
     bot_credentials = load(file)
@@ -49,7 +50,7 @@ async def leaderboard():
     data = get_sorted_elo()
     position = 1
     for item in data:
-        data[position-1] = (item[0], item[1], item[2], position)
+        data[position - 1] = (item[0], item[1], item[2], position)
         if player:
             if item[0] == player.minecraft_username:
                 player.leaderboard_position = position
@@ -77,7 +78,8 @@ async def help_page():
         command_help = {
             "options": options,
             "guilds": guilds,
-            "description": commands[command].description,
+            "description": markdown(commands[command].description) if commands[command].description
+            else "No Description",
             "command_name": command
         }
         help_list.append(command_help)
@@ -99,6 +101,8 @@ async def event(event_id: int):
     except EventDoesNotExistError:
         return await render_template("page_not_found.html"), 404
     else:
+        event_from_id.description = markdown(event_from_id.description)\
+            if event_from_id.description else "No Description"
         return await render_template("event.html", event=event_from_id, signed=signed)
 
 
