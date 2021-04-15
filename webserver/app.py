@@ -5,6 +5,8 @@ from json import load
 from os import getcwd, environ
 from bot import bot, slash
 from utils.config import *
+from utils.event_util import get_embed_time_string
+from datetime import datetime
 from database.database import get_sorted_elo, fetch_players_list_discord_id
 from database.Event import Event, EventDoesNotExistError
 from database.Player import Player
@@ -61,6 +63,9 @@ async def leaderboard():
 @app.route("/events")
 async def events():
     all_events = Event.fetch_events_list()
+    for event_obj in all_events:
+        event_obj.time_est = get_embed_time_string(datetime.fromisoformat(event_obj.time_est))
+        event_obj.signup_deadline = get_embed_time_string(datetime.fromisoformat(event_obj.signup_deadline))
     active_events = [event for event in all_events if event.is_active]
     inactive_events = [event for event in all_events if not event.is_active]
     return await render_template("events.html", active_events=active_events, inactive_events=inactive_events,
@@ -101,6 +106,8 @@ async def event(event_id: int):
     except EventDoesNotExistError:
         return await render_template("page_not_found.html"), 404
     else:
+        event_from_id.time_est = get_embed_time_string(datetime.fromisoformat(event_from_id.time_est))
+        event_from_id.signup_deadline = get_embed_time_string(datetime.fromisoformat(event_from_id.signup_deadline))
         event_from_id.description = markdown(event_from_id.description)\
             if event_from_id.description else "No Description"
         return await render_template("event.html", event=event_from_id, signed=signed)
