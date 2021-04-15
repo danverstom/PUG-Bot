@@ -1,4 +1,4 @@
-from quart import Quart, redirect, url_for, render_template, jsonify, request
+from quart import Quart, redirect, url_for, render_template, jsonify, request, session
 import quart_discord.exceptions
 from quart_discord import DiscordOAuth2Session, requires_authorization, Unauthorized
 from json import load
@@ -31,6 +31,11 @@ environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 # The above items need to be added to utils/app_credentials for this to work
 
 discord = DiscordOAuth2Session(app)
+
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
 
 
 @app.route("/")
