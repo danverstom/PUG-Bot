@@ -6,8 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{% endblock %} - Winston</title>
     <link rel="stylesheet" href="{{url_for('static', filename='bulma-css/css/main.css')}}">
-    <meta property="og:title" content="Winston" />
-    <meta content="Winston is a discord bot created for the Brawl Capture the Flag PUG discord server. Offers tools for event creation, brawl related utilities & many more!" property="og:description">
+    <meta property="og:title" content="Winston"/>
+    <meta content="Winston is a discord bot created for the Brawl Capture the Flag PUG discord server. Offers tools for event creation, brawl related utilities & many more!"
+          property="og:description">
     <meta content="{{url_for('.home')}}" property="og:url">
     <meta content="{{url_for('static', filename='images/winston-small.jpg')}}" property="og:image">
     <meta content="#71368a" data-react-helmet="true" name="theme-color">
@@ -44,6 +45,8 @@
 
 
 
+
+
 </script>
 <body>
 <nav class="navbar" role="navigation" aria-label="main navigation">
@@ -73,6 +76,11 @@
             <a class="navbar-item" href="{{url_for('.help_page')}}">
                 Help
             </a>
+        </div>
+        <div class="navbar-end">
+            <div class="navbar-item">
+                <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script><script type='text/javascript'>kofiwidget2.init('Support on Ko-fi', '#71368a', 'J3J34ARCI');kofiwidget2.draw();</script>
+            </div>
         </div>
     </div>
 </nav>

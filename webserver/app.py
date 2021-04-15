@@ -2,7 +2,7 @@ from quart import Quart, redirect, url_for, render_template, jsonify, request
 import quart_discord.exceptions
 from quart_discord import DiscordOAuth2Session, requires_authorization, Unauthorized
 from json import load
-from os import getcwd, environ
+from os import getcwd, environ, urandom
 from bot import bot, slash
 from utils.config import *
 from utils.event_util import get_embed_time_string
@@ -13,13 +13,14 @@ from database.Player import Player
 from database.Signup import Signup
 from discord import Status
 from markdown import markdown
+from secrets import token_urlsafe
 
 with open("utils/app_credentials.json") as file:
     bot_credentials = load(file)
 
 app = Quart(__name__)
 
-app.secret_key = b"testing secret key"  # do this better
+app.secret_key = token_urlsafe(24)
 
 app.config["DISCORD_CLIENT_ID"] = bot_credentials["oauth2_client_id"]  # Discord client ID.
 app.config["DISCORD_CLIENT_SECRET"] = bot_credentials["oauth2_client_secret"]  # Discord client secret.
