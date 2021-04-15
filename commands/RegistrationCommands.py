@@ -16,7 +16,7 @@ import re
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
-from utils.config import SLASH_COMMANDS_GUILDS
+from utils.config import SLASH_COMMANDS_GUILDS, BOT_START_MESSAGE
 
 
 class RegistrationCommands(Cog, name="User Registration"):
@@ -34,7 +34,8 @@ class RegistrationCommands(Cog, name="User Registration"):
     @Cog.listener()
     async def on_ready(self):
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
-        # await success_embed(self.bot_channel, "Bot has started")
+        if BOT_START_MESSAGE:
+            await success_embed(self.bot_channel, "Bot has started")
         self.update_usernames.start()
 
     @cog_slash(name="list", description="Lists data",

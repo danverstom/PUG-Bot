@@ -20,6 +20,10 @@ GENERAL_CHAT = 753663185093132309
 TIMEZONE = "US/Eastern"
 PUG_INVITE_LINK = "https://discord.gg/Gqpv5yUhAd"
 SYNC_COMMANDS = False
+BOT_START_MESSAGE = False
+
+WEB_SERVER_HOSTNAME = "localhost"
+WEB_SERVER_PORT = 8080
 
 debug = False
 

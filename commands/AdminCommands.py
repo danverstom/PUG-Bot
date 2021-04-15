@@ -11,7 +11,14 @@ from json import dump, load
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
-from utils.config import SLASH_COMMANDS_GUILDS, ADMIN_ROLE, MOD_ROLE
+from utils.config import SLASH_COMMANDS_GUILDS, ADMIN_ROLE, MOD_ROLE, WEB_SERVER_HOSTNAME, WEB_SERVER_PORT
+
+# Web Server
+from hypercorn.asyncio import serve
+from hypercorn.config import Config
+from asyncio import Event
+from webserver.app import app
+from logging import info
 
 
 class AdminCommands(Cog, name="Admin Commands"):
@@ -23,6 +30,14 @@ class AdminCommands(Cog, name="Admin Commands"):
         self.bot = bot
         self.slash = slash
         self.token = token
+        self.web_task = None
+        self.shutdown_event = Event()
+
+    @Cog.listener()
+    async def on_ready(self):
+        config = Config()
+        config.bind = [f"{WEB_SERVER_HOSTNAME}:{WEB_SERVER_PORT}"]
+        self.web_task = self.bot.loop.create_task(serve(app, config=config, shutdown_trigger=self.shutdown_event.wait))
 
     @cog_slash(name="removecommands", description="Removes all slash commands from the bot",
                guild_ids=SLASH_COMMANDS_GUILDS)
@@ -58,7 +73,15 @@ class AdminCommands(Cog, name="Admin Commands"):
         if pull_changes:
             output = subprocess.check_output("git pull", shell=True)
             await response_embed(ctx, "Update Summary", output.decode("utf8"))
-        await self.bot.logout()
+
+        info("Triggering web server shutdown event")
+        self.shutdown_event.set()
+        info("Waiting for web server to shut down")
+        await self.web_task
+        info("Web server shutdown complete")
+        info("Closing the bot")
+        await self.bot.close()
+        info("Bot has finished closing")
 
         # Checks for operating system
         operating_system = platform.system()
