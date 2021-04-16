@@ -42,11 +42,6 @@
 });
 
 
-
-
-
-
-
 </script>
 <body>
 <nav class="navbar" role="navigation" aria-label="main navigation">
@@ -79,7 +74,23 @@
         </div>
         <div class="navbar-end">
             <div class="navbar-item">
-                <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script><script type='text/javascript'>kofiwidget2.init('Support on Ko-fi', '#71368a', 'J3J34ARCI');kofiwidget2.draw();</script>
+                <div class="buttons">
+                    {% if user %}
+
+                    <p>Logged in as {{user}} (<a href="{{url_for('.logout')}}">Log Out</a>)</p>
+                    {% else %}
+                    <a class="button" href="{{url_for('.login')}}">
+                        Log In
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="navbar-item">
+                <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
+                <script type='text/javascript'>
+                    kofiwidget2.init('Support on Ko-fi', '#71368a', 'J3J34ARCI');kofiwidget2.draw();
+
+                </script>
             </div>
         </div>
     </div>

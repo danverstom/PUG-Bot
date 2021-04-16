@@ -40,19 +40,26 @@ def make_session_permanent():
 
 @app.route("/")
 async def home():
+    if await discord.authorized:
+        user = await discord.fetch_user()
+    else:
+        user = False
     guilds = ', '.join([bot.get_guild(guild_id).name for guild_id in SLASH_COMMANDS_GUILDS])
     registered_users = len(fetch_players_list_discord_id())
     online_members = sum(member.status != Status.offline and not member.bot for member in
                          bot.get_guild(SLASH_COMMANDS_GUILDS[0]).members)
     return await render_template("home.html", discord_invite=PUG_INVITE_LINK, guilds=guilds,
-                                 registered_users=registered_users, online_members=online_members)
+                                 registered_users=registered_users, online_members=online_members, user=user)
 
 
 @app.route("/leaderboard")
-@requires_authorization
 async def leaderboard():
-    user_details = await discord.fetch_user()
-    player = Player.exists_discord_id(user_details.id)
+    player = None
+    if await discord.authorized:
+        user = await discord.fetch_user()
+        player = Player.exists_discord_id(user.id)
+    else:
+        user = False
     if player:
         player.leaderboard_position = False
     data = get_sorted_elo()
@@ -63,11 +70,15 @@ async def leaderboard():
             if item[0] == player.minecraft_username:
                 player.leaderboard_position = position
         position += 1
-    return await render_template("leaderboard.html", data=data, user=user_details, player=player)
+    return await render_template("leaderboard.html", data=data, user=user, player=player)
 
 
 @app.route("/events")
 async def events():
+    if await discord.authorized:
+        user = await discord.fetch_user()
+    else:
+        user = False
     all_events = Event.fetch_events_list()
     for event_obj in all_events:
         event_obj.time_est = get_embed_time_string(datetime.fromisoformat(event_obj.time_est))
@@ -75,11 +86,15 @@ async def events():
     active_events = [event for event in all_events if event.is_active]
     inactive_events = [event for event in all_events if not event.is_active]
     return await render_template("events.html", active_events=active_events, inactive_events=inactive_events,
-                                 total_active_events=len(active_events))
+                                 total_active_events=len(active_events), user=user)
 
 
 @app.route("/help")
 async def help_page():
+    if await discord.authorized:
+        user = await discord.fetch_user()
+    else:
+        user = False
     commands = slash.commands
     info = ""
     help_list = []
@@ -94,7 +109,7 @@ async def help_page():
             "command_name": command
         }
         help_list.append(command_help)
-    return await render_template("help.html", help_list=help_list)
+    return await render_template("help.html", help_list=help_list, user=user)
 
 
 @app.route("/event/<event_id>")
@@ -122,6 +137,12 @@ async def event(event_id: int):
 @app.route("/login/")
 async def login():
     return await discord.create_session(scope=["identify"])
+
+
+@app.route("/logout/")
+async def logout():
+    discord.revoke()
+    return redirect(url_for("home"))
 
 
 @app.route("/callback/")
