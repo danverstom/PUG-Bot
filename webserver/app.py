@@ -71,11 +71,11 @@ async def fetch_user_with_perms():
                 "in_server": False}
 
 
-"""
+
 @app.before_request
 def make_session_permanent():
     session.permanent = True
-"""
+
 
 
 @app.route("/")
@@ -96,8 +96,8 @@ async def home():
 async def leaderboard():
     player = None
     if await discord.authorized:
-        user = await discord.fetch_user()
-        player = Player.exists_discord_id(user.id)
+        user = await fetch_user_with_perms()
+        player = Player.exists_discord_id(user["user"].id)
     else:
         user = False
     if player:
@@ -116,7 +116,7 @@ async def leaderboard():
 @app.route("/events")
 async def events():
     if await discord.authorized:
-        user = await discord.fetch_user()
+        user = await fetch_user_with_perms()
     else:
         user = False
     all_events = Event.fetch_events_list()
@@ -132,7 +132,7 @@ async def events():
 @app.route("/help")
 async def help_page():
     if await discord.authorized:
-        user = await discord.fetch_user()
+        user = await fetch_user_with_perms()
     else:
         user = False
     commands = slash.commands
@@ -155,7 +155,8 @@ async def help_page():
 @app.route("/event/<event_id>")
 @requires_authorization
 async def event(event_id: int):
-    user_details = await discord.fetch_user()
+    user = await fetch_user_with_perms()
+    user_details = user["user"]
     try:
         event_from_id = Event.from_event_id(event_id)
         player = Player.exists_discord_id(user_details.id)
@@ -171,7 +172,7 @@ async def event(event_id: int):
         event_from_id.signup_deadline = get_embed_time_string(datetime.fromisoformat(event_from_id.signup_deadline))
         event_from_id.description = markdown(event_from_id.description)\
             if event_from_id.description else "No Description"
-        return await render_template("event.html", event=event_from_id, signed=signed)
+        return await render_template("event.html", event=event_from_id, signed=signed, user=user)
 
 
 @app.route("/login/")
