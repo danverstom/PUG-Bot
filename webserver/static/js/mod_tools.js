@@ -21,6 +21,7 @@ $(document).ready(function(){
         success: function(data){
             if (data["success"]) {
                 console.log("Sent message successfully");
+                $("#message_textarea").val("");
                 anime({
                     targets: '#send_message_button',
                     scale: 1,
