@@ -12,6 +12,7 @@ from database.Event import Event, EventDoesNotExistError
 from database.Player import Player
 from database.Signup import Signup
 from discord import Status
+from discord.utils import get
 from markdown import markdown
 from secrets import token_urlsafe
 
@@ -33,15 +34,54 @@ environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 discord = DiscordOAuth2Session(app)
 
 
+async def fetch_dummy_user():
+    """for dev purposes"""
+    user = bot.get_user(175964671520669696)
+    guild = bot.get_guild(SLASH_COMMANDS_GUILDS[0])
+    admin_role = get(guild.roles, name=ADMIN_ROLE)
+    mod_role = get(guild.roles, name=MOD_ROLE)
+    member = get(guild.members, id=user.id)
+    if member:
+        return {"user": user,
+                "is_admin": member.top_role.position >= admin_role.position,
+                "is_mod": member.top_role.position >= mod_role.position,
+                "in_server": True}
+    else:
+        return {"user": user,
+                "is_admin": False,
+                "is_mod": False,
+                "in_server": False}
+
+
+async def fetch_user_with_perms():
+    user = await discord.fetch_user()
+    guild = bot.get_guild(SLASH_COMMANDS_GUILDS[0])
+    admin_role = get(guild.roles, name=ADMIN_ROLE)
+    mod_role = get(guild.roles, name=MOD_ROLE)
+    member = get(guild.members, id=user.id)
+    if member:
+        return {"user": user,
+                "is_admin": member.top_role.position >= admin_role.position,
+                "is_mod": member.top_role.position >= mod_role.position,
+                "in_server": True}
+    else:
+        return {"user": user,
+                "is_admin": False,
+                "is_mod": False,
+                "in_server": False}
+
+
+"""
 @app.before_request
 def make_session_permanent():
     session.permanent = True
+"""
 
 
 @app.route("/")
 async def home():
     if await discord.authorized:
-        user = await discord.fetch_user()
+        user = await fetch_user_with_perms()
     else:
         user = False
     guilds = ', '.join([bot.get_guild(guild_id).name for guild_id in SLASH_COMMANDS_GUILDS])
@@ -150,7 +190,7 @@ async def callback():
     try:
         await discord.callback()
     except quart_discord.exceptions.AccessDenied:
-        redirect(url_for("home"))
+        return redirect(url_for("home"))
     return redirect(url_for("home"))
 
 
@@ -169,3 +209,7 @@ async def page_not_found(e):
 async def me():
     user = await discord.fetch_user()
     return user.to_json()
+
+from webserver.blueprints.mod_tools import mod_tools_blueprint
+
+app.register_blueprint(mod_tools_blueprint)
