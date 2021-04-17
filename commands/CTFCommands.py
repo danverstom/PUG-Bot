@@ -4,7 +4,7 @@ from discord import File, Embed, Colour
 from database.Player import Player
 from utils.CTFGame import get_server_games, CTFGame
 from utils.utils import response_embed, success_embed, create_list_pages, error_embed, request_async_json, has_permissions
-from random import choice
+from random import choice, seed
 from json import load, dump
 from re import split
 from requests import get
@@ -83,6 +83,7 @@ class CTFCommands(Cog, name="CTF Commands"):
         Picks a random map out of a preset map pool
         """
         await ctx.defer()
+        seed()
         with open("utils/rng_maps.json") as file:
             maps = load(file)
         random_map = choice(list(maps.keys()))

@@ -364,8 +364,8 @@ class EventCommands(Cog, name="Event Commands"):
 
         if selected_players:
             results_embed.add_field(name=f"Playing ({len(selected_players)})", value='\n'.join(
-                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') +
-                 ('🛗' if signup.can_sub else '') +
+                [self.bot.get_user(signup.user_id).mention + (' 🔇' if signup.is_muted else '') +
+                 (' 🛗' if signup.can_sub else '') +
                  ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
                  selected_players]))
             if do_priority:
@@ -375,8 +375,8 @@ class EventCommands(Cog, name="Event Commands"):
                         player.change_priority(-1)
         if benched_players:
             results_embed.add_field(name=f"Not Playing ({len(benched_players)})", value='\n'.join(
-                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') +
-                 ('🛗' if signup.can_sub else '') +
+                [self.bot.get_user(signup.user_id).mention + (' 🔇' if signup.is_muted else '') +
+                 (' 🛗' if signup.can_sub else '') +
                  ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
                  benched_players]))
             if do_priority:
