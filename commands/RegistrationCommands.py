@@ -4,7 +4,7 @@ from discord.ext import tasks
 from database.Player import Player, PlayerDoesNotExistError, UsernameAlreadyExistsError, UsernameDoesNotExistError, \
     DiscordAlreadyExistsError
 from database.database import check_user_requests, add_register_request, get_register_request, \
-    remove_register_request, get_all_register_requests
+    remove_register_request, get_all_register_requests, get_sorted_elo
 from utils.utils import error_embed, success_embed, response_embed, create_list_pages, has_permissions
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL,\
     ELO_FLOOR, ADMIN_ROLE
@@ -309,7 +309,17 @@ class RegistrationCommands(Cog, name="User Registration"):
             await error_embed(ctx, "Player does not exist")
             return
 
-        stats = f"**ELO:** {getattr(player, 'elo')}\n**Discord:** <@{getattr(player, 'discord_id')}>"
+        #Position in leaderboard
+        data = get_sorted_elo()
+        count = 1
+        for item in data:
+            if player:
+                if player.minecraft_username == item[0]:
+                    leader_pos = count
+                    break
+            count += 1
+
+        stats = f"**ELO:** {getattr(player, 'elo')}\n**Rank**: #{leader_pos}\n**Discord:** <@{getattr(player, 'discord_id')}>"
         #for key in player.__dict__.keys():
         #    stats += f"**{key}:** {getattr(player, key)}\n"
 
