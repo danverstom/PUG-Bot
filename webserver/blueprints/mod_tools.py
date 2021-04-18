@@ -40,5 +40,5 @@ async def send_message():
         else:
             return jsonify({"success": False, "error": "You need the PUG Mod role to do this"})
     else:
-        return jsonify({"success": False, "error": "Yuu are not logged in with your discord account"})
+        return jsonify({"success": False, "error": "You are not logged in with your discord account"})
 

@@ -71,7 +71,6 @@ async def fetch_user_with_perms():
                 "in_server": False}
 
 
-
 @app.before_request
 def make_session_permanent():
     session.permanent = True

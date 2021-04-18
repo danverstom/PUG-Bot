@@ -47,7 +47,7 @@
 <body>
 <nav class="navbar" role="navigation" aria-label="main navigation">
     <div class="navbar-brand">
-        <a class="navbar-item grow-on-hover" href="{{url_for('home')}}">
+        <a class="navbar-item" href="{{url_for('home')}}">
             <strong>Winston</strong>
         </a>
 
@@ -60,21 +60,21 @@
 
     <div id="main_navbar" class="navbar-menu">
         <div class="navbar-start">
-            <a class="navbar-item grow-on-hover" href="{{url_for('home')}}">
+            <a class="navbar-item" href="{{url_for('home')}}">
                 Home
             </a>
-            <a class="navbar-item grow-on-hover" href="{{url_for('leaderboard')}}">
+            <a class="navbar-item" href="{{url_for('leaderboard')}}">
                 Leaderboard
             </a>
-            <a class="navbar-item grow-on-hover" href="{{url_for('events')}}">
+            <a class="navbar-item" href="{{url_for('events')}}">
                 Events
             </a>
-            <a class="navbar-item grow-on-hover" href="{{url_for('help_page')}}">
+            <a class="navbar-item" href="{{url_for('help_page')}}">
                 Help
             </a>
             {% if user %}
             {% if user["is_mod"] %}
-            <div class="navbar-item has-dropdown is-hoverable grow-on-hover">
+            <div class="navbar-item has-dropdown is-hoverable">
                 <a class="navbar-link">
                     Moderators
                 </a>
@@ -95,13 +95,13 @@
 
                 <p>Logged in as {{user["user"]}} (<a href="{{url_for('logout')}}">Log Out</a>)</p>
                 {% else %}
-                <a class="button grow-on-hover" href="{{url_for('login')}}">
+                <a class="button" href="{{url_for('login')}}">
                     Log In
                 </a>
                 {% endif %}
             </div>
         </div>
-        <div class="navbar-item grow-on-hover">
+        <div class="navbar-item">
             <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
             <script type='text/javascript'>
                     kofiwidget2.init('Support on Ko-fi', '#71368a', 'J3J34ARCI');kofiwidget2.draw();

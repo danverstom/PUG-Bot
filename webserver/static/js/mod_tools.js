@@ -30,10 +30,23 @@ $(document).ready(function(){
                 $("#send_message_button").removeClass("is-loading");
             } else {
                 console.log("Could not send message")
-                console.log(data["error"])
+                anime({
+                    targets: '#send_message_button',
+                    scale: 1,
+                    easing: "easeInOutBack"
+                });
+                $("#send_message_button").removeClass("is-loading");
+                console.log(data["error"]);
+                alert(data["error"])
             }
         },
         error: function(jqXHR, exception){
+            anime({
+                    targets: '#send_message_button',
+                    scale: 1,
+                    easing: "easeInOutBack"
+                });
+                $("#send_message_button").removeClass("is-loading");
             console.log("Failure");
             alert(exception);
         }
