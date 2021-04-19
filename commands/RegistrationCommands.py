@@ -37,6 +37,19 @@ class RegistrationCommands(Cog, name="User Registration"):
         await success_embed(self.bot_channel, "Bot has started")
         self.update_usernames.start()
 
+    @Cog.listener()
+    async def on_member_join(self, member):
+        channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
+        if Player.exists_discord_id(member.id):
+            return
+        else:
+            try:
+                await member.send(f"Welcome {member.mention} to the PUG server, do not forget to use **/register**.")
+            except Forbidden:
+                # This means the bot can't DM the user
+                await channel.send(f"Welcome {member.mention} to the PUG server, do not forget to use **/register**.")
+
+
     @cog_slash(name="list", description="Lists data",
                options=[manage_commands.create_option(name="data_type",
                                                       description="The object you want to list",
