@@ -9,6 +9,7 @@ ELO_FLOOR = 975
 MOD_ROLE = "PUG Mod"
 ADMIN_ROLE = "PUG Dev"
 BOT_OUTPUT_CHANNEL = 816004363544690738
+PUBLIC_BOT_CHANNEL = 816004363544690738
 IGN_TRACKER_INTERVAL_HOURS = 12
 SIGNUPS_TRACKER_INTERVAL_SECONDS = 10
 SLASH_COMMANDS_GUILDS = [753663184228974643]
@@ -18,6 +19,7 @@ SIGNED_ROLE_NAME = "Signed"
 SPECTATOR_ROLE_NAME = "Spectator"
 GENERAL_CHAT = 753663185093132309
 TIMEZONE = "US/Eastern"
+TEAMS_ROLES = ["Team 1 [Red]", "Team 2 [Blue]"]
 
 debug = False
 
@@ -26,4 +28,4 @@ def get_debug_status():
     return debug
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO) #local time !

@@ -8,7 +8,7 @@ from discord_slash.cog_ext import cog_slash, cog_subcommand
 from discord_slash.utils import manage_commands as mc
 
 from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
-    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT, TIMEZONE, SPECTATOR_ROLE_NAME
+    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT, TIMEZONE, SPECTATOR_ROLE_NAME, TEAMS_ROLES
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
     priority_rng_signups, get_embed_time_string, generate_signups_embed
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
@@ -481,13 +481,22 @@ class EventCommands(Cog, name="Event Commands"):
                         for role in roles_dict:
                             users_string = f"{role.mention}\n"
                             for member in roles_dict[role]:
-                                users_string += f"{member.mention}\n"
+                                users_string += f"{member.mention}"
+                                users_string += "\n" if Player.exists_discord_id(member.id) else " ❌\n" #Add X if unregistered user
                                 await member.add_roles(role, reason=f"role added by {ctx.author.name} with setroles"
                                                                     f" command")
                                 roles_assigned += 1
                                 if roles_assigned % 5 == 0:
                                     roles_embed.description = f"Progress: {roles_assigned}/{total_roles_count}"
                                     await roles_msg.edit(embed=roles_embed)
+                            if role.name in TEAMS_ROLES: #Average ELO Display
+                                elo_list = [Player.from_discord_id(member.id).elo for member in roles_dict[role] if
+                                            Player.exists_discord_id(member.id)]
+                                if len(elo_list) > 0:
+                                    elo_avg = sum(elo_list) / len(elo_list)
+                                    users_string += f"**Average ELO: {int(round(elo_avg))}**"
+                                else:
+                                    users_string += f"**Average ELO: ---**"
                             roles_embed.add_field(name=f"{role.name} ({len(roles_dict[role])})", value=users_string)
                             await roles_msg.edit(embed=roles_embed)
                         roles_embed.title = "Roles Set"

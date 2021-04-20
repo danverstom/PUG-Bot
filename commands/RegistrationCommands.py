@@ -7,7 +7,7 @@ from database.database import check_user_requests, add_register_request, get_reg
     remove_register_request, get_all_register_requests, get_sorted_elo
 from utils.utils import error_embed, success_embed, response_embed, create_list_pages, has_permissions
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL,\
-    ELO_FLOOR, ADMIN_ROLE
+    ELO_FLOOR, ADMIN_ROLE, PUBLIC_BOT_CHANNEL
 from mojang import MojangAPI
 from asyncio import sleep as async_sleep
 from discord.errors import Forbidden
@@ -36,6 +36,8 @@ class RegistrationCommands(Cog, name="User Registration"):
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
         await success_embed(self.bot_channel, "Bot has started")
         self.update_usernames.start()
+
+
 
     @cog_slash(name="list", description="Lists data",
                options=[manage_commands.create_option(name="data_type",
@@ -122,9 +124,22 @@ class RegistrationCommands(Cog, name="User Registration"):
                                        color=Colour.dark_red()))
 
     @Cog.listener()
+    async def on_member_join(self, member):
+        channel = self.bot.get_channel(PUBLIC_BOT_CHANNEL)
+        if Player.exists_discord_id(member.id):
+            return
+        else:
+            try:
+                await member.send(f"Welcome {member.mention} to the PUG server, do not forget to use **/register**"
+                                  f" in the PUG server.")
+            except Forbidden:
+                # This means the bot can't DM the user
+                await channel.send(f"Welcome {member.mention} to the PUG server, do not forget to use **/register**.")
+
+    @Cog.listener()
     async def on_raw_reaction_add(self, payload):
         request = get_register_request(payload.message_id)
-        if payload.channel_id == REGISTER_REQUESTS_CHANNEL and bool(request):
+        if payload.channel_id == REGISTER_REQUESTS_CHANNEL and bool(request) and payload.user_id != self.bot.user.id:
             channel = await self.bot.fetch_channel(REGISTER_REQUESTS_CHANNEL)
             message = await channel.fetch_message(payload.message_id)
             server = self.bot.get_guild(payload.guild_id)
@@ -142,7 +157,7 @@ class RegistrationCommands(Cog, name="User Registration"):
                 except Forbidden:
                     # This means the bot can't DM the user
                     await channel.send("This user has PMs off, failed to send DM.")
-            elif str(payload.emoji) == "❌" and MOD_ROLE in [role.name for role in mod_member.roles]:
+            elif str(payload.emoji) == "❌" and required_role.position <= mod_member.top_role.position:
                 remove_register_request(payload.message_id)
                 await message.clear_reactions()
                 await message.edit(content=f"❌ {mod_member.name} denied {player_member.mention}'s request for IGN"
