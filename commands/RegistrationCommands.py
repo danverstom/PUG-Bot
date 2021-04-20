@@ -129,7 +129,6 @@ class RegistrationCommands(Cog, name="User Registration"):
         if Player.exists_discord_id(member.id):
             return
         else:
-            await member.add_roles(get(member.guild.roles, name=UNREGISTERED_ROLE))
             try:
                 await member.send(f"Welcome {member.mention} to the PUG server, do not forget to use **/register**"
                                   f" in the PUG server.")
@@ -158,8 +157,6 @@ class RegistrationCommands(Cog, name="User Registration"):
                 except Forbidden:
                     # This means the bot can't DM the user
                     await channel.send("This user has PMs off, failed to send DM.")
-                await player_member.add_roles(get(server.roles, name=REGISTERED_ROLE))
-                await player_member.remove_roles(get(server.roles, name=UNREGISTERED_ROLE))
             elif str(payload.emoji) == "❌" and required_role.position <= mod_member.top_role.position:
                 remove_register_request(payload.message_id)
                 await message.clear_reactions()
@@ -205,10 +202,6 @@ class RegistrationCommands(Cog, name="User Registration"):
         response = await self.bot.wait_for('message', check=check)
         if response.content.lower() == "y" or response.content.lower() == "yes":
             player.delete()
-            server = self.bot_channel.guild
-            member = server.get_member(user.id)
-            await member.remove_roles(get(member.guild.roles, name=REGISTERED_ROLE))
-            await member.add_roles(get(member.guild.roles, name=UNREGISTERED_ROLE))
             await success_embed(ctx, f"User {user.mention} has been unregistered.")
         else:
             await response_embed(ctx, "Stopped Deletion", f"User {user.mention} will not be deleted from the database.")
