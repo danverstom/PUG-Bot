@@ -19,8 +19,6 @@ SIGNED_ROLE_NAME = "Signed"
 SPECTATOR_ROLE_NAME = "Spectator"
 GENERAL_CHAT = 753663185093132309
 TIMEZONE = "US/Eastern"
-UNREGISTERED_ROLE = "Unregistered"
-REGISTERED_ROLE = "Registered"
 TEAMS_ROLES = ["Team 1 [Red]", "Team 2 [Blue]"]
 
 debug = False
