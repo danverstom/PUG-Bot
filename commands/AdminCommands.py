@@ -110,41 +110,50 @@ class AdminCommands(Cog, name="Admin Commands"):
                 return await ctx.send(embed=Embed(description="❌ Adding map cancelled", color=Colour.dark_red()))
                 
             name = response.content
-
-            embed = Embed(title="Adding map to database", description="Add an image for the map\nThis can be a direct upload, or a direct link to an image (not supported yet)", color=Colour.dark_purple())
-            embed.set_footer(text="Type \"cancel\" to cancel")
+            embed = Embed(title="Adding map to database", description="Would you like to add an image?", color=Colour.dark_purple())
+            embed.set_footer(text="Type \"y/yes\" to add map with an image\nType \"n/no\" to add map without an image\nType \"cancel\" to cancel map adding")
             message = await ctx.send(embed=embed)
+
             response = await self.bot.wait_for("message", check=check)
-            if response.content.lower() == "cancel":
+            if response.content.lower() in ["done", "finished", "yes", "y"]: #add map if y
+                embed = Embed(title="Adding map to database", description="This can be a direct upload, or a direct link to an image (not supported yet)", color=Colour.dark_purple())
+                message = await ctx.send(embed=embed)
+                response = await self.bot.wait_for("message", check=check) #Send image here
+                if not response.attachments:
+                    return await error_embed(ctx, "No image attached")
+                if not response.attachments[0].content_type.startswith("image"):
+                    return await error_embed(ctx, "File uploaded is not image")
+                attachment = response.attachments[0]
+                embed = Embed(title="Confirm addition (y/n)",
+                              description=f"Are you sure you want to add {name} ({map_id})?",
+                              color=Colour.dark_purple())
+                embed.set_image(url=attachment.url)
+
+                message = await ctx.send(embed=embed)
+                response = await self.bot.wait_for("message", check=check)
+                is_correct = response.content.lower() == "y" or response.content.lower() == "yes"
+                if not is_correct:
+                    return await ctx.send(embed=Embed(description="❌ Adding map cancelled", color=Colour.dark_red()))
+                await attachment.save(f"assets/map_screenshots/{map_id}.jpg")
+                compress(f"assets/map_screenshots/{map_id}.jpg")
+                await response_embed(ctx, "✅ Map added", "")
+            elif response.content.lower() in ["no", "n"]:
+                await response_embed(ctx, "✅ Map added", "")
+            elif response.content.lower() == "cancel":
                 return await ctx.send(embed=Embed(description="❌ Adding map cancelled", color=Colour.dark_red()))
-            if not response.attachments:
-                return await error_embed(ctx, "No image attached")
-            if not response.attachments[0].content_type.startswith("image"):
-                return await error_embed(ctx, "File uploaded is not image")
-            attachment = response.attachments[0]
-
-            embed = Embed(title="Confirm addition (y/n)", description=f"Are you sure you want to add {name} ({map_id})?", color=Colour.dark_purple())
-            embed.set_image(url=attachment.url)
-
-            message = await ctx.send(embed=embed)
-            response = await self.bot.wait_for("message", check=check)
-            is_correct = response.content.lower() == "y" or response.content.lower() == "yes"
-            if not is_correct:
-                return await ctx.send(embed=Embed(description="❌ Adding map cancelled", color=Colour.dark_red()))
-                
-
+            else:
+                return await ctx.send(embed=Embed(description="❌ Adding map cancelled, please type yes, no or cancel next time", color=Colour.dark_red()))
             new_data = {name: map_id}
             data = None
             with open("utils/maps.json", "r+") as file:
                 data = load(file)
                 data.update(new_data)
-                
-            with open("utils/maps.json", "w") as file:
-                dump(data,file, sort_keys=True, indent=4)
 
-            await attachment.save(f"assets/map_screenshots/{map_id}.jpg")
-            compress(f"assets/map_screenshots/{map_id}.jpg")
-            await response_embed(ctx, "✅ Map added", "")
+            with open("utils/maps.json", "w") as file:
+                dump(data, file, sort_keys=True, indent=4)
+
+
+
         elif operation == "del":
             name = None
             with open("utils/maps.json", "r+") as file:
@@ -157,12 +166,16 @@ class AdminCommands(Cog, name="Admin Commands"):
                         break
                 if name is None:
                     return await error_embed(ctx, "Map not found")
-                    
-                file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
-                embed = Embed(file=file, title="Confirm deletion (y/n)", description=f"Are you sure you want to delete {name} ({map_id})?", color=Colour.dark_purple())
-                embed.set_image(url=f"attachment://{map_id}.png")
-
-                message = await ctx.send(file=file, embed=embed)
+                try:
+                    file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
+                    embed = Embed(file=file, title="Confirm deletion (y/n)", description=f"Are you sure you want to delete **{name}** ({map_id})?", color=Colour.dark_purple())
+                    embed.set_image(url=f"attachment://{map_id}.png")
+                    message = await ctx.send(file=file, embed=embed)
+                except FileNotFoundError:
+                    embed = Embed(title="Confirm deletion (y/n)",
+                                  description=f"Are you sure you want to delete **{name}** ({map_id})?",
+                                  color=Colour.dark_purple())
+                    message = await ctx.send(embed=embed)
                 response = await self.bot.wait_for("message", check=check)
                 
                 is_correct = response.content.lower() == "y" or response.content.lower() == "yes"
@@ -171,7 +184,8 @@ class AdminCommands(Cog, name="Admin Commands"):
                 
                 with open("utils/maps.json", "w") as file:
                     dump(data,file, sort_keys=True, indent=4)
-                os.remove(f"assets/map_screenshots/{map_id}.jpg")
+                if os.path.exists(f"assets/map_screenshots/{map_id}.jpg"):
+                    os.remove(f"assets/map_screenshots/{map_id}.jpg")
                 return await response_embed(ctx, "✅ Map deleted", "")
 
 
