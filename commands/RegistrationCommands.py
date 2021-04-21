@@ -13,10 +13,11 @@ from asyncio import sleep as async_sleep
 from discord.errors import Forbidden
 from discord.utils import get
 import re
+import logging
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
-from utils.config import SLASH_COMMANDS_GUILDS
+from utils.config import SLASH_COMMANDS_GUILDS, BOT_START_MESSAGE
 
 
 class RegistrationCommands(Cog, name="User Registration"):
@@ -34,7 +35,8 @@ class RegistrationCommands(Cog, name="User Registration"):
     @Cog.listener()
     async def on_ready(self):
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
-        await success_embed(self.bot_channel, "Bot has started")
+        if BOT_START_MESSAGE:
+            await success_embed(self.bot_channel, "Bot has started")
         self.update_usernames.start()
 
 
@@ -132,9 +134,11 @@ class RegistrationCommands(Cog, name="User Registration"):
             try:
                 await member.send(f"Welcome {member.mention} to the PUG server, do not forget to use **/register**"
                                   f" in the PUG server.")
+                logging.info(f"Sent registration reminder for {member.name} in DMs")
             except Forbidden:
                 # This means the bot can't DM the user
                 await channel.send(f"Welcome {member.mention} to the PUG server, do not forget to use **/register**.")
+                logging.info(f"Sent registration reminder for {member.name} in #{channel.name}")
 
     @Cog.listener()
     async def on_raw_reaction_add(self, payload):

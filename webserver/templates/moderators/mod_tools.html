@@ -1,0 +1,50 @@
+{% extends 'page_template.html' %}
+{% block title %}Mod tools{% endblock %}
+{% block content %}
+<script>
+    var send_message_url = "{{url_for('moderators.send_message')}}"
+</script>
+<script type="text/javascript" src="{{url_for('static', filename='js/mod_tools.js')}}"></script>
+<section class="hero is-primary">
+    <div class="hero-body">
+        <p class="title">
+            Moderator Tools - Winston
+        </p>
+    </div>
+</section>
+<section class="section">
+    <div class="container">
+        <div class="box">
+            <h1 class="title">Send Message</h1>
+            <div class="block">
+                <div class="columns">
+                    <div class="column is-three-quarters">
+                        <textarea id="message_textarea" rows="5"
+                                  class="textarea" placeholder="Type message here"></textarea>
+                    </div>
+                    <div class="column">
+                        <div class="block">
+                            <div class="select">
+                                <select id="channel_select">
+                                    {% for channel in allowed_text_channels %}
+                                    <option value="{{channel.id}}" class="is-primary">#{{channel.name}}</option>
+                                    {% endfor%}
+                                </select>
+                            </div>
+                            <hr>
+                            <div class="control">
+                                <button class="button is-primary grow-on-hover" id="send_message_button">Send</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+
+
+
+

@@ -1,38 +1,64 @@
-#PUG Bot
-####About
-The PUG Bot is a discord bot created for the [Brawl](https://www.brawl.com/front/) Capture the Flag PUG discord server.
-Offers tools for event creation, brawl related utilities & many more!
-#
-#### Basic user commands
-List of commands basic users can use:
-+ `/help` - Shows all commands or details about a specific command. \
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Usage: `/help optional=[command]`
-+ `/coinflip` - Flips a coin.
-+ `/ping` - Checks the bot's response time to Discord.
-+ `/elo` - Returns player's ELO. \
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Usage: `/elo optional=[discord tag]`
-+ `/maps` - Lists all maps in rotation or searches based on given term.\
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Usage: `/maps optional=[term]`
-+ `/rngmap` - Picks a random map out of a preset map pool.
-+ `/stats` - Gets most recent stats from match 1 and 2.
-+ `/register` - Registers minecraft username to discord. **This is required to sign up for PUGs.** \
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Usage: `/register [ign]`
-+ `/user` - Gets information about a user. \
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Usage: `/user [discord tag] optional=[get] optional=[username/discord/elo/priority]`
+# About
 
-#
-#### Staff commands
-List of additional commands staff can use:
-+ `/unregister` Removes a user from the database. **permanently**. \
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Usage: `/unregister [discord tag]`
-+ `/user [discord tag] [set] [username/discord/elo/priority] [value]` Modifies a user's information.
-+ `/event` Creates an event.
+Winston is a discord bot created for the Brawl Capture the Flag PUG discord server. Offers tools for event creation, brawl related utilities & many more!
 
-#
-####Created by:
-- TomD53 (Tom#4831)
-- Ninsanity (Ninsanity#0212)\
-Honourable mention:
-- redboo123 (redboo123#8682) 
+## What are PUGs?
 
-#test
+PUG stands for "Pick Up Game". The purpose of the CTF PUG server is to provide players with a way to play high level competitive games and keep track of their progress.
+
+## Features
+
+*   MCCTF event related commands (coinflip, rngmap, maps etc)
+*   ELO tracking system (leaderboard, etc)
+*   User registration system (links discord with minecraft IGN & keeps it updated)
+*   User management features for admins
+*   Stats-related commands - playerstats (individual stats) and game stats following matches
+*   Spreadsheet viewer - view upcoming matches and their times, on the match server spreadsheet
+*   Roster Count tracker - sends notifications when teams are made or change in size
+*   Event system - designed to be semi-automated & signups are stored, can be easily accessed
+*   Priority system & RNG - gives players equal opportunity to play in games
+*   Postpone events
+*   Role management commands (setroles, removeroles, etc)
+*   Rotation map search - allows you to quickly search for maps and get IDs without hassle
+*   [Slash commands](https://github.com/eunwoo1104/discord-py-slash-command) - commands which are user-friendly & easy to use
+*   Multiplayer discord minigames
+*   Web interface
+
+## Collaborators
+
+Many thanks to the following people who have helped out!
+
+*   [Ninsanity](https://github.com/ningeek212)
+*   [redboo123](https://github.com/Partition)
+*   [mikye](https://github.com/mikeo)
+
+## Running PUG Bot yourself
+
+Installation instructions ([view the project on GitHub here](https://github.com/TomD53/PUG-Bot))
+
+`git clone https://github.com/TomD53/PUG-Bot`  
+`pip install -r requirements.txt`  
+`cd webserver/static/bulma-css`  
+
+`npm install` (make sure you have [node.js](https://nodejs.org/en/) installed)
+
+In order to update the app theme using sass variables, edit `webserver/static/bulma-css/sass/main.scss` and run `npm start`
+
+Create a new file `utils/app_credentials.json` and fill in the details of [your app](https://discord.com/developers/applications).
+
+Set the callback to `http://localhost:8080/callback`
+
+<pre>{
+  "bot_token": "",
+  "oauth2_client_id": 12345,
+  "oauth2_client_secret": "",
+  "oauth2_callback": ""
+}</pre>
+
+In order to start the application, run `python init.py`
+
+## Support/Donate
+
+Winston costs money to host every month, and time to develop.
+
+Support the project [here](https://ko-fi.com/tomd53)

@@ -1,0 +1,73 @@
+{% extends 'page_template.html' %}
+{% block title %}Leaderboard{% endblock %}
+{% block content %}
+<section class="hero is-primary">
+    <div class="hero-body">
+        <p class="title">
+            Leaderboard
+        </p>
+        {% if player %}
+        {% if player.leaderboard_position %}
+        <p class="subtitle">
+            Your leaderboard position is #{{player.leaderboard_position}}
+        </p>
+        {% endif %}
+        {% elif user %}
+        <p class="subtitle">
+            Use /register in the discord to register your  minecraft account with your discord, and you'll appear here.
+        </p>
+        {% else %}
+        <p class="subtitle">
+            <a href="{{url_for('.login')}}?next={{ url_for(request.endpoint) }}">Log in</a> to view your position on the leaderboard
+        </p>
+        {% endif %}
+    </div>
+</section>
+<section class="section">
+    <div class="container">
+        <div class="box">
+            <table class="table is-hoverable is-fullwidth">
+                <thead>
+                <tr>
+                    <th style="width:10%">Position</th>
+                    <th>Icon</th>
+                    <th>Username</th>
+                    <th>ELO</th>
+                </tr>
+                </thead>
+                <tfoot>
+                <tr>
+                    <th style="width:5%">Position</th>
+                    <th>Icon</th>
+                    <th>Username</th>
+                    <th>ELO</th>
+                </tr>
+                </tfoot>
+                <tbody>
+                {% for item in data %}
+                {% if player %}
+                    {% if player.minecraft_username == item[0] %}
+                        <tr class="is-selected">
+                    {% else %}
+                        <tr>
+                    {% endif %}
+                {% else %}
+                <tr>
+                {% endif %}
+                    <td>{{item[3]}}</td>
+                    <td>
+                        <figure class="image is-32x32">
+                            <img src="https://cravatar.eu/helmavatar/{{item[0]}}/32.png">
+                        </figure>
+                    </td>
+                    <td>{{item[0]}}</td>
+                    <td>{{item[1]}}</td>
+
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}
