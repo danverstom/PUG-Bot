@@ -238,9 +238,9 @@ class EventCommands(Cog, name="Event Commands"):
 
     @cog_slash(name="removeroles", options=[mc.create_option(name="roles_list",
                                                              description="Tag roles to remove from all members",
-                                                             option_type=3, required=True)],
+                                                             option_type=3, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
-    async def removeroles(self, ctx, roles_list):
+    async def removeroles(self, ctx, roles_list=None):
         """Remove multiple roles"""
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
@@ -250,15 +250,23 @@ class EventCommands(Cog, name="Event Commands"):
         roles = []
         total_to_remove = 0
         total_removed = 0
-        expr = "\<(.*?)\>"  # Match between <>
-
-        for role_id in re.findall(expr, roles_list):
-            role_id = role_id.strip(" <@&!>")
-            role = ctx.guild.get_role(int(role_id))
-            if role:
-                roles.append(role)
-                counter[role.name] = len(role.members)
-                total_to_remove += len(role.members)
+        if roles_list is None:
+            MISC_ROLES = ["Signed", "Spectator"]
+            roles_list = [ctx.guild.get_role(get(ctx.guild.roles, name=role).id) for role in TEAMS_ROLES+MISC_ROLES]
+            for role in roles_list:
+                if role:
+                    roles.append(role)
+                    counter[role.name] = len(role.members)
+                    total_to_remove += len(role.members)
+        else:
+            expr = "\<(.*?)\>"  # Match between <>
+            for role_id in re.findall(expr, roles_list):
+                role_id = role_id.strip(" <@&!>")
+                role = ctx.guild.get_role(int(role_id))
+                if role:
+                    roles.append(role)
+                    counter[role.name] = len(role.members)
+                    total_to_remove += len(role.members)
 
         removing_embed = Embed(title="Removing roles", colour=Colour.dark_purple())
         removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
