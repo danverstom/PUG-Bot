@@ -130,13 +130,22 @@ class CTFCommands(Cog, name="CTF Commands"):
                 return await error_embed(ctx, "No maps found. Did you forget to separate maps with commas (blackout, pagodas III)?")
             map_id = list_maps[0][1]
             map_name = list_maps[0][0]
-            file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
-            embed = Embed(title="Maps Found:", description=f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})",
-              color=Colour.dark_purple())
-            embed.set_image(url=f"attachment://{map_id}.png")
-            response = await ctx.send("Fetching maps...")
-            await response.edit(content="Done!")
-            await ctx.channel.send(embed=embed, file=file)
+            if os.path.exists(f"assets/map_screenshots/{map_id}.jpg"):
+                file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
+                embed = Embed(title="Maps Found:", description=f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})",
+                  color=Colour.dark_purple())
+                embed.set_image(url=f"attachment://{map_id}.png")
+                response = await ctx.send("Fetching maps...")
+                await response.edit(content="Done!")
+                await ctx.channel.send(embed=embed, file=file)
+            else:
+                embed = Embed(title="Maps Found:",
+                              description=f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})",
+                              color=Colour.dark_purple())
+                embed.set_footer(text="This map has no image yet :(")
+                response = await ctx.send("Fetching maps...")
+                await response.edit(content="Done!")
+                await ctx.channel.send(embed=embed)
             return
         
         for (map_name, map_id) in list_maps:
