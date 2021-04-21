@@ -127,7 +127,7 @@ class CTFCommands(Cog, name="CTF Commands"):
         
         if len(args) == 1:
             if not list_maps:
-                return await error_embed(ctx, "No maps found. Did you forget to separate maps with commas (blackout, paogdas III)?")
+                return await error_embed(ctx, "No maps found. Did you forget to separate maps with commas (blackout, pagodas III)?")
             map_id = list_maps[0][1]
             map_name = list_maps[0][0]
             file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
