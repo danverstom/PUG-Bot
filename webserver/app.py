@@ -15,6 +15,7 @@ from discord import Status
 from discord.utils import get
 from markdown import markdown
 from secrets import token_urlsafe
+from logging import info
 
 with open("utils/app_credentials.json") as file:
     bot_credentials = load(file)
@@ -181,6 +182,8 @@ async def login():
 
 @app.route("/logout/")
 async def logout():
+    user = await discord.fetch_user()
+    info(f"{user} just logged out")
     discord.revoke()
     return redirect(url_for("home"))
 
@@ -191,6 +194,9 @@ async def callback():
         await discord.callback()
     except quart_discord.exceptions.AccessDenied:
         return redirect(url_for("home"))
+    finally:
+        user = await discord.fetch_user()
+        info(f"{user} just logged in")
     return redirect(url_for("home"))
 
 
