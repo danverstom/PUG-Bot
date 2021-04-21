@@ -251,8 +251,7 @@ class EventCommands(Cog, name="Event Commands"):
         total_to_remove = 0
         total_removed = 0
         if roles_list is None:
-            MISC_ROLES = ["Signed", "Spectator"]
-            roles_list = [ctx.guild.get_role(get(ctx.guild.roles, name=role).id) for role in TEAMS_ROLES+MISC_ROLES]
+            roles_list = [ctx.guild.get_role(get(ctx.guild.roles, name=role).id) for role in TEAMS_ROLES]
             for role in roles_list:
                 if role:
                     roles.append(role)
