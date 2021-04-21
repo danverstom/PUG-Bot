@@ -1,0 +1,113 @@
+{% extends 'page_template.html' %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<section class="hero is-primary">
+    <div class="hero-body">
+        <p class="title">
+            Winston - the MCCTF PUG Bot
+        </p>
+    </div>
+</section>
+<div class="columns">
+    <div class="column is-two-thirds">
+        <section class="section">
+            <nav class="level">
+                <div class="level-item has-text-centered">
+                    <div>
+                        <p class="heading">Registered Users</p>
+                        <p class="title">{{registered_users}}</p>
+                    </div>
+                </div>
+                <div class="level-item has-text-centered">
+                    <div>
+                        <p class="heading">Watching Server</p>
+                        <p class="title">{{guilds}}</p>
+                    </div>
+                </div>
+                <div class="level-item has-text-centered">
+                    <div>
+                        <p class="heading">Online Members</p>
+                        <p class="title">{{online_members}}</p>
+                    </div>
+                </div>
+            </nav>
+            <div class="content">
+                <h1>About</h1>
+                <p>Winston is a discord bot created for the Brawl Capture the Flag PUG discord server.
+                    Offers tools for event creation, brawl related utilities & many more!</p>
+                <h2>What are PUGs?</h2>
+                <p>PUG stands for "Pick Up Game". The purpose of the CTF PUG server is to provide players with a way to
+                    play
+                    high level competitive games and keep track of their progress.</p>
+                <h2>Features</h2>
+                <ul>
+                    <li>MCCTF event related commands (coinflip, rngmap, maps etc)</li>
+                    <li>ELO tracking system (leaderboard, etc)</li>
+                    <li><a href="{{url_for('.help_page')}}#register">User registration</a> system (links discord with minecraft IGN & keeps it updated)</li>
+                    <li>User management features for admins</li>
+                    <li>Stats-related commands - playerstats (individual stats) and game stats following matches</li>
+                    <li>Spreadsheet viewer - view upcoming matches and their times, on the match server spreadsheet</li>
+                    <li>Roster Count tracker - sends notifications when teams are made or change in size</li>
+                    <li><a href="{{url_for('.help_page')}}#event">Event system</a> - designed to be semi-automated & signups are stored, can be easily accessed</li>
+                    <li>Priority system & <a href="{{url_for('.help_page')}}#rngsignups">RNG</a> - gives players equal opportunity to play in games</li>
+                    <li><a href="{{url_for('.help_page')}}#postpone">Postpone events</a></li>
+                    <li>Role management commands (setroles, removeroles, etc)</li>
+                    <li><a href="{{url_for('.help_page')}}#maps">Rotation map search</a> - allows you to quickly search for maps and get IDs without hassle</li>
+                    <li><a href="https://github.com/eunwoo1104/discord-py-slash-command" target="_blank">Slash commands</a> - commands which are user-friendly & easy to use</li>
+                    <li>Multiplayer discord minigames</li>
+                    <li>Web interface</li>
+                </ul>
+                <h2>Collaborators</h2>
+                <p>Many thanks to the following people who have helped out!</p>
+                <ul>
+                    <li>
+                        <a href="https://github.com/ningeek212" target="_blank">Ninsanity</a>
+                    </li>
+                    <li>
+                        <a href="https://github.com/Partition" target="_blank">redboo123</a>
+                    </li>
+                    <li>
+                        <a href="https://github.com/mikeo" target="_blank">mikye</a>
+                    </li>
+                </ul>
+                <h2>Running PUG Bot yourself</h2>
+                <p>Installation instructions (<a href="https://github.com/TomD53/PUG-Bot" target="_blank">view the project on GitHub here</a>)</p>
+                <code>git clone https://github.com/TomD53/PUG-Bot</code><br>
+                <code>pip install -r requirements.txt</code><br>
+                <code>cd webserver/static/bulma-css</code><br>
+                <p><code>npm install</code> (make sure you have <a href="https://nodejs.org/en/"
+                                                                   target="_blank">node.js</a> installed)</p>
+
+                <p>In order to update the app theme using sass variables, edit <code>webserver/static/bulma-css/sass/main.scss</code>
+                    and run
+                    <code>npm start</code></p>
+
+                <p>Create a new file <code>utils/app_credentials.json</code> and fill in the details of
+                    <a href="https://discord.com/developers/applications" target="_blank">your app</a>.</p>
+                <p>Set the callback to <code>http://localhost:8080/callback</code></p>
+                <pre>{
+  "bot_token": "",
+  "oauth2_client_id": 12345,
+  "oauth2_client_secret": "",
+  "oauth2_callback": ""
+}</pre>
+                <p>In order to start the application, run <code>python init.py</code></p>
+                <h2>Support/Donate</h2>
+                <p>Winston costs money to host every month, and time to develop.</p>
+                <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script><script type='text/javascript'>kofiwidget2.init('Support on Ko-fi', '#71368a', 'J3J34ARCI');kofiwidget2.draw();</script>
+            </div>
+        </section>
+    </div>
+    <div class="column">
+        <figure class="image">
+            <img src="{{url_for('static', filename='images/winston.jpg')}}">
+        </figure>
+    </div>
+</div>
+
+{% endblock %}
+
+
+
+
+

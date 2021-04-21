@@ -1,0 +1,50 @@
+{% extends 'page_template.html' %}
+{% block title %}Help{% endblock %}
+{% block content %}
+<section class="hero is-primary">
+    <div class="hero-body">
+        <p class="title">
+            Help - Winston Commands
+        </p>
+    </div>
+</section>
+<section class="section">
+    <div class="container">
+        <div class="box">
+            {% for command in help_list %}
+            <div class="box content" id="{{command['command_name']}}">
+                <p class="subtitle">
+                    <a href="{{url_for('.help_page')}}#{{command['command_name']}}">
+                        {{command["command_name"].title().replace("_", " ")}}
+                    </a>
+                </p>
+                <code>/{{command["command_name"]}}</code>
+                {% for option in command["options"] %} <code>[{{option["name"]}}]</code>{% endfor %}
+                <p>{{command["description"]|safe}}</p>
+                {% if command["options"] %}
+                <hr>
+                {% endif %}
+                {% for option in command["options"] %}
+                <p><code>{{option["name"]}}</code></p>
+                <p>{{option["description"]}}</p>
+                {% if option["choices"] %}
+                <ul>
+                    <li>
+                        {% for choice in option["choices"] %} <code>{{choice["name"]}}</code>{% endfor %}
+                    </li>
+                </ul>
+                <hr>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+
+
+
+
