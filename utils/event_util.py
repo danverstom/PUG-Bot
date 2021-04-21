@@ -191,14 +191,14 @@ async def announce_event(title, description, announcement_channel, signup_list_c
                          signup_deadline):
     embed_description = f"**Time:**\n{event_time}\n\n**Signup Deadline:**\n{signup_deadline}\n\n{description}\n\n" \
                         f"React with ✅ to play\nReact with 🔇 if you cannot speak\nReact with 🛗 if you are able to sub"
-    embed = Embed(title=title, description=embed_description, color=Colour.light_grey())
+    embed = Embed(title=title, description=embed_description, color=Colour.dark_purple())
     if mention_role.lower() == "none":
         mention_role = ""
     announcement_message = await announcement_channel.send(content=f"{mention_role}", embed=embed)
     embed.set_footer(text=f"Event ID: {announcement_message.id}")
     await announcement_message.edit(embed=embed)
     description = f"{title}\n\n**Time:**\n{event_time}\n\n**Signup Deadline:**\n{signup_deadline}\n\n{description}"
-    embed = Embed(title="Signups", description=description, color=Colour.light_grey())
+    embed = Embed(title="Signups", description=description, color=Colour.dark_purple())
     embed.add_field(name="✅ Players: 0", value="No one :(", inline=False)
     embed.add_field(name="🛗 Subs: 0", value="No one :(", inline=False)
     signup_list_message = await signup_list_channel.send(embed=embed)
