@@ -246,7 +246,6 @@ class EventCommands(Cog, name="Event Commands"):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
         counter = {}
-        print(roles_list)
         roles = []
         total_to_remove = 0
         total_removed = 0
