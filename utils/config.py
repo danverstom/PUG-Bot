@@ -22,8 +22,8 @@ TIMEZONE = "US/Eastern"
 PUG_INVITE_LINK = "https://discord.gg/Gqpv5yUhAd"
 TEAMS_ROLES = ["Team 1 [Red]", "Team 2 [Blue]"]
 
-SYNC_COMMANDS = False
-BOT_START_MESSAGE = False
+SYNC_COMMANDS = True
+BOT_START_MESSAGE = True
 
 WEB_SERVER_HOSTNAME = "localhost"
 WEB_SERVER_PORT = 8080

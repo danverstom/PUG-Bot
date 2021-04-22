@@ -33,6 +33,7 @@ async def send_message():
         if user["is_mod"]:
             message_info = await request.get_json()
             info(message_info)
+            info(f"{user['user']} sent message \"{message_info['message']}\"")
             channel = bot.get_channel(int(message_info["channel_id"]))
             await channel.send(message_info["message"])
             # TODO: send errors if needed, better UI (anime.js), remove dummy user
