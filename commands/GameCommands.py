@@ -85,7 +85,6 @@ class GameCommands(Cog, name="CTF Commands"):
                 guessed = False
                 n_guesses = 0
                 while not guessed:
-                    logging.info([name for name in map_names if maps[name] == map_id])
                     try:
                         response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
                     except TimeoutError:
@@ -95,9 +94,7 @@ class GameCommands(Cog, name="CTF Commands"):
                         return
                     content = response.content.lower()
                     if content.startswith(">"):
-                        logging.info(content.strip(">"))
                         map_guess = get_close_matches(content.strip(">"), map_names)
-                        logging.info(map_guess)
                         if map_guess:
                             if maps[map_guess[0]] == map_id:
                                 await response.add_reaction("✅")
@@ -138,11 +135,9 @@ class GameCommands(Cog, name="CTF Commands"):
             while True:
                 random_player = Player.fetch_random_player()
                 random_ign = random_player.minecraft_username
-                logging.info(f"Random IGN generated: {random_ign}")
                 uuid = random_player.minecraft_id
                 names_dict = MojangAPI.get_name_history(uuid)
                 all_names = [item["name"].lower() for item in names_dict]
-                logging.info(all_names)
                 pie_file = await self.comp_playtime_pie(random_ign)
                 if pie_file:
                     round_message = await ctx.send(content=f"Round {round_num}:", file=pie_file)
@@ -158,8 +153,6 @@ class GameCommands(Cog, name="CTF Commands"):
                             return
                         content = response.content.lower()
                         if content.startswith(">"):
-                            logging.info(content.strip(">"))
-                            logging.info(all_names)
                             if content.strip(">") in all_names:
                                 await response.add_reaction("✅")
                                 await response.reply(f"You guessed correctly! ({random_ign})")
