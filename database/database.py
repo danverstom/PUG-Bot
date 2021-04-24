@@ -44,8 +44,180 @@ conn.execute(
     can_sub bool)'''
 )
 
+conn.execute(
+    '''create table if not exists pug_events (
+    pug_id integer primary key autoincrement,
+    event_id integer,
+    leader_one integer,
+    leader_two integer,
+    team_one_role integer,
+    team_two_role integer,
+    teams_drafted bool,
+    in_progress bool,
+    team_one_maps_won integer,
+    team_two_maps_won integer,
+    total_maps_played integer
+    )
+    '''
+)
+
+conn.execute(
+    '''create table if not exists pug_draft (
+    pug_id integer,
+    discord_id integer,
+    leader_id integer,
+    team_role integer,
+    draft_position integer
+    )
+    '''
+)
+
+
 conn.commit()
 c = conn.cursor()
+
+"""
+Functions that interact with the PUG Draft table
+"""
+
+
+def is_player_drafted(pug_id, discord_id):
+    c.execute("SELECT * FROM pug_draft WHERE pug_id = ? and discord_id = ?", (pug_id, discord_id))
+    result = c.fetchall()
+    if result:
+        return True
+    else:
+        return False
+
+
+def get_drafted_players_pug_id(pug_id):
+    c.execute("SELECT * FROM pug_draft WHERE pug_id = ?", (pug_id,))
+    result = c.fetchall()
+    return result
+
+
+def draft_player_pug(pug_id, discord_id, leader_id, team_role, draft_position):
+    if not is_player_drafted(pug_id, discord_id):
+        c.execute("INSERT INTO pug_draft ("
+                  "pug_id,"
+                  "discord_id,"
+                  "leader_id,"
+                  "team_role,"
+                  "draft_position) "
+                  "VALUES (?,?,?,?,?)",
+                  (pug_id, discord_id, leader_id, team_role, draft_position))
+        conn.commit()
+        return True
+    else:
+        return False
+
+
+def undraft_player_pug(pug_id, discord_id):
+    if is_player_drafted(pug_id, discord_id):
+        c.execute("DELETE FROM pug_draft WHERE pug_id = ? and discord_id = ?", (pug_id,discord_id))
+        conn.commit()
+        return True
+    else:
+        return False
+
+
+"""
+Functions that interact with the PUG Events table
+"""
+
+
+def pug_event_exists_event_id(event_id):
+    """Check to see if a PUG event has been created for an event"""
+    c.execute("SELECT * FROM pug_events WHERE event_id = ?", (event_id,))
+    result = c.fetchall()
+    if result:
+        return True
+    else:
+        return False
+
+
+def pug_event_exists_pug_id(pug_id):
+    c.execute("SELECT * FROM pug_events WHERE pug_id = ?", (pug_id,))
+    result = c.fetchall()
+    if result:
+        return True
+    else:
+        return False
+
+
+def get_pug_event_from_pug_id(pug_id):
+    c.execute("SELECT * FROM pug_events WHERE pug_id = ?", (pug_id,))
+    result = c.fetchall()
+    return result
+
+
+def get_pug_event_from_event_id(event_id):
+    c.execute("SELECT * FROM pug_events WHERE event_id = ?", (event_id,))
+    result = c.fetchall()
+    return result
+
+
+def create_pug_event(event_id, leader_one, leader_two, team_one_role, team_two_role):
+    if not pug_event_exists_event_id(event_id):
+        c.execute("INSERT INTO pug_events (event_id, "
+                  "leader_one,"
+                  "leader_two,"
+                  "team_one_role,"
+                  "team_two_role,"
+                  "teams_drafted,"
+                  "in_progress,"
+                  "team_one_maps_won,"
+                  "team_two_maps_won,"
+                  "total_maps_played)"
+                  "VALUES (?,?,?,?,?,?,?,?,?,?)", (
+                      event_id, leader_one, leader_two, team_one_role, team_two_role, False, False, 0, 0, 0
+                  ))
+        conn.commit()
+        return True
+    else:
+        # PUG Event already exists for this event
+        return False
+
+
+def delete_pug_event(pug_id):
+    if pug_event_exists_pug_id(pug_id):
+        c.execute("DELETE FROM pug_events WHERE pug_id = ?", (pug_id,))
+        conn.commit()
+        return True
+    else:
+        return False
+
+
+def set_pug_event_teams_drafted(pug_id, value: bool):
+    c.execute("UPDATE pug_events SET teams_drafted = ? WHERE pug_id = ?", (value, pug_id))
+    conn.commit()
+    return True
+
+
+def set_pug_event_in_progress(pug_id, value: bool):
+    c.execute("UPDATE pug_events SET in_progress = ? WHERE pug_id = ?", (value, pug_id))
+    conn.commit()
+    return True
+
+
+def set_pug_event_team_one_maps_won(pug_id, value: bool):
+    c.execute("UPDATE pug_events SET team_one_maps_won = ? WHERE pug_id = ?", (value, pug_id))
+    conn.commit()
+    return True
+
+
+def set_pug_event_team_two_maps_won(pug_id, value: bool):
+    c.execute("UPDATE pug_events SET team_two_maps_won = ? WHERE pug_id = ?", (value, pug_id))
+    conn.commit()
+    return True
+
+
+def set_pug_event_total_maps_played(pug_id, value: bool):
+    c.execute("UPDATE pug_events SET total_maps_played = ? WHERE pug_id = ?", (value, pug_id))
+    conn.commit()
+    return True
+
+
 
 """
 Functions that interact with the Players database
