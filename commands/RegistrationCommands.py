@@ -197,7 +197,7 @@ class RegistrationCommands(Cog, name="User Registration"):
             await error_embed(ctx, "Player is not registered in the database.")
             return
         await response_embed(ctx, "Confirm", f"""Are you sure you want to delete {user.mention} from the database?
-                                                \nThis action is permanent, and will remove their elo and priority.
+                                                \nThis action is **permanent** and **irreversible**, and will remove their elo and priority **forever**.
                                                 \nReply with yes or no.""")
 
         def check(m):
