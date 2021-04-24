@@ -100,7 +100,7 @@ class RegistrationCommands(Cog, name="User Registration"):
                     embed = Embed(title=f"Register Request: {minecraft_username}",
                                   description=f"React below to verify {ctx.author.mention}",
                                   colour=Colour.dark_purple())
-                    embed.set_thumbnail(url=f"https://cravatar.eu/helmavatar/{minecraft_username}/128.png")
+                    embed.set_thumbnail(url=f"https://cravatar.eu/helmavatar/{uuid}/128.png")
                     message = await request_channel.send(embed=embed)
                     await message.add_reaction("✅")
                     await message.add_reaction("❌")
@@ -197,7 +197,7 @@ class RegistrationCommands(Cog, name="User Registration"):
             await error_embed(ctx, "Player is not registered in the database.")
             return
         await response_embed(ctx, "Confirm", f"""Are you sure you want to delete {user.mention} from the database?
-                                                \nThis action is permanent, and will remove their elo and priority.
+                                                \nThis action is **permanent** and **irreversible**, and will remove their elo and priority **forever**.
                                                 \nReply with yes or no.""")
 
         def check(m):
@@ -342,7 +342,7 @@ class RegistrationCommands(Cog, name="User Registration"):
         #    stats += f"**{key}:** {getattr(player, key)}\n"
 
         embed = Embed(description=stats, color=Colour.dark_purple())
-        embed.set_author(name=f"User profile - {getattr(player, 'minecraft_username')}", icon_url=f"https://cravatar.eu/helmavatar/{getattr(player, 'minecraft_username')}/128.png")
+        embed.set_author(name=f"User profile - {getattr(player, 'minecraft_username')}", icon_url=f"https://cravatar.eu/helmavatar/{getattr(player, 'minecraft_id')}/128.png")
         await ctx.send(embed=embed)
 
     @tasks.loop(hours=IGN_TRACKER_INTERVAL_HOURS)

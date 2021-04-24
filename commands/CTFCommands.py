@@ -16,6 +16,7 @@ import aiohttp
 from asyncio import sleep as async_sleep
 import logging
 from utils.plot_utils import *
+from mojang import MojangAPI
 
 # ss
 import os
@@ -409,9 +410,9 @@ class CTFCommands(Cog, name="CTF Commands"):
         if ign:
             username = ign
         else:
-            username = Player.exists_discord_id(ctx.author.id).minecraft_username
+            username = Player.exists_discord_id(ctx.author.id)
         if not username:
-            await error_embed(ctx, "Please input a player or `/register`")
+            await error_embed(ctx, "Please input a player or `/register` to get your own stats")
             return
         response = await request_async_json(get_player_id_url.format(username), 'text/plain')
         if response:
@@ -509,5 +510,5 @@ class CTFCommands(Cog, name="CTF Commands"):
         await discord_message.edit(content="Done! Sending results...")
         await ctx.send(file=chart_file)
         await create_list_pages(self.bot, ctx, info=class_stats_list, title=f"{mode.title()} stats | {username}",
-                                elements_per_page=1, thumbnails=[f"https://cravatar.eu/helmavatar/{username}/128.png"],
+                                elements_per_page=1, thumbnails=[f"https://cravatar.eu/helmavatar/{MojangAPI.get_uuid(username)}/128.png"],
                                 can_be_reversed=True)
