@@ -20,6 +20,7 @@ from random import shuffle, seed
 import logging
 from datetime import datetime, timedelta
 from pytz import timezone
+from time import time
 
 
 class EventCommands(Cog, name="Event Commands"):
@@ -32,6 +33,8 @@ class EventCommands(Cog, name="Event Commands"):
         self.events = Event.fetch_active_events_dict()
         self.signups = dict()
         self.bot_channel = None
+        self.rng_last_used = 0
+        self.rng_cooldown = 600
         for event_id in self.events.keys():
             self.signups[event_id] = Signup.fetch_signups_list(event_id)
 
@@ -336,6 +339,11 @@ class EventCommands(Cog, name="Event Commands"):
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
+        logging.info(f"RNG Signups command last used {round(time() - self.rng_last_used)} seconds ago")
+        if time() - self.rng_last_used < self.rng_cooldown and do_priority:
+            await error_embed(ctx, "**WARNING!** Did someone else already use this recently?\n\nThis command has a"
+                                   " cooldown of 5 minutes if priority is used")
+            return False
         seed()
         try:
             event_id = int(event_id)
@@ -354,6 +362,7 @@ class EventCommands(Cog, name="Event Commands"):
         signups = list(filter(lambda signup: signup.can_play, signups))
         shuffle(signups)
         if do_priority:
+            self.rng_last_used = time()
             # key is player.priority if player exists else its 0
             signups = sorted(signups, key=lambda signup: Player.from_discord_id(signup.user_id)
                              .priority if Player.exists_discord_id(signup.user_id) else -1, reverse=True)
