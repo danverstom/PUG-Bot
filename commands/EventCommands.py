@@ -690,12 +690,13 @@ class EventCommands(Cog, name="Event Commands"):
                     changes_str += f"{member.mention} `{prev_elo} → {player.get_elo()}`\n"
         summary = Embed(title="Summary of ELO changes", color=Colour.dark_purple())
         if changes_str:
-            if amount < 0:
-                summary.description = f"{role.mention} lost `{abs(amount)}` ELO"
-                summary.color = Colour.dark_red()
-            else:
-                summary.description = f"{role.mention} gained `{abs(amount)}` ELO"
-                summary.color = Colour.green()
+            if role:
+                if amount < 0:
+                    summary.description = f"{role.mention} lost `{abs(amount)}` ELO"
+                    summary.color = Colour.dark_red()
+                else:
+                    summary.description = f"{role.mention} gained `{abs(amount)}` ELO"
+                    summary.color = Colour.green()
             summary.add_field(name=f"ELO changes: ({total_input})", value=changes_str)
         else:
             summary.description = "No changes were made to ELO"

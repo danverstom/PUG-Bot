@@ -9,7 +9,6 @@ from database.Player import Player
 from database.database import get_sorted_elo
 from datetime import datetime
 from pytz import timezone
-from mojang import MojangAPI
 
 
 class BaseCommands(Cog, name="Base Commands"):
@@ -64,11 +63,10 @@ class BaseCommands(Cog, name="Base Commands"):
                     continue
             leaderboard_entries.append(f"**#{count}:** `{item[0]}` - **{item[1]}**")
             count += 1
-        uuid = MojangAPI.get_uuid(data[0][0])
 
         await create_list_pages(self.bot, ctx, "Leaderboard", leaderboard_entries, "There are no registered players",
                                 elements_per_page=20,
-                                thumbnails=[f"https://cravatar.eu/helmavatar/{uuid}/128.png"],
+                                thumbnails=[f"https://cravatar.eu/helmavatar/{data[0][0]}/128.png"],
                                 can_be_reversed=True)
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
