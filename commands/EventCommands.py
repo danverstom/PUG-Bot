@@ -246,7 +246,6 @@ class EventCommands(Cog, name="Event Commands"):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
         counter = {}
-        print(roles_list)
         roles = []
         total_to_remove = 0
         total_removed = 0
@@ -630,10 +629,11 @@ class EventCommands(Cog, name="Event Commands"):
         info_embed = Embed(title="Current Events", description="Here is a list of **events** and their details",
                            colour=Colour.dark_purple())
         for event in Event.fetch_events_list():
-            announcement_url = f"https://discord.com/channels/{event.guild_id}/{event.announcement_channel}/" \
-                               f"{event.event_id}"
-            info_embed.description += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
-                                      f"> Active: **{str(event.is_active) + (' 🟢' if event.is_active else ' 🔴')}**"
+            if event.is_active:
+                announcement_url = f"https://discord.com/channels/{event.guild_id}/{event.announcement_channel}/" \
+                                   f"{event.event_id}"
+                info_embed.description += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
+                                          f"> Active: **{str(event.is_active) + (' 🟢' if event.is_active else ' 🔴')}**"
         await ctx.send(embed=info_embed)
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS,
@@ -690,6 +690,13 @@ class EventCommands(Cog, name="Event Commands"):
                     changes_str += f"{member.mention} `{prev_elo} → {player.get_elo()}`\n"
         summary = Embed(title="Summary of ELO changes", color=Colour.dark_purple())
         if changes_str:
+            if role:
+                if amount < 0:
+                    summary.description = f"{role.mention} lost `{abs(amount)}` ELO"
+                    summary.color = Colour.dark_red()
+                else:
+                    summary.description = f"{role.mention} gained `{abs(amount)}` ELO"
+                    summary.color = Colour.green()
             summary.add_field(name=f"ELO changes: ({total_input})", value=changes_str)
         else:
             summary.description = "No changes were made to ELO"

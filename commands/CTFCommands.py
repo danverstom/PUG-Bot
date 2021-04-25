@@ -409,9 +409,13 @@ class CTFCommands(Cog, name="CTF Commands"):
         if ign:
             username = ign
         else:
-            username = Player.exists_discord_id(ctx.author.id).minecraft_username
+            player = Player.exists_discord_id(ctx.author.id)
+            if player:
+                username = player.minecraft_username
+            else:
+                username = None
         if not username:
-            await error_embed(ctx, "Please input a player or `/register`")
+            await error_embed(ctx, "Please input a player or `/register` to get your own stats")
             return
         response = await request_async_json(get_player_id_url.format(username), 'text/plain')
         if response:
