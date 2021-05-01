@@ -2,7 +2,7 @@ from discord.ext.commands import Cog
 from random import randint
 from discord.embeds import Embed
 from discord import Colour
-from discord_slash.cog_ext import cog_slash
+from discord_slash.cog_ext import cog_slash, manage_commands
 from utils.config import SLASH_COMMANDS_GUILDS
 from utils.utils import create_list_pages
 from database.Player import Player
@@ -49,12 +49,17 @@ class BaseCommands(Cog, name="Base Commands"):
             embed=Embed(title="Coinflip 🪙", description=f"You flipped {result}", color=Colour.dark_purple()))
 
     @cog_slash(name="leaderboard", description="Displays an ELO leaderboard",
-               options=[], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def leaderboard(self, ctx):
+               options=[manage_commands.create_option(name="role",
+                                                      description="Filter leaderboard by role",
+                                                      option_type=8, required=False)], guild_ids=SLASH_COMMANDS_GUILDS)
+    async def leaderboard(self, ctx, role=None):
         player = Player.exists_discord_id(ctx.author.id)
         data = get_sorted_elo()
         leaderboard_entries = []
         count = 1
+        if role:
+            data = list(filter(lambda item: item[2] in [member.id for member in ctx.guild.members], data))
+            data = list(filter(lambda item: role in ctx.guild.get_member(item[2]).roles, data))
         for item in data:
             if player:
                 if player.minecraft_username == item[0]:
@@ -63,8 +68,10 @@ class BaseCommands(Cog, name="Base Commands"):
                     continue
             leaderboard_entries.append(f"**#{count}:** `{item[0]}` - **{item[1]}**")
             count += 1
-
-        await create_list_pages(self.bot, ctx, "Leaderboard", leaderboard_entries, "There are no registered players",
+        title = "Leaderboard"
+        if role:
+            title += f" | {role.name}"
+        await create_list_pages(self.bot, ctx, title, leaderboard_entries, "There are no registered players",
                                 elements_per_page=20,
                                 thumbnails=[f"https://cravatar.eu/helmavatar/{data[0][0]}/128.png"],
                                 can_be_reversed=True)
