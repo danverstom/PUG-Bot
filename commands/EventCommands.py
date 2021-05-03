@@ -34,7 +34,7 @@ class EventCommands(Cog, name="Event Commands"):
         self.signups = dict()
         self.bot_channel = None
         self.rng_last_used = 0
-        self.rng_cooldown = 600
+        self.rng_cooldown = 300
         for event_id in self.events.keys():
             self.signups[event_id] = Signup.fetch_signups_list(event_id)
 
@@ -359,6 +359,7 @@ class EventCommands(Cog, name="Event Commands"):
         results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
         if not signups:
             signups = Signup.fetch_signups_list(event_id)
+        subs = list(filter(lambda signup: not signup.can_play and signup.can_sub, signups)) #Players that have reacted can sub but not can play
         signups = list(filter(lambda signup: signup.can_play, signups))
         shuffle(signups)
         if do_priority:
@@ -394,6 +395,11 @@ class EventCommands(Cog, name="Event Commands"):
                  (' 🛗' if signup.can_sub else '') +
                  ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
                  benched_players]))
+            results_embed.add_field(name=f"Subs ({len(subs)})", value='\n'.join(
+                [self.bot.get_user(signup.user_id).mention + (' 🔇' if signup.is_muted else '') +
+                 (' 🛗' if signup.can_sub else '') +
+                 ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
+                 subs]))
             if do_priority:
                 for signup in benched_players:
                     player = Player.exists_discord_id(signup.user_id)
