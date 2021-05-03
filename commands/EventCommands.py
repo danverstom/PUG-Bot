@@ -395,16 +395,17 @@ class EventCommands(Cog, name="Event Commands"):
                  (' 🛗' if signup.can_sub else '') +
                  ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
                  benched_players]))
-            results_embed.add_field(name=f"Subs ({len(subs)})", value='\n'.join(
-                [self.bot.get_user(signup.user_id).mention + (' 🔇' if signup.is_muted else '') +
-                 (' 🛗' if signup.can_sub else '') +
-                 ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
-                 subs]))
             if do_priority:
                 for signup in benched_players:
                     player = Player.exists_discord_id(signup.user_id)
                     if player:
                         player.change_priority(1)
+        if subs:
+            results_embed.add_field(name=f"Subs ({len(subs)})", value='\n'.join(
+                [self.bot.get_user(signup.user_id).mention + (' 🔇' if signup.is_muted else '') +
+                 (' 🛗' if signup.can_sub else '') +
+                 ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
+                 subs]))
         signed_role = ctx.guild.get_role(event.signup_role)
         if not results_channel:
             await ctx.send(content=f"{signed_role.mention} RNG results:",
