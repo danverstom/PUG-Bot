@@ -7,7 +7,7 @@ from database.database import check_user_requests, add_register_request, get_reg
     remove_register_request, get_all_register_requests, get_sorted_elo
 from utils.utils import error_embed, success_embed, response_embed, create_list_pages, has_permissions
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL,\
-    ELO_FLOOR, ADMIN_ROLE, PUBLIC_BOT_CHANNEL, UPDATE_NICKNAMES
+    ELO_FLOOR, ADMIN_ROLE, PUBLIC_BOT_CHANNEL, UPDATE_NICKNAMES, SEND_JOIN_MESSAGE
 from mojang import MojangAPI
 from asyncio import sleep as async_sleep
 from discord.errors import Forbidden
@@ -127,6 +127,8 @@ class RegistrationCommands(Cog, name="User Registration"):
 
     @Cog.listener()
     async def on_member_join(self, member):
+        if not SEND_JOIN_MESSAGE:
+            return
         channel = self.bot.get_channel(PUBLIC_BOT_CHANNEL)
         if Player.exists_discord_id(member.id):
             return
