@@ -2,12 +2,16 @@ from discord.ext.commands import Cog, has_role
 from discord import File, Embed, Colour
 from utils.utils import get_json_data, error_embed, success_embed, response_embed, has_permissions
 from utils.image_util import compress
+from database.Player import Player
 import utils.config
 import os
 import sys
 import platform
 import subprocess
 from json import dump, load
+from shutil import copyfile
+from pytz import timezone
+from datetime import datetime
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
@@ -198,5 +202,38 @@ class AdminCommands(Cog, name="Admin Commands"):
                 os.remove(f"assets/map_screenshots/{map_id}.jpg")
                 return await response_embed(ctx, "✅ Map deleted", "")
 
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def prune_missing_players(self, ctx):
+        """Removes registered players from the database who aren't in the server"""
+        if not has_permissions(ctx, ADMIN_ROLE) and ctx.guild not in SLASH_COMMANDS_GUILDS:
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        await ctx.defer()
+        tz = timezone('US/Eastern')
+        time = datetime.now(tz).strftime("%Y%m%d-%H%M%S")
+        backup_filename = f"backups/database-{time}.db"
+        copyfile("database/database.db", backup_filename)
+        await success_embed(ctx, f"Created backup file: `{backup_filename}`")
+        players = Player.fetch_players_list()
+        guild_member_ids = [member.id for member in ctx.guild.members]
+        deleted_player_names = []
+        for player in players:
+            if player.discord_id not in guild_member_ids:
+                deleted_player_names.append(player.minecraft_username)
+                player.delete()
+        if deleted_player_names:
+            await success_embed(ctx, f"Removed players `{', '.join(deleted_player_names)}` from database.")
+        else:
+            await error_embed(ctx, "No players to prune.")
 
-
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def backup(self, ctx):
+        """Creates backup of database"""
+        if not has_permissions(ctx, ADMIN_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        tz = timezone('US/Eastern')
+        time = datetime.now(tz).strftime("%Y%m%d-%H%M%S")
+        backup_filename = f"backups/database-{time}.db"
+        copyfile("database/database.db", backup_filename)
+        await success_embed(ctx, f"Created backup file: `{backup_filename}`")
