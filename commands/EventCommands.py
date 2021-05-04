@@ -7,8 +7,7 @@ from discord.utils import get
 from discord_slash.cog_ext import cog_slash, cog_subcommand
 from discord_slash.utils import manage_commands as mc
 
-from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
-    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT, TIMEZONE, SPECTATOR_ROLE_NAME, TEAMS_ROLES
+from utils.config import *
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
     priority_rng_signups, get_embed_time_string, generate_signups_embed
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
@@ -70,12 +69,12 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="Date of the event.  Must be in DD-MM-YYYY format",
                                          option_type=3, required=False),
                         mc.create_option(name="signup_deadline",
-                                         description="Amount of time (in minutes) before the event for signup "
-                                                     "deadline.  Default is 30 minutes",
+                                         description=f"Amount of time (in minutes) before the event for signup "
+                                                     f"deadline.  Default is {SIGNUP_DEADLINE_DEFAULT} minutes",
                                          option_type=4, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
     async def event(self, ctx, title, announcement_channel, mention_role, signup_channel, signup_role, event_time,
-                    event_date="", signup_deadline=30):
+                    event_date="", signup_deadline=SIGNUP_DEADLINE_DEFAULT):
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
@@ -331,10 +330,11 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="The channel to send the RNG results",
                                          option_type=7, required=False),
                         mc.create_option(name="do_priority",
-                                         description="Whether to process priority",
+                                         description=f"Whether to process priority. Default is {PRIORITY_DEFAULT}",
                                          option_type=5, required=False)
                         ], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def rngsignups(self, ctx, event_id, size=22, priority_role=None, results_channel=None, do_priority=True):
+    async def rngsignups(self, ctx, event_id, size=22, priority_role=None, results_channel=None,
+                         do_priority=PRIORITY_DEFAULT):
         """Randomises signups for an event"""
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)

@@ -7,7 +7,7 @@ from database.database import check_user_requests, add_register_request, get_reg
     remove_register_request, get_all_register_requests, get_sorted_elo
 from utils.utils import error_embed, success_embed, response_embed, create_list_pages, has_permissions
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL,\
-    ELO_FLOOR, ADMIN_ROLE, PUBLIC_BOT_CHANNEL
+    ELO_FLOOR, ADMIN_ROLE, PUBLIC_BOT_CHANNEL, UPDATE_NICKNAMES
 from mojang import MojangAPI
 from asyncio import sleep as async_sleep
 from discord.errors import Forbidden
@@ -354,28 +354,33 @@ class RegistrationCommands(Cog, name="User Registration"):
             latest_username = player.update_minecraft_username()
             if latest_username != old_username and latest_username is not None:
                 changes_list.append([player, old_username])
-            await async_sleep(3)
+            await async_sleep(1)
         if len(changes_list) > 0:
             embed = Embed(title="IGNs Updated", color=Colour.dark_purple())
             for change in changes_list:
                 player = change[0]
                 member = server.get_member(player.discord_id)
                 old_username = change[1]
+                if not member.nick:
+                    member.nick = member.name
                 team_list = re.findall(r"^\[(\w{1,4})\]", member.nick)
                 alias_list = re.findall(r"\s\((.*)\)$", member.nick)
                 new_nick = f"{'[' + team_list[0] + '] ' if team_list else ''}{player.minecraft_username}" + \
                            (f" ({alias_list[0]})" if alias_list else "")
-                try:
-                    await member.edit(nick=new_nick)
-                except Forbidden:
-                    embed_value = f"🔴 Failed to update nickname to `{new_nick}` (Forbidden)"
-                else:
-                    embed_value = f"Updated server nickname to `{new_nick}`"
+                if UPDATE_NICKNAMES:
                     try:
-                        await success_embed(member, f"PUG server nickname updated to `{new_nick}`")
-                        embed_value += " (DM sent)"
+                        await member.edit(nick=new_nick)
                     except Forbidden:
-                        embed_value += " (confirmation DM failed to send)"
+                        embed_value = f"🔴 Failed to update nickname to `{new_nick}` (Forbidden)"
+                    else:
+                        embed_value = f"Updated server nickname to `{new_nick}`"
+                        try:
+                            await success_embed(member, f"PUG server nickname updated to `{new_nick}`")
+                            embed_value += " (DM sent)"
+                        except Forbidden:
+                            embed_value += " (confirmation DM failed to send)"
+                else:
+                    embed_value = "Nickname updates disabled in config."
                 embed.add_field(name=f"{old_username} → {player.minecraft_username}", value=embed_value, inline=False)
             await self.bot_channel.send(embed=embed)
 
