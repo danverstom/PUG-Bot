@@ -69,11 +69,13 @@ class BaseCommands(Cog, name="Base Commands"):
             leaderboard_entries.append(f"**#{count}:** `{item[0]}` - **{item[1]}**")
             count += 1
         title = "Leaderboard"
+        no_reg_desc = "There are no registered players"
         if role:
             title += f" | {role.name}"
-        await create_list_pages(self.bot, ctx, title, leaderboard_entries, "There are no registered players",
+            no_reg_desc = "There are no registered players with that role"
+        await create_list_pages(self.bot, ctx, title, leaderboard_entries, no_reg_desc,
                                 elements_per_page=20,
-                                thumbnails=[f"https://cravatar.eu/helmavatar/{data[0][0]}/128.png"],
+                                thumbnails=[f"https://cravatar.eu/helmavatar/{data[0][0]}/128.png"] if data else [],
                                 can_be_reversed=True)
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])

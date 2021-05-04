@@ -7,8 +7,7 @@ from discord.utils import get
 from discord_slash.cog_ext import cog_slash, cog_subcommand
 from discord_slash.utils import manage_commands as mc
 
-from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
-    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT, TIMEZONE, SPECTATOR_ROLE_NAME, TEAMS_ROLES
+from utils.config import *
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
     priority_rng_signups, get_embed_time_string, generate_signups_embed
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
@@ -34,7 +33,7 @@ class EventCommands(Cog, name="Event Commands"):
         self.signups = dict()
         self.bot_channel = None
         self.rng_last_used = 0
-        self.rng_cooldown = 600
+        self.rng_cooldown = 300
         for event_id in self.events.keys():
             self.signups[event_id] = Signup.fetch_signups_list(event_id)
 
@@ -70,12 +69,12 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="Date of the event.  Must be in DD-MM-YYYY format",
                                          option_type=3, required=False),
                         mc.create_option(name="signup_deadline",
-                                         description="Amount of time (in minutes) before the event for signup "
-                                                     "deadline.  Default is 30 minutes",
+                                         description=f"Amount of time (in minutes) before the event for signup "
+                                                     f"deadline.  Default is {SIGNUP_DEADLINE_DEFAULT} minutes",
                                          option_type=4, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
     async def event(self, ctx, title, announcement_channel, mention_role, signup_channel, signup_role, event_time,
-                    event_date="", signup_deadline=30):
+                    event_date="", signup_deadline=SIGNUP_DEADLINE_DEFAULT):
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
@@ -331,10 +330,11 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="The channel to send the RNG results",
                                          option_type=7, required=False),
                         mc.create_option(name="do_priority",
-                                         description="Whether to process priority",
+                                         description=f"Whether to process priority. Default is {PRIORITY_DEFAULT}",
                                          option_type=5, required=False)
                         ], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def rngsignups(self, ctx, event_id, size=22, priority_role=None, results_channel=None, do_priority=True):
+    async def rngsignups(self, ctx, event_id, size=22, priority_role=None, results_channel=None,
+                         do_priority=PRIORITY_DEFAULT):
         """Randomises signups for an event"""
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
@@ -359,6 +359,7 @@ class EventCommands(Cog, name="Event Commands"):
         results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
         if not signups:
             signups = Signup.fetch_signups_list(event_id)
+        subs = list(filter(lambda signup: not signup.can_play and signup.can_sub, signups)) #Players that have reacted can sub but not can play
         signups = list(filter(lambda signup: signup.can_play, signups))
         shuffle(signups)
         if do_priority:
@@ -399,6 +400,12 @@ class EventCommands(Cog, name="Event Commands"):
                     player = Player.exists_discord_id(signup.user_id)
                     if player:
                         player.change_priority(1)
+        if subs:
+            results_embed.add_field(name=f"Subs ({len(subs)})", value='\n'.join(
+                [self.bot.get_user(signup.user_id).mention + (' 🔇' if signup.is_muted else '') +
+                 (' 🛗' if signup.can_sub else '') +
+                 ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
+                 subs]))
         signed_role = ctx.guild.get_role(event.signup_role)
         if not results_channel:
             await ctx.send(content=f"{signed_role.mention} RNG results:",
