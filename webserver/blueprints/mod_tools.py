@@ -32,11 +32,18 @@ async def send_message():
         user = await fetch_user_with_perms()
         if user["is_mod"]:
             message_info = await request.get_json()
+            guild = bot.get_guild(SLASH_COMMANDS_GUILDS[0])
+
+            member = get(guild.members, id=user["user"].id)
             info(message_info)
             info(f"{user['user']} sent message \"{message_info['message']}\"")
             channel = bot.get_channel(int(message_info["channel_id"]))
-            await channel.send(message_info["message"])
-            # TODO: send errors if needed, better UI (anime.js), remove dummy user
+            allowed_text_channels = [channel for channel in guild.text_channels if
+                                     channel.permissions_for(member).send_messages]
+            if channel in allowed_text_channels:
+                await channel.send(message_info["message"])
+            else:
+                return jsonify({"success": False, "error": "You do not have perms for this channel"})
             return jsonify({"success": True})
         else:
             return jsonify({"success": False, "error": "You need the PUG Mod role to do this"})
