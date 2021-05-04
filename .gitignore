@@ -8,3 +8,4 @@ utils/team_threads.json
 utils/pug_settings.json
 utils/service_account.json
 webserver/static/bulma-css/node_modules
+*.db
