@@ -208,23 +208,32 @@ class CTFCommands(Cog, name="CTF Commands"):
 
     async def rosters_comparison(self, old_threads, new_threads): #Compares old and new forum threads (team sizes)
         changes = ""
-        for thread in old_threads:
-            if thread not in new_threads:
-                changes += f"---{thread}\n\n"
+        #TODO: Handle error for when teams change their threads titles
+        old_links = {old_threads[old_key]["link"]: old_key for old_key in old_threads.keys()}
+        new_links = {new_threads[new_key]["link"]: new_key for new_key in new_threads.keys()}
 
-        for thread in new_threads:
-            if thread in old_threads:
-                if new_threads[thread]['members'] != old_threads[thread]['members']:
-                    new_size = int(new_threads[thread]['members'].split("/")[0])
-                    old_size = int(old_threads[thread]['members'].split("/")[0])
+        disjunct_union = set(old_links.keys()) ^ set(new_links.keys())
+
+        for disjunct in disjunct_union:
+            if disjunct in old_links:
+                changes += f"🔴 **{old_links[disjunct]}** has disbanded.\n\n"
+            else:
+                changes += f"🟢 **{new_links[disjunct]}** is now official.\n\n"
+
+        for o_key in old_threads.keys():
+            for n_key in new_threads.keys():
+                if o_key != n_key:
+                    continue
+                if new_threads[n_key]['members'] != old_threads[o_key]['members']:
+                    new_size = int(new_threads[n_key]['members'].split("/")[0])
+                    old_size = int(old_threads[o_key]['members'].split("/")[0])
                     if new_size > old_size:
                         changes += (
-                            f"🟢 **{thread}:** {old_threads[thread]['members']} -> {new_threads[thread]['members']} (**+{new_size - old_size}**)\n\n")
+                            f"🟢 **{o_key}:** {old_threads[o_key]['members']} -> {new_threads[n_key]['members']} (**+{new_size - old_size}**)\n\n")
                     else:
                         changes += (
-                            f"🔴 **{thread}:** {old_threads[thread]['members']} -> {new_threads[thread]['members']} (**{new_size - old_size}**)\n\n")
-            else:
-                changes += f"+++{thread}\n\n"
+                            f"🔴 **{n_key}:** {old_threads[o_key]['members']} -> {new_threads[n_key]['members']} (**{new_size - old_size}**)\n\n")
+
         if changes:
             embed = Embed(title="Roster Changes", description=changes, color=Colour.dark_purple())
             message = await self.general_chat.send(embed=embed)
@@ -250,9 +259,9 @@ class CTFCommands(Cog, name="CTF Commands"):
                 else:
                     author_avatar = f"https://www.brawl.com/{img_loc.get('src')}"
                 thread_link = f"https://www.brawl.com/{info.get('href')}"
-                team_title = split("((\[|\()?[0-9][0-9]/25(\]|\))?)", info.text, 1)
+                team_title = split("((\[|\()\d{1,3}/\d{1,3}(\]|\))?)", info.text, 1)
 
-                team_size = split("([0-9][0-9]/25)", info.text, 1)
+                team_size = split("(\d{1,3}/\d{1,3})", info.text, 1)
                 try:  # uhh haha not all teams have member size in title
                     team_size = team_size[1]
                 except:
