@@ -644,12 +644,16 @@ class EventCommands(Cog, name="Event Commands"):
             return False
         info_embed = Embed(title="Current Events", description="Here is a list of **events** and their details",
                            colour=Colour.dark_purple())
+        info_desc = ""
         for event in Event.fetch_events_list():
             if event.is_active:
                 announcement_url = f"https://discord.com/channels/{event.guild_id}/{event.announcement_channel}/" \
                                    f"{event.event_id}"
-                info_embed.description += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
+                info_desc += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
                                           f"> Active: **{str(event.is_active) + (' 🟢' if event.is_active else ' 🔴')}**"
+        info_embed.description += info_desc
+        if not info_desc:
+            info_embed.description = "There is currently no active **event**, what about hosting one?"
         await ctx.send(embed=info_embed)
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS,
