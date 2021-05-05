@@ -1,13 +1,13 @@
 from discord.ext.commands import Cog
-from random import randint
+from random import randint, choice
 from discord.embeds import Embed
 from discord import Colour
 from discord_slash.cog_ext import cog_slash, manage_commands
-from utils.config import SLASH_COMMANDS_GUILDS
-from utils.utils import create_list_pages
+from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE
+from utils.utils import create_list_pages, has_permissions
 from database.Player import Player
 from database.database import get_sorted_elo
-from datetime import datetime
+from datetime import datetime, timedelta
 from pytz import timezone
 
 
@@ -82,3 +82,37 @@ class BaseCommands(Cog, name="Base Commands"):
     async def error_test_command(self, ctx):
         int("bonjour")
         await ctx.send("test")
+
+    @cog_slash(name="schedule", description="Create a quick copypaste schedule message",
+               options=[manage_commands.create_option(name="alternation",
+                                                      description="Alternate between late/early times",
+                                                      option_type=3, required=False,
+                                                      choices=["EarlyMon", "LateMon"])],
+               guild_ids=SLASH_COMMANDS_GUILDS)
+    async def schedule(self, ctx, alternation = "EarlyMon"):
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        j=0
+        if alternation == "LateMon":
+            j=1
+        start = datetime.today() - timedelta(days=datetime.today().weekday() % 7)
+        num_of_pugs = [1, 1, 1, 1, 2, 2, 2]
+
+        early = ["2pm EST", "3pm EST", "4pm EST"]
+        late = ["7pm EST", "8pm EST"]
+
+        sched_str = ""
+        sched_str += f"__**Week of {int(start.strftime('%m'))}/{int(start.strftime('%d'))}**__\n\n"
+        # await ctx.send(sched_str)
+        for pugs in num_of_pugs:
+            if pugs == 2:
+                j = 0
+            for i in range(pugs):
+                # message = await ctx.channel.send(
+                #     f"**{start.strftime('%A')} {int(start.strftime('%m'))}/{int(start.strftime('%d'))} - {choice(early) if j % 2 == 0 else choice(late)}**")
+                sched_str += f"**{start.strftime('%A')} {int(start.strftime('%m'))}/{int(start.strftime('%d'))} - {choice(early) if j % 2 == 0 else choice(late)}**\n"
+                # await message.add_reaction("✅")
+                j += 1
+            start += timedelta(days=1)
+        await ctx.send(f"Here's a copypasta of the dates\n```{sched_str}```")
