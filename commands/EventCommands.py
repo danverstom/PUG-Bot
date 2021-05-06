@@ -151,7 +151,9 @@ class EventCommands(Cog, name="Event Commands"):
                                     f"Set event {event.event_id} / {event.title} to **inactive**")
                 message = await self.bot.get_channel(event.announcement_channel).fetch_message(event.event_id)
                 embed = message.embeds[0]
-                embed.description = "This event is no longer active."
+                embed.description = embed.description.rsplit("\n", 4)[0] #Getting rid of the last three lines of the description "React if you can.."
+                embed.description += "\n\n**This event is no longer active.**\n"
+                embed.color = Colour.default()
                 await message.edit(embed=embed)
                 await message.clear_reactions()
                 spectator_role = get(message.guild.roles, name=SPECTATOR_ROLE_NAME)
