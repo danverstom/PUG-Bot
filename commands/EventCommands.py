@@ -251,7 +251,7 @@ class EventCommands(Cog, name="Event Commands"):
             return False
         counter = {}
         roles = []
-        forbidden_roles = ""
+        forbidden_roles = []
         total_to_remove = 0
         total_removed = 0
         stats = ""
@@ -273,7 +273,7 @@ class EventCommands(Cog, name="Event Commands"):
                         counter[role.mention] = len(role.members)
                         total_to_remove += len(role.members)
                     else:
-                        forbidden_roles += f"{role.mention}"
+                        forbidden_roles.append(role.mention)
         if total_to_remove > 0: #Kinda lame getting the 0/0 progress embed thus the >0
             removing_embed = Embed(title="Removing roles", colour=Colour.dark_purple())
             removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
@@ -293,8 +293,10 @@ class EventCommands(Cog, name="Event Commands"):
 
         for roles in list(counter.keys()):
             stats += "{} {} roles were removed\n".format(counter[roles], roles)
-        if forbidden_roles:
-            await ctx.send(f"You cannot remove these roles: {forbidden_roles}", hidden=True)
+        if forbidden_roles: #if there are forbidden roles
+            await ctx.send(f"You cannot remove these roles: {', '.join(forbidden_roles)}", hidden=True)
+            if not stats: #and not a single valid role
+                return
         if stats:
             return await success_embed(ctx, stats)
         await response_embed(ctx, "No roles removed", "Check your usage")

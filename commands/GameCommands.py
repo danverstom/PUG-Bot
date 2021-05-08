@@ -31,8 +31,8 @@ class GameCommands(Cog, name="CTF Commands"):
         self.timeout = 300
         self.repost_guesses = 10
 
-    @Cog.listener() #;pokemon easter egg
-    async def on_message(self, message):
+    @Cog.listener('on_message')
+    async def pokemon_easteregg(self, message):
         if message.content.startswith(';pokemon'):
             seed()
             if random() < 0.01:
