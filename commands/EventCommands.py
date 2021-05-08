@@ -365,6 +365,9 @@ class EventCommands(Cog, name="Event Commands"):
         except EventDoesNotExistError:
             await error_embed(ctx, "This event does not exist")
             return
+        if not event.is_active:
+            await error_embed(ctx, "This event is no longer active")
+            return
         signups = self.signups.setdefault(event_id)
         results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
         if not signups:
@@ -736,3 +739,72 @@ class EventCommands(Cog, name="Event Commands"):
         await ctx.send(embed=summary)
         if send_channel:
             await send_channel.send(embed=summary)
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[mc.create_option(name="event_id",
+                                         description="The message ID of the event announcement",
+                                         option_type=3, required=True)])
+    async def cancel(self, ctx, event_id):
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        try:
+            event_id = int(event_id)
+        except ValueError:
+            await error_embed(ctx, "Please enter an integer")
+            return
+        try:
+            event = Event.from_event_id(event_id)
+        except EventDoesNotExistError:
+            await error_embed(ctx, "This event does not exist")
+            return False
+        if event.is_active:
+            event.set_is_active(False)
+            event.set_is_signup_active(False)
+            event.update()
+            await success_embed(self.bot.get_channel(event.signup_channel),
+                                f"Set event {event.event_id} / {event.title} to **inactive**")
+            message = await self.bot.get_channel(event.announcement_channel).fetch_message(event.event_id)
+            embed = message.embeds[0]
+            embed.description = embed.description.rsplit("\n", 4)[
+                0]  # Getting rid of the last three lines of the description "React if you can.."
+            embed.description += "\n\n**This event is no longer active.**\n"
+            embed.color = Colour.default()
+            await message.edit(embed=embed)
+            await message.clear_reactions()
+
+            #Roles removal on cancel
+            counter = {}
+            roles = []
+            total_to_remove = 0
+            total_removed = 0
+            stats = ""
+            list_of_roles = TEAMS_ROLES + ["Signed", "Spectator"] #TODO: TIDY UP LIST
+            roles_list = [ctx.guild.get_role(get(ctx.guild.roles, name=role).id) for role in list_of_roles]
+            for role in roles_list:
+                if role:
+                    roles.append(role)
+                    counter[role.mention] = len(role.members)
+                    total_to_remove += len(role.members)
+            if total_to_remove > 0:  # Kinda lame getting the 0/0 progress embed thus the >0
+                removing_embed = Embed(title="Removing roles", colour=Colour.dark_purple())
+                removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+
+                removing_msg = await ctx.send(embed=removing_embed)
+
+                for role in roles:
+                    for member in role.members:
+                        await member.remove_roles(role)
+                        total_removed += 1
+                        if total_removed % 5 == 0:
+                            removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+                            await removing_msg.edit(embed=removing_embed)
+
+                removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+                await removing_msg.edit(embed=removing_embed)
+            for roles in list(counter.keys()):
+                stats += "{} {} roles were removed\n".format(counter[roles], roles)
+            if stats:
+                return await success_embed(ctx, stats)
+            await response_embed(ctx, "No roles removed", "Check your usage")
+        else:
+            await error_embed(ctx, "This event is not active")
