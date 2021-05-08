@@ -8,7 +8,7 @@ import logging
 from mojang import MojangAPI
 from asyncio import TimeoutError
 from os import listdir
-from random import choice, shuffle
+from random import choice, shuffle, random, seed
 from json import load
 from difflib import get_close_matches
 
@@ -30,6 +30,16 @@ class GameCommands(Cog, name="CTF Commands"):
         self.maps_dir = "assets/map_closeups/"
         self.timeout = 300
         self.repost_guesses = 10
+
+    @Cog.listener() #;pokemon easter egg
+    async def on_message(self, message):
+        if message.content.startswith(';pokemon'):
+            seed()
+            if random() < 0.01:
+                embed = Embed(description=f"{message.author.mention}, you've caught a **Rhydon**!")
+                embed.set_image(url=f"https://i.pinimg.com/originals/cd/f2/1e/cdf21efd947128353dc6fc03b9359b8c.gif")
+                embed.set_footer(text="Rhydon deez nuts")
+                await message.channel.send(embed=embed)
 
     @staticmethod
     async def comp_playtime_pie(ign):
