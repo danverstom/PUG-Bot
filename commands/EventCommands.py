@@ -771,40 +771,6 @@ class EventCommands(Cog, name="Event Commands"):
             embed.color = Colour.default()
             await message.edit(embed=embed)
             await message.clear_reactions()
-
-            #Roles removal on cancel
-            counter = {}
-            roles = []
-            total_to_remove = 0
-            total_removed = 0
-            stats = ""
-            list_of_roles = TEAMS_ROLES + ["Signed", "Spectator"] #TODO: TIDY UP LIST
-            roles_list = [ctx.guild.get_role(get(ctx.guild.roles, name=role).id) for role in list_of_roles]
-            for role in roles_list:
-                if role:
-                    roles.append(role)
-                    counter[role.mention] = len(role.members)
-                    total_to_remove += len(role.members)
-            if total_to_remove > 0:  # Kinda lame getting the 0/0 progress embed thus the >0
-                removing_embed = Embed(title="Removing roles", colour=Colour.dark_purple())
-                removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
-
-                removing_msg = await ctx.send(embed=removing_embed)
-
-                for role in roles:
-                    for member in role.members:
-                        await member.remove_roles(role)
-                        total_removed += 1
-                        if total_removed % 5 == 0:
-                            removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
-                            await removing_msg.edit(embed=removing_embed)
-
-                removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
-                await removing_msg.edit(embed=removing_embed)
-            for roles in list(counter.keys()):
-                stats += "{} {} roles were removed\n".format(counter[roles], roles)
-            if stats:
-                return await success_embed(ctx, stats)
-            await response_embed(ctx, "No roles removed", "Check your usage")
+            await success_embed(ctx, "Event has been successfully set to inactive.")
         else:
             await error_embed(ctx, "This event is not active")
