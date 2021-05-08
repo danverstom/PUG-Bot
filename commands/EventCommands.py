@@ -251,14 +251,16 @@ class EventCommands(Cog, name="Event Commands"):
             return False
         counter = {}
         roles = []
+        forbidden_roles = ""
         total_to_remove = 0
         total_removed = 0
+        stats = ""
         if roles_list is None:
             roles_list = [ctx.guild.get_role(get(ctx.guild.roles, name=role).id) for role in TEAMS_ROLES]
             for role in roles_list:
                 if role:
                     roles.append(role)
-                    counter[role.name] = len(role.members)
+                    counter[role.mention] = len(role.members)
                     total_to_remove += len(role.members)
         else:
             expr = "\<(.*?)\>"  # Match between <>
@@ -266,29 +268,33 @@ class EventCommands(Cog, name="Event Commands"):
                 role_id = role_id.strip(" <@&!>")
                 role = ctx.guild.get_role(int(role_id))
                 if role:
-                    roles.append(role)
-                    counter[role.name] = len(role.members)
-                    total_to_remove += len(role.members)
+                    if role.name in PPM_ROLES:
+                        roles.append(role)
+                        counter[role.mention] = len(role.members)
+                        total_to_remove += len(role.members)
+                    else:
+                        forbidden_roles += f"{role.mention}"
+        if total_to_remove > 0: #Kinda lame getting the 0/0 progress embed thus the >0
+            removing_embed = Embed(title="Removing roles", colour=Colour.dark_purple())
+            removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
 
-        removing_embed = Embed(title="Removing roles", colour=Colour.dark_purple())
-        removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+            removing_msg = await ctx.send(embed=removing_embed)
 
-        removing_msg = await ctx.send(embed=removing_embed)
+            for role in roles:
+                for member in role.members:
+                    await member.remove_roles(role)
+                    total_removed += 1
+                    if total_removed % 5 == 0:
+                        removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+                        await removing_msg.edit(embed=removing_embed)
 
-        for role in roles:
-            for member in role.members:
-                await member.remove_roles(role)
-                total_removed += 1
-                if total_removed % 5 == 0:
-                    removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
-                    await removing_msg.edit(embed=removing_embed)
+            removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+            await removing_msg.edit(embed=removing_embed)
 
-        removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
-        await removing_msg.edit(embed=removing_embed)
-
-        stats = ""
         for roles in list(counter.keys()):
-            stats += "{} `{}` roles were removed\n".format(counter[roles], roles)
+            stats += "{} {} roles were removed\n".format(counter[roles], roles)
+        if forbidden_roles:
+            await ctx.send(f"You cannot remove these roles: {forbidden_roles}", hidden=True)
         if stats:
             return await success_embed(ctx, stats)
         await response_embed(ctx, "No roles removed", "Check your usage")
