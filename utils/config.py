@@ -1,7 +1,7 @@
 import json
 import logging
 
-with open("utils/token.json") as file:
+with open("utils/app_credentials.json") as file:
     token_json = json.load(file)
 
 bot_token = token_json["bot_token"]
@@ -19,7 +19,20 @@ SIGNED_ROLE_NAME = "Signed"
 SPECTATOR_ROLE_NAME = "Spectator"
 GENERAL_CHAT = 753663185093132309
 TIMEZONE = "US/Eastern"
+PUG_INVITE_LINK = "https://discord.gg/Gqpv5yUhAd"
 TEAMS_ROLES = ["Team 1 [Red]", "Team 2 [Blue]"]
+PPM_ROLES = ["Red Team", "Blue Team", "Green Team", "Yellow Team", "playing", "Spectator"]
+
+SYNC_COMMANDS = True
+BOT_START_MESSAGE = True
+UPDATE_NICKNAMES = True
+PRIORITY_DEFAULT = True
+SIGNUP_DEADLINE_DEFAULT = 30
+SEND_JOIN_MESSAGE = True
+
+WEB_SERVER_HOSTNAME = "localhost"
+WEB_SERVER_PORT = 8080
+
 
 debug = False
 

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {% block head %}
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{% endblock %} - Winston</title>
+    <link rel="stylesheet" href="{{url_for('static', filename='bulma-css/css/main.css')}}">
+    <script type="text/javascript" src="{{url_for('static', filename='js/anime.min.js')}}"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='js/functions.js')}}"></script>
+    <meta property="og:title" content="Winston"/>
+    <meta content="Winston is a discord bot created for the Brawl Capture the Flag PUG discord server. Offers tools for event creation, brawl related utilities & many more!"
+          property="og:description">
+    <meta content="{{url_for('home')}}" property="og:url">
+    <meta content="{{url_for('static', filename='images/winston-small.jpg')}}" property="og:image">
+    <meta content="#71368a" data-react-helmet="true" name="theme-color">
+    {% endblock %}
+</head>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+  // Get all "navbar-burger" elements
+  const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+
+  // Check if there are any navbar burgers
+  if ($navbarBurgers.length > 0) {
+
+    // Add a click event on each of them
+    $navbarBurgers.forEach( el => {
+      el.addEventListener('click', () => {
+
+        // Get the target from the "data-target" attribute
+        const target = el.dataset.target;
+        const $target = document.getElementById(target);
+
+        // Toggle the "is-active" class on both the "navbar-burger" and the "navbar-menu"
+        el.classList.toggle('is-active');
+        $target.classList.toggle('is-active');
+
+      });
+    });
+  }
+
+});
+</script>
+<body>
+<nav class="navbar" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+        <a class="navbar-item" href="{{url_for('home')}}">
+            <strong>Winston</strong>
+        </a>
+
+        <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="main_navbar">
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+        </a>
+    </div>
+
+    <div id="main_navbar" class="navbar-menu">
+        <div class="navbar-start">
+            <a class="navbar-item" href="{{url_for('home')}}">
+                Home
+            </a>
+            <a class="navbar-item" href="{{url_for('leaderboard')}}">
+                Leaderboard
+            </a>
+            <a class="navbar-item" href="{{url_for('events')}}">
+                Events
+            </a>
+            <a class="navbar-item" href="{{url_for('help_page')}}">
+                Help
+            </a>
+            {% if user %}
+            {% if user["is_mod"] %}
+            <div class="navbar-item has-dropdown is-hoverable">
+                <a class="navbar-link">
+                    Moderators
+                </a>
+                <div class="navbar-dropdown">
+                    <a class="navbar-item" href="{{url_for('moderators.mod_tools')}}">
+                        Mod tools
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    <div class="navbar-end">
+        <div class="navbar-item">
+            <div class="buttons">
+                {% if user %}
+
+                <p>Logged in as {{user["user"]}} (<a href="{{url_for('logout')}}">Log Out</a>)</p>
+                {% else %}
+                <a class="button" href="{{url_for('login')}}">
+                    Log In
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="navbar-item">
+            <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
+            <script type='text/javascript'>
+                    kofiwidget2.init('Support on Ko-fi', '#71368a', 'J3J34ARCI');kofiwidget2.draw();
+
+
+            </script>
+        </div>
+    </div>
+    </div>
+</nav>
+{% block content %}{% endblock %}
+</body>
+</html>

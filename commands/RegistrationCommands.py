@@ -7,16 +7,17 @@ from database.database import check_user_requests, add_register_request, get_reg
     remove_register_request, get_all_register_requests, get_sorted_elo
 from utils.utils import error_embed, success_embed, response_embed, create_list_pages, has_permissions
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL,\
-    ELO_FLOOR, ADMIN_ROLE, PUBLIC_BOT_CHANNEL
+    ELO_FLOOR, ADMIN_ROLE, PUBLIC_BOT_CHANNEL, UPDATE_NICKNAMES, SEND_JOIN_MESSAGE
 from mojang import MojangAPI
 from asyncio import sleep as async_sleep
 from discord.errors import Forbidden
 from discord.utils import get
 import re
+import logging
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
-from utils.config import SLASH_COMMANDS_GUILDS
+from utils.config import SLASH_COMMANDS_GUILDS, BOT_START_MESSAGE
 
 
 class RegistrationCommands(Cog, name="User Registration"):
@@ -34,7 +35,8 @@ class RegistrationCommands(Cog, name="User Registration"):
     @Cog.listener()
     async def on_ready(self):
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
-        await success_embed(self.bot_channel, "Bot has started")
+        if BOT_START_MESSAGE:
+            await success_embed(self.bot_channel, "Bot has started")
         self.update_usernames.start()
 
 
@@ -98,7 +100,7 @@ class RegistrationCommands(Cog, name="User Registration"):
                     embed = Embed(title=f"Register Request: {minecraft_username}",
                                   description=f"React below to verify {ctx.author.mention}",
                                   colour=Colour.dark_purple())
-                    embed.set_thumbnail(url=f"https://cravatar.eu/helmavatar/{minecraft_username}/128.png")
+                    embed.set_thumbnail(url=f"https://cravatar.eu/helmavatar/{uuid}/128.png")
                     message = await request_channel.send(embed=embed)
                     await message.add_reaction("✅")
                     await message.add_reaction("❌")
@@ -125,6 +127,8 @@ class RegistrationCommands(Cog, name="User Registration"):
 
     @Cog.listener()
     async def on_member_join(self, member):
+        if not SEND_JOIN_MESSAGE:
+            return
         channel = self.bot.get_channel(PUBLIC_BOT_CHANNEL)
         if Player.exists_discord_id(member.id):
             return
@@ -132,9 +136,11 @@ class RegistrationCommands(Cog, name="User Registration"):
             try:
                 await member.send(f"Welcome {member.mention} to the PUG server, do not forget to use **/register**"
                                   f" in the PUG server.")
+                logging.info(f"Sent registration reminder for {member.name} in DMs")
             except Forbidden:
                 # This means the bot can't DM the user
                 await channel.send(f"Welcome {member.mention} to the PUG server, do not forget to use **/register**.")
+                logging.info(f"Sent registration reminder for {member.name} in #{channel.name}")
 
     @Cog.listener()
     async def on_raw_reaction_add(self, payload):
@@ -193,7 +199,7 @@ class RegistrationCommands(Cog, name="User Registration"):
             await error_embed(ctx, "Player is not registered in the database.")
             return
         await response_embed(ctx, "Confirm", f"""Are you sure you want to delete {user.mention} from the database?
-                                                \nThis action is permanent, and will remove their elo and priority.
+                                                \nThis action is **permanent** and **irreversible**, and will remove their elo and priority **forever**.
                                                 \nReply with yes or no.""")
 
         def check(m):
@@ -338,7 +344,7 @@ class RegistrationCommands(Cog, name="User Registration"):
         #    stats += f"**{key}:** {getattr(player, key)}\n"
 
         embed = Embed(description=stats, color=Colour.dark_purple())
-        embed.set_author(name=f"User profile - {getattr(player, 'minecraft_username')}", icon_url=f"https://cravatar.eu/helmavatar/{getattr(player, 'minecraft_username')}/128.png")
+        embed.set_author(name=f"User profile - {getattr(player, 'minecraft_username')}", icon_url=f"https://cravatar.eu/helmavatar/{getattr(player, 'minecraft_id')}/128.png")
         await ctx.send(embed=embed)
 
     @tasks.loop(hours=IGN_TRACKER_INTERVAL_HOURS)
@@ -350,28 +356,33 @@ class RegistrationCommands(Cog, name="User Registration"):
             latest_username = player.update_minecraft_username()
             if latest_username != old_username and latest_username is not None:
                 changes_list.append([player, old_username])
-            await async_sleep(3)
+            await async_sleep(1)
         if len(changes_list) > 0:
             embed = Embed(title="IGNs Updated", color=Colour.dark_purple())
             for change in changes_list:
                 player = change[0]
                 member = server.get_member(player.discord_id)
                 old_username = change[1]
+                if not member.nick:
+                    member.nick = member.name
                 team_list = re.findall(r"^\[(\w{1,4})\]", member.nick)
                 alias_list = re.findall(r"\s\((.*)\)$", member.nick)
                 new_nick = f"{'[' + team_list[0] + '] ' if team_list else ''}{player.minecraft_username}" + \
                            (f" ({alias_list[0]})" if alias_list else "")
-                try:
-                    await member.edit(nick=new_nick)
-                except Forbidden:
-                    embed_value = f"🔴 Failed to update nickname to `{new_nick}` (Forbidden)"
-                else:
-                    embed_value = f"Updated server nickname to `{new_nick}`"
+                if UPDATE_NICKNAMES:
                     try:
-                        await success_embed(member, f"PUG server nickname updated to `{new_nick}`")
-                        embed_value += " (DM sent)"
+                        await member.edit(nick=new_nick)
                     except Forbidden:
-                        embed_value += " (confirmation DM failed to send)"
+                        embed_value = f"🔴 Failed to update nickname to `{new_nick}` (Forbidden)"
+                    else:
+                        embed_value = f"Updated server nickname to `{new_nick}`"
+                        try:
+                            await success_embed(member, f"PUG server nickname updated to `{new_nick}`")
+                            embed_value += " (DM sent)"
+                        except Forbidden:
+                            embed_value += " (confirmation DM failed to send)"
+                else:
+                    embed_value = "Nickname updates disabled in config."
                 embed.add_field(name=f"{old_username} → {player.minecraft_username}", value=embed_value, inline=False)
             await self.bot_channel.send(embed=embed)
 

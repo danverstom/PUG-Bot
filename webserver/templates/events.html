@@ -1,0 +1,40 @@
+{% extends 'page_template.html' %}
+{% block title %}Events{% endblock %}
+{% block content %}
+<section class="hero is-primary">
+    <div class="hero-body">
+        <p class="title">
+            Events
+        </p>
+        <p class="subtitle">
+            There are currently {{total_active_events}} events active
+        </p>
+    </div>
+</section>
+<section class="section">
+    <div class="container">
+
+        <div class="box">
+            <h1 class="title">Active Events</h1>
+            {% for event in active_events %}
+            <div class="box">
+                <h4 class="title is-4"><a href="{{url_for('.event', event_id=event.event_id)}}">{{event.title}}</a></h4>
+                <p><strong>Start Time:</strong> <code>{{event.time_est}}</code></p>
+                <p><strong>Signup Deadline:</strong> <code>{{event.signup_deadline}}</code></p>
+                <p><strong>ID:</strong> <code>{{event.event_id}}</code></p>
+            </div>
+            {% endfor %}
+            <hr>
+            <h1 class="title">Inactive Events</h1>
+            {% for event in inactive_events %}
+            <div class="box">
+                <h4 class="title is-4"><a href="{{url_for('.event', event_id=event.event_id)}}">{{event.title}}</a></h4>
+                <p><strong>Start Time:</strong> <code>{{event.time_est}}</code></p>
+                <p><strong>Signup Deadline:</strong> <code>{{event.signup_deadline}}</code></p>
+                <p><strong>ID:</strong> <code>{{event.event_id}}</code></p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

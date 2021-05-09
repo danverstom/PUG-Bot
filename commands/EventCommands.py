@@ -7,8 +7,7 @@ from discord.utils import get
 from discord_slash.cog_ext import cog_slash, cog_subcommand
 from discord_slash.utils import manage_commands as mc
 
-from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
-    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT, TIMEZONE, SPECTATOR_ROLE_NAME, TEAMS_ROLES
+from utils.config import *
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
     priority_rng_signups, get_embed_time_string, generate_signups_embed
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
@@ -20,6 +19,7 @@ from random import shuffle, seed
 import logging
 from datetime import datetime, timedelta
 from pytz import timezone
+from time import time
 
 
 class EventCommands(Cog, name="Event Commands"):
@@ -32,6 +32,8 @@ class EventCommands(Cog, name="Event Commands"):
         self.events = Event.fetch_active_events_dict()
         self.signups = dict()
         self.bot_channel = None
+        self.rng_last_used = 0
+        self.rng_cooldown = 300
         for event_id in self.events.keys():
             self.signups[event_id] = Signup.fetch_signups_list(event_id)
 
@@ -67,12 +69,12 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="Date of the event.  Must be in DD-MM-YYYY format",
                                          option_type=3, required=False),
                         mc.create_option(name="signup_deadline",
-                                         description="Amount of time (in minutes) before the event for signup "
-                                                     "deadline.  Default is 30 minutes",
+                                         description=f"Amount of time (in minutes) before the event for signup "
+                                                     f"deadline.  Default is {SIGNUP_DEADLINE_DEFAULT} minutes",
                                          option_type=4, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
     async def event(self, ctx, title, announcement_channel, mention_role, signup_channel, signup_role, event_time,
-                    event_date="", signup_deadline=30):
+                    event_date="", signup_deadline=SIGNUP_DEADLINE_DEFAULT):
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
@@ -149,7 +151,9 @@ class EventCommands(Cog, name="Event Commands"):
                                     f"Set event {event.event_id} / {event.title} to **inactive**")
                 message = await self.bot.get_channel(event.announcement_channel).fetch_message(event.event_id)
                 embed = message.embeds[0]
-                embed.description = "This event is no longer active."
+                embed.description = embed.description.rsplit("\n", 4)[0] #Getting rid of the last three lines of the description "React if you can.."
+                embed.description += "\n\n**This event is no longer active.**\n"
+                embed.color = Colour.default()
                 await message.edit(embed=embed)
                 await message.clear_reactions()
                 spectator_role = get(message.guild.roles, name=SPECTATOR_ROLE_NAME)
@@ -238,47 +242,61 @@ class EventCommands(Cog, name="Event Commands"):
 
     @cog_slash(name="removeroles", options=[mc.create_option(name="roles_list",
                                                              description="Tag roles to remove from all members",
-                                                             option_type=3, required=True)],
+                                                             option_type=3, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
-    async def removeroles(self, ctx, roles_list):
+    async def removeroles(self, ctx, roles_list=None):
         """Remove multiple roles"""
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
         counter = {}
-        print(roles_list)
         roles = []
+        forbidden_roles = []
         total_to_remove = 0
         total_removed = 0
-        expr = "\<(.*?)\>"  # Match between <>
-
-        for role_id in re.findall(expr, roles_list):
-            role_id = role_id.strip(" <@&!>")
-            role = ctx.guild.get_role(int(role_id))
-            if role:
-                roles.append(role)
-                counter[role.name] = len(role.members)
-                total_to_remove += len(role.members)
-
-        removing_embed = Embed(title="Removing roles", colour=Colour.dark_purple())
-        removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
-
-        removing_msg = await ctx.send(embed=removing_embed)
-
-        for role in roles:
-            for member in role.members:
-                await member.remove_roles(role)
-                total_removed += 1
-                if total_removed % 5 == 0:
-                    removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
-                    await removing_msg.edit(embed=removing_embed)
-
-        removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
-        await removing_msg.edit(embed=removing_embed)
-
         stats = ""
+        if roles_list is None:
+            roles_list = [ctx.guild.get_role(get(ctx.guild.roles, name=role).id) for role in TEAMS_ROLES]
+            for role in roles_list:
+                if role:
+                    roles.append(role)
+                    counter[role.mention] = len(role.members)
+                    total_to_remove += len(role.members)
+        else:
+            expr = "\<(.*?)\>"  # Match between <>
+            for role_id in re.findall(expr, roles_list):
+                role_id = role_id.strip(" <@&!>")
+                role = ctx.guild.get_role(int(role_id))
+                if role:
+                    if role.name in PPM_ROLES:
+                        roles.append(role)
+                        counter[role.mention] = len(role.members)
+                        total_to_remove += len(role.members)
+                    else:
+                        forbidden_roles.append(role.mention)
+        if total_to_remove > 0: #Kinda lame getting the 0/0 progress embed thus the >0
+            removing_embed = Embed(title="Removing roles", colour=Colour.dark_purple())
+            removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+
+            removing_msg = await ctx.send(embed=removing_embed)
+
+            for role in roles:
+                for member in role.members:
+                    await member.remove_roles(role)
+                    total_removed += 1
+                    if total_removed % 5 == 0:
+                        removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+                        await removing_msg.edit(embed=removing_embed)
+
+            removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+            await removing_msg.edit(embed=removing_embed)
+
         for roles in list(counter.keys()):
-            stats += "{} `{}` roles were removed\n".format(counter[roles], roles)
+            stats += "{} {} roles were removed\n".format(counter[roles], roles)
+        if forbidden_roles: #if there are forbidden roles
+            await ctx.send(f"You cannot remove these roles: {', '.join(forbidden_roles)}", hidden=True)
+            if not stats: #and not a single valid role
+                return
         if stats:
             return await success_embed(ctx, stats)
         await response_embed(ctx, "No roles removed", "Check your usage")
@@ -322,13 +340,19 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="The channel to send the RNG results",
                                          option_type=7, required=False),
                         mc.create_option(name="do_priority",
-                                         description="Whether to process priority",
+                                         description=f"Whether to process priority. Default is {PRIORITY_DEFAULT}",
                                          option_type=5, required=False)
                         ], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def rngsignups(self, ctx, event_id, size=22, priority_role=None, results_channel=None, do_priority=True):
+    async def rngsignups(self, ctx, event_id, size=22, priority_role=None, results_channel=None,
+                         do_priority=PRIORITY_DEFAULT):
         """Randomises signups for an event"""
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        logging.info(f"RNG Signups command last used {round(time() - self.rng_last_used)} seconds ago")
+        if time() - self.rng_last_used < self.rng_cooldown and do_priority:
+            await error_embed(ctx, "**WARNING!** Did someone else already use this recently?\n\nThis command has a"
+                                   " cooldown of 5 minutes if priority is used")
             return False
         seed()
         try:
@@ -345,9 +369,11 @@ class EventCommands(Cog, name="Event Commands"):
         results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
         if not signups:
             signups = Signup.fetch_signups_list(event_id)
+        subs = list(filter(lambda signup: not signup.can_play and signup.can_sub, signups)) #Players that have reacted can sub but not can play
         signups = list(filter(lambda signup: signup.can_play, signups))
         shuffle(signups)
         if do_priority:
+            self.rng_last_used = time()
             # key is player.priority if player exists else its 0
             signups = sorted(signups, key=lambda signup: Player.from_discord_id(signup.user_id)
                              .priority if Player.exists_discord_id(signup.user_id) else -1, reverse=True)
@@ -384,6 +410,12 @@ class EventCommands(Cog, name="Event Commands"):
                     player = Player.exists_discord_id(signup.user_id)
                     if player:
                         player.change_priority(1)
+        if subs:
+            results_embed.add_field(name=f"Subs ({len(subs)})", value='\n'.join(
+                [self.bot.get_user(signup.user_id).mention + (' 🔇' if signup.is_muted else '') +
+                 (' 🛗' if signup.can_sub else '') +
+                 ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
+                 subs]))
         signed_role = ctx.guild.get_role(event.signup_role)
         if not results_channel:
             await ctx.send(content=f"{signed_role.mention} RNG results:",
@@ -622,11 +654,16 @@ class EventCommands(Cog, name="Event Commands"):
             return False
         info_embed = Embed(title="Current Events", description="Here is a list of **events** and their details",
                            colour=Colour.dark_purple())
+        info_desc = ""
         for event in Event.fetch_events_list():
-            announcement_url = f"https://discord.com/channels/{event.guild_id}/{event.announcement_channel}/" \
-                               f"{event.event_id}"
-            info_embed.description += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
-                                      f"> Active: **{str(event.is_active) + (' 🟢' if event.is_active else ' 🔴')}**"
+            if event.is_active:
+                announcement_url = f"https://discord.com/channels/{event.guild_id}/{event.announcement_channel}/" \
+                                   f"{event.event_id}"
+                info_desc += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
+                                          f"> Active: **{str(event.is_active) + (' 🟢' if event.is_active else ' 🔴')}**"
+        info_embed.description += info_desc
+        if not info_desc:
+            info_embed.description = "There is currently no active **event**, what about hosting one?"
         await ctx.send(embed=info_embed)
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS,
@@ -683,6 +720,13 @@ class EventCommands(Cog, name="Event Commands"):
                     changes_str += f"{member.mention} `{prev_elo} → {player.get_elo()}`\n"
         summary = Embed(title="Summary of ELO changes", color=Colour.dark_purple())
         if changes_str:
+            if role:
+                if amount < 0:
+                    summary.description = f"{role.mention} lost `{abs(amount)}` ELO"
+                    summary.color = Colour.dark_red()
+                else:
+                    summary.description = f"{role.mention} gained `{abs(amount)}` ELO"
+                    summary.color = Colour.green()
             summary.add_field(name=f"ELO changes: ({total_input})", value=changes_str)
         else:
             summary.description = "No changes were made to ELO"

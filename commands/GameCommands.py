@@ -8,7 +8,7 @@ import logging
 from mojang import MojangAPI
 from asyncio import TimeoutError
 from os import listdir
-from random import choice, shuffle
+from random import choice, shuffle, random, seed
 from json import load
 from difflib import get_close_matches
 
@@ -30,6 +30,16 @@ class GameCommands(Cog, name="CTF Commands"):
         self.maps_dir = "assets/map_closeups/"
         self.timeout = 300
         self.repost_guesses = 10
+
+    @Cog.listener('on_message')
+    async def pokemon_easteregg(self, message):
+        if message.content.startswith(';pokemon'):
+            seed()
+            if random() < 0.01:
+                embed = Embed(description=f"{message.author.mention}, you've caught a **Rhydon**!")
+                embed.set_image(url=f"https://i.pinimg.com/originals/cd/f2/1e/cdf21efd947128353dc6fc03b9359b8c.gif")
+                embed.set_footer(text="Rhydon deez nuts")
+                await message.channel.send(embed=embed)
 
     @staticmethod
     async def comp_playtime_pie(ign):
@@ -85,7 +95,6 @@ class GameCommands(Cog, name="CTF Commands"):
                 guessed = False
                 n_guesses = 0
                 while not guessed:
-                    logging.info([name for name in map_names if maps[name] == map_id])
                     try:
                         response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
                     except TimeoutError:
@@ -95,9 +104,7 @@ class GameCommands(Cog, name="CTF Commands"):
                         return
                     content = response.content.lower()
                     if content.startswith(">"):
-                        logging.info(content.strip(">"))
                         map_guess = get_close_matches(content.strip(">"), map_names)
-                        logging.info(map_guess)
                         if map_guess:
                             if maps[map_guess[0]] == map_id:
                                 await response.add_reaction("✅")
@@ -138,11 +145,9 @@ class GameCommands(Cog, name="CTF Commands"):
             while True:
                 random_player = Player.fetch_random_player()
                 random_ign = random_player.minecraft_username
-                logging.info(f"Random IGN generated: {random_ign}")
                 uuid = random_player.minecraft_id
                 names_dict = MojangAPI.get_name_history(uuid)
                 all_names = [item["name"].lower() for item in names_dict]
-                logging.info(all_names)
                 pie_file = await self.comp_playtime_pie(random_ign)
                 if pie_file:
                     round_message = await ctx.send(content=f"Round {round_num}:", file=pie_file)
@@ -158,8 +163,6 @@ class GameCommands(Cog, name="CTF Commands"):
                             return
                         content = response.content.lower()
                         if content.startswith(">"):
-                            logging.info(content.strip(">"))
-                            logging.info(all_names)
                             if content.strip(">") in all_names:
                                 await response.add_reaction("✅")
                                 await response.reply(f"You guessed correctly! ({random_ign})")

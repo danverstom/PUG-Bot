@@ -2,16 +2,27 @@ from discord.ext.commands import Cog, has_role
 from discord import File, Embed, Colour
 from utils.utils import get_json_data, error_embed, success_embed, response_embed, has_permissions
 from utils.image_util import compress
+from database.Player import Player
 import utils.config
 import os
 import sys
 import platform
 import subprocess
 from json import dump, load
+from shutil import copyfile
+from pytz import timezone
+from datetime import datetime
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
-from utils.config import SLASH_COMMANDS_GUILDS, ADMIN_ROLE, MOD_ROLE
+from utils.config import SLASH_COMMANDS_GUILDS, ADMIN_ROLE, MOD_ROLE, WEB_SERVER_HOSTNAME, WEB_SERVER_PORT
+
+# Web Server
+from hypercorn.asyncio import serve
+from hypercorn.config import Config
+from asyncio import Event
+from webserver.app import app
+from logging import info
 
 
 class AdminCommands(Cog, name="Admin Commands"):
@@ -23,6 +34,14 @@ class AdminCommands(Cog, name="Admin Commands"):
         self.bot = bot
         self.slash = slash
         self.token = token
+        self.web_task = None
+        self.shutdown_event = Event()
+
+    @Cog.listener()
+    async def on_ready(self):
+        config = Config()
+        config.bind = [f"{WEB_SERVER_HOSTNAME}:{WEB_SERVER_PORT}"]
+        self.web_task = self.bot.loop.create_task(serve(app, config=config, shutdown_trigger=self.shutdown_event.wait))
 
     @cog_slash(name="removecommands", description="Removes all slash commands from the bot",
                guild_ids=SLASH_COMMANDS_GUILDS)
@@ -49,16 +68,25 @@ class AdminCommands(Cog, name="Admin Commands"):
         if not has_permissions(ctx, ADMIN_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
+        msg = await ctx.send("`Bot is restarting`")
         if remove_commands:
-            message = await response_embed(ctx, "Removing commands", "Please wait, this process can take a while")
+            await msg.edit(content=msg.content + "\n`Removing commands - please wait, this process can take a while`")
             await manage_commands.remove_all_commands(self.bot.user.id, self.token, guild_ids=SLASH_COMMANDS_GUILDS)
-            await message.delete()
-            await success_embed(ctx, "Removed all commands from this bot")
-        await response_embed(ctx, "Info", "Bot is restarting")
+            await msg.edit(content=msg.content + "\n`Removed all commands from the bot`")
         if pull_changes:
+            await msg.edit(content=msg.content + "\n`Pulling latest changes`")
             output = subprocess.check_output("git pull", shell=True)
             await response_embed(ctx, "Update Summary", output.decode("utf8"))
-        await self.bot.logout()
+        info("Triggering web server shutdown event")
+        self.shutdown_event.set()
+        info("Waiting for web server to shut down")
+        await msg.edit(content=msg.content + "\n`Waiting for web server to shut down`")
+        await self.web_task
+        info("Web server shutdown complete")
+        await msg.edit(content=msg.content + "\n`Web server shutdown complete. Bot restarting. Goodbye!`")
+        info("Closing the bot")
+        await self.bot.close()
+        info("Bot has finished closing")
 
         # Checks for operating system
         operating_system = platform.system()
@@ -188,5 +216,38 @@ class AdminCommands(Cog, name="Admin Commands"):
                     os.remove(f"assets/map_screenshots/{map_id}.jpg")
                 return await response_embed(ctx, "✅ Map deleted", "")
 
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def prune_missing_players(self, ctx):
+        """Removes registered players from the database who aren't in the server"""
+        if not has_permissions(ctx, ADMIN_ROLE) and ctx.guild not in SLASH_COMMANDS_GUILDS:
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        await ctx.defer()
+        tz = timezone('US/Eastern')
+        time = datetime.now(tz).strftime("%Y%m%d-%H%M%S")
+        backup_filename = f"backups/database-{time}.db"
+        copyfile("database/database.db", backup_filename)
+        await success_embed(ctx, f"Created backup file: `{backup_filename}`")
+        players = Player.fetch_players_list()
+        guild_member_ids = [member.id for member in ctx.guild.members]
+        deleted_player_names = []
+        for player in players:
+            if player.discord_id not in guild_member_ids:
+                deleted_player_names.append(player.minecraft_username)
+                player.delete()
+        if deleted_player_names:
+            await success_embed(ctx, f"Removed players `{', '.join(deleted_player_names)}` from database.")
+        else:
+            await error_embed(ctx, "No players to prune.")
 
-
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def backup(self, ctx):
+        """Creates backup of database"""
+        if not has_permissions(ctx, ADMIN_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        tz = timezone('US/Eastern')
+        time = datetime.now(tz).strftime("%Y%m%d-%H%M%S")
+        backup_filename = f"backups/database-{time}.db"
+        copyfile("database/database.db", backup_filename)
+        await success_embed(ctx, f"Created backup file: `{backup_filename}`")
