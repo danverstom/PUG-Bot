@@ -152,7 +152,8 @@ class CTFCommands(Cog, name="CTF Commands"):
         
         for (map_name, map_id) in list_maps:
             map_str.append(f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})")
-            
+        if len(list_maps)>5: #Sort maps by name but only for >5 results otherwise match string gets scuffed
+            map_str = sorted(map_str)
         if len(list_maps) <= 5 and len(list_maps) != 0:  # Shows map ids only if there are 3 results
             map_str.append(f"\n*For match server:*\n`{' '.join(str(item[1]) for item in list_maps)}`")
 
