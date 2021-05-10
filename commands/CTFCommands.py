@@ -123,20 +123,31 @@ class CTFCommands(Cog, name="CTF Commands"):
             for search in args:
                 for k, v in maps.items():
                     if search in k.lower() or search in str(v):
-                        list_maps.append([k, v])
-        
+                        if [k, v] not in list_maps: #Only adds new elements so no dupes
+                            list_maps.append([k, v])
+        amount = len(list_maps)
         if len(args) == 1:
             if not list_maps:
-                return await error_embed(ctx, "No maps found. Did you forget to separate maps with commas (blackout, paogdas III)?")
+                return await error_embed(ctx, "No maps found. Did you forget to separate maps with commas (blackout, pagodas III)?")
             map_id = list_maps[0][1]
             map_name = list_maps[0][0]
-            file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
-            embed = Embed(title="Maps Found:", description=f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})",
-              color=Colour.dark_purple())
-            embed.set_image(url=f"attachment://{map_id}.png")
-            response = await ctx.send("Fetching maps...")
-            await response.edit(content="Done!")
-            await ctx.channel.send(embed=embed, file=file)
+
+            if os.path.exists(f"assets/map_screenshots/{map_id}.jpg"):
+                file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
+                embed = Embed(title="Maps Found:", description=f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})",
+                  color=Colour.dark_purple())
+                embed.set_image(url=f"attachment://{map_id}.png")
+                response = await ctx.send("Fetching maps...")
+                await response.edit(content="Done!")
+                await ctx.channel.send(embed=embed, file=file)
+            else:
+                embed = Embed(title="Maps Found:",
+                              description=f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})",
+                              color=Colour.dark_purple())
+                embed.set_footer(text="This map has no image yet :(")
+                response = await ctx.send("Fetching maps...")
+                await response.edit(content="Done!")
+                await ctx.channel.send(embed=embed)
             return
         
         for (map_name, map_id) in list_maps:
@@ -145,7 +156,7 @@ class CTFCommands(Cog, name="CTF Commands"):
         if len(list_maps) <= 5 and len(list_maps) != 0:  # Shows map ids only if there are 3 results
             map_str.append(f"\n*For match server:*\n`{' '.join(str(item[1]) for item in list_maps)}`")
 
-        await create_list_pages(self.bot, ctx, "Maps Found:", map_str, "No Maps were found")
+        await create_list_pages(self.bot, ctx, f"Maps Found ({amount}):", map_str, "No Maps were found")
 
 
     @cog_slash(name="stats", description="Gets most recent stats from match 1 and 2",
@@ -208,23 +219,32 @@ class CTFCommands(Cog, name="CTF Commands"):
 
     async def rosters_comparison(self, old_threads, new_threads): #Compares old and new forum threads (team sizes)
         changes = ""
-        for thread in old_threads:
-            if thread not in new_threads:
-                changes += f"---{thread}\n\n"
+        #TODO: Handle error for when teams change their threads titles
+        old_links = {old_threads[old_key]["link"]: old_key for old_key in old_threads.keys()}
+        new_links = {new_threads[new_key]["link"]: new_key for new_key in new_threads.keys()}
 
-        for thread in new_threads:
-            if thread in old_threads:
-                if new_threads[thread]['members'] != old_threads[thread]['members']:
-                    new_size = int(new_threads[thread]['members'].split("/")[0])
-                    old_size = int(old_threads[thread]['members'].split("/")[0])
+        disjunct_union = set(old_links.keys()) ^ set(new_links.keys())
+
+        for disjunct in disjunct_union:
+            if disjunct in old_links:
+                changes += f"🔴 **{old_links[disjunct]}** has disbanded.\n\n"
+            else:
+                changes += f"🟢 **{new_links[disjunct]}** is now official.\n\n"
+
+        for o_key in old_threads.keys():
+            for n_key in new_threads.keys():
+                if o_key != n_key:
+                    continue
+                if new_threads[n_key]['members'] != old_threads[o_key]['members']:
+                    new_size = int(new_threads[n_key]['members'].split("/")[0])
+                    old_size = int(old_threads[o_key]['members'].split("/")[0])
                     if new_size > old_size:
                         changes += (
-                            f"🟢 **{thread}:** {old_threads[thread]['members']} -> {new_threads[thread]['members']} (**+{new_size - old_size}**)\n\n")
+                            f"🟢 **{o_key}:** {old_threads[o_key]['members']} -> {new_threads[n_key]['members']} (**+{new_size - old_size}**)\n\n")
                     else:
                         changes += (
-                            f"🔴 **{thread}:** {old_threads[thread]['members']} -> {new_threads[thread]['members']} (**{new_size - old_size}**)\n\n")
-            else:
-                changes += f"+++{thread}\n\n"
+                            f"🔴 **{n_key}:** {old_threads[o_key]['members']} -> {new_threads[n_key]['members']} (**{new_size - old_size}**)\n\n")
+
         if changes:
             embed = Embed(title="Roster Changes", description=changes, color=Colour.dark_purple())
             message = await self.general_chat.send(embed=embed)
@@ -250,9 +270,9 @@ class CTFCommands(Cog, name="CTF Commands"):
                 else:
                     author_avatar = f"https://www.brawl.com/{img_loc.get('src')}"
                 thread_link = f"https://www.brawl.com/{info.get('href')}"
-                team_title = split("((\[|\()?[0-9][0-9]/25(\]|\))?)", info.text, 1)
+                team_title = split("((\[|\()\d{1,3}/\d{1,3}(\]|\))?)", info.text, 1)
 
-                team_size = split("([0-9][0-9]/25)", info.text, 1)
+                team_size = split("(\d{1,3}/\d{1,3})", info.text, 1)
                 try:  # uhh haha not all teams have member size in title
                     team_size = team_size[1]
                 except:

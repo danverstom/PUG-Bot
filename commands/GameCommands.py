@@ -4,11 +4,12 @@ from discord import File, Embed, Colour
 from utils.stat_util import *
 from utils.plot_utils import *
 from utils.utils import *
+from utils.config import ADMIN_ROLE
 import logging
 from mojang import MojangAPI
 from asyncio import TimeoutError
 from os import listdir
-from random import choice, shuffle
+from random import choice, shuffle, random, seed
 from json import load
 from difflib import get_close_matches
 
@@ -30,6 +31,16 @@ class GameCommands(Cog, name="CTF Commands"):
         self.maps_dir = "assets/map_closeups/"
         self.timeout = 300
         self.repost_guesses = 10
+
+    @Cog.listener('on_message')
+    async def pokemon_easteregg(self, message):
+        if message.content.startswith(';pokemon'):
+            seed()
+            if random() < 0.01:
+                embed = Embed(description=f"{message.author.mention}, you've caught a **Rhydon**!")
+                embed.set_image(url=f"https://i.pinimg.com/originals/cd/f2/1e/cdf21efd947128353dc6fc03b9359b8c.gif")
+                embed.set_footer(text="Rhydon deez nuts")
+                await message.channel.send(embed=embed)
 
     @staticmethod
     async def comp_playtime_pie(ign):
@@ -64,6 +75,9 @@ class GameCommands(Cog, name="CTF Commands"):
         if self.in_progress:
             await error_embed(ctx, "There is already a game in progress")
             return
+        if not has_permissions(ctx, ADMIN_ROLE):
+            await ctx.send("Game of maps is temporarily disabled to due changed rotation (code requires rewrite)")
+            return False
 
         def check(message):
             return message.content.startswith(">") and message.channel == ctx.channel

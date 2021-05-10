@@ -151,7 +151,9 @@ class EventCommands(Cog, name="Event Commands"):
                                     f"Set event {event.event_id} / {event.title} to **inactive**")
                 message = await self.bot.get_channel(event.announcement_channel).fetch_message(event.event_id)
                 embed = message.embeds[0]
-                embed.description = "This event is no longer active."
+                embed.description = embed.description.rsplit("\n", 4)[0] #Getting rid of the last three lines of the description "React if you can.."
+                embed.description += "\n\n**This event is no longer active.**\n"
+                embed.color = Colour.default()
                 await message.edit(embed=embed)
                 await message.clear_reactions()
                 spectator_role = get(message.guild.roles, name=SPECTATOR_ROLE_NAME)
@@ -249,14 +251,16 @@ class EventCommands(Cog, name="Event Commands"):
             return False
         counter = {}
         roles = []
+        forbidden_roles = []
         total_to_remove = 0
         total_removed = 0
+        stats = ""
         if roles_list is None:
             roles_list = [ctx.guild.get_role(get(ctx.guild.roles, name=role).id) for role in TEAMS_ROLES]
             for role in roles_list:
                 if role:
                     roles.append(role)
-                    counter[role.name] = len(role.members)
+                    counter[role.mention] = len(role.members)
                     total_to_remove += len(role.members)
         else:
             expr = "\<(.*?)\>"  # Match between <>
@@ -264,29 +268,35 @@ class EventCommands(Cog, name="Event Commands"):
                 role_id = role_id.strip(" <@&!>")
                 role = ctx.guild.get_role(int(role_id))
                 if role:
-                    roles.append(role)
-                    counter[role.name] = len(role.members)
-                    total_to_remove += len(role.members)
+                    if role.name in PPM_ROLES:
+                        roles.append(role)
+                        counter[role.mention] = len(role.members)
+                        total_to_remove += len(role.members)
+                    else:
+                        forbidden_roles.append(role.mention)
+        if total_to_remove > 0: #Kinda lame getting the 0/0 progress embed thus the >0
+            removing_embed = Embed(title="Removing roles", colour=Colour.dark_purple())
+            removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
 
-        removing_embed = Embed(title="Removing roles", colour=Colour.dark_purple())
-        removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+            removing_msg = await ctx.send(embed=removing_embed)
 
-        removing_msg = await ctx.send(embed=removing_embed)
+            for role in roles:
+                for member in role.members:
+                    await member.remove_roles(role)
+                    total_removed += 1
+                    if total_removed % 5 == 0:
+                        removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+                        await removing_msg.edit(embed=removing_embed)
 
-        for role in roles:
-            for member in role.members:
-                await member.remove_roles(role)
-                total_removed += 1
-                if total_removed % 5 == 0:
-                    removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
-                    await removing_msg.edit(embed=removing_embed)
+            removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
+            await removing_msg.edit(embed=removing_embed)
 
-        removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
-        await removing_msg.edit(embed=removing_embed)
-
-        stats = ""
         for roles in list(counter.keys()):
-            stats += "{} `{}` roles were removed\n".format(counter[roles], roles)
+            stats += "{} {} roles were removed\n".format(counter[roles], roles)
+        if forbidden_roles: #if there are forbidden roles
+            await ctx.send(f"You cannot remove these roles: {', '.join(forbidden_roles)}", hidden=True)
+            if not stats: #and not a single valid role
+                return
         if stats:
             return await success_embed(ctx, stats)
         await response_embed(ctx, "No roles removed", "Check your usage")
@@ -355,10 +365,15 @@ class EventCommands(Cog, name="Event Commands"):
         except EventDoesNotExistError:
             await error_embed(ctx, "This event does not exist")
             return
+        if not event.is_active:
+            await error_embed(ctx, "This event is no longer active")
+            return
         signups = self.signups.setdefault(event_id)
         results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
         if not signups:
             signups = Signup.fetch_signups_list(event_id)
+        member_ids = [member.id for member in ctx.guild.members]
+        signups = list(filter(lambda signup: signup.user_id in member_ids, signups)) #Filtered list so bot doesn't crash if people leave server after signing up
         subs = list(filter(lambda signup: not signup.can_play and signup.can_sub, signups)) #Players that have reacted can sub but not can play
         signups = list(filter(lambda signup: signup.can_play, signups))
         shuffle(signups)
@@ -644,12 +659,16 @@ class EventCommands(Cog, name="Event Commands"):
             return False
         info_embed = Embed(title="Current Events", description="Here is a list of **events** and their details",
                            colour=Colour.dark_purple())
+        info_desc = ""
         for event in Event.fetch_events_list():
             if event.is_active:
                 announcement_url = f"https://discord.com/channels/{event.guild_id}/{event.announcement_channel}/" \
                                    f"{event.event_id}"
-                info_embed.description += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
+                info_desc += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
                                           f"> Active: **{str(event.is_active) + (' 🟢' if event.is_active else ' 🔴')}**"
+        info_embed.description += info_desc
+        if not info_desc:
+            info_embed.description = "There is currently no active **event**, what about hosting one?"
         await ctx.send(embed=info_embed)
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS,
@@ -722,3 +741,38 @@ class EventCommands(Cog, name="Event Commands"):
         await ctx.send(embed=summary)
         if send_channel:
             await send_channel.send(embed=summary)
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[mc.create_option(name="event_id",
+                                         description="The message ID of the event announcement",
+                                         option_type=3, required=True)])
+    async def cancel(self, ctx, event_id):
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        try:
+            event_id = int(event_id)
+        except ValueError:
+            await error_embed(ctx, "Please enter an integer")
+            return
+        try:
+            event = Event.from_event_id(event_id)
+        except EventDoesNotExistError:
+            await error_embed(ctx, "This event does not exist")
+            return False
+        if event.is_active:
+            event.set_is_active(False)
+            event.set_is_signup_active(False)
+            event.update()
+            await success_embed(self.bot.get_channel(event.signup_channel),
+                                f"Set event {event.event_id} / {event.title} to **inactive**")
+            message = await self.bot.get_channel(event.announcement_channel).fetch_message(event.event_id)
+            embed = message.embeds[0]
+            embed.description = embed.description.rsplit("\n", 4)[
+                0]  # Getting rid of the last three lines of the description "React if you can.."
+            embed.description += "\n\n**This event is no longer active.**\n"
+            embed.color = Colour.default()
+            await message.edit(embed=embed)
+            await message.clear_reactions()
+            await success_embed(ctx, "Event has been successfully set to inactive.")
+        else:
+            await error_embed(ctx, "This event is not active")
