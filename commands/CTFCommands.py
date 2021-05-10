@@ -125,10 +125,13 @@ class CTFCommands(Cog, name="CTF Commands"):
                     if search in k.lower() or search in str(v):
                         if [k, v] not in list_maps: #Only adds new elements so no dupes
                             list_maps.append([k, v])
-        amount = len(list_maps)
-        if len(args) == 1:
-            if not list_maps:
-                return await error_embed(ctx, "No maps found. Did you forget to separate maps with commas (blackout, pagodas III)?")
+
+        amount = len(list_maps) #Amount of maps found
+
+        if not list_maps: #No results
+            return await error_embed(ctx,"No maps found. Did you forget to separate maps with commas (blackout, pagodas III)?")
+
+        if len(list_maps) == 1: #Image for single search result
             map_id = list_maps[0][1]
             map_name = list_maps[0][0]
 
@@ -140,7 +143,7 @@ class CTFCommands(Cog, name="CTF Commands"):
                 response = await ctx.send("Fetching maps...")
                 await response.edit(content="Done!")
                 await ctx.channel.send(embed=embed, file=file)
-            else:
+            else: #Handling single search results without an image
                 embed = Embed(title="Maps Found:",
                               description=f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})",
                               color=Colour.dark_purple())
