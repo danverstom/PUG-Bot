@@ -57,7 +57,7 @@ class RegistrationCommands(Cog, name="User Registration"):
             players = sorted(Player.fetch_players_list(), key=lambda item: item.minecraft_username)
             title = "Registered Users"
             for player in players:
-                player_string = f"**{player.minecraft_username}** ({self.bot.get_user(player.discord_id).mention})\n"
+                player_string = f"**{player.minecraft_username}** ({self.bot.get_user(player.discord_id).mention if self.bot.get_user(player.discord_id) else '<@' + str(player.discord_id) + '> 🚫' })\n"
                 for key in player.__dict__.keys():
                     player_string += f"> {key}: `{player.__dict__[key]}`\n"
                 info.append(player_string)
@@ -65,9 +65,10 @@ class RegistrationCommands(Cog, name="User Registration"):
             title = "IGN Registration Requests"
             requests = sorted(get_all_register_requests(), key=lambda item: item[2])
             for request in requests:
-                info.append(f"**{request[2]}** ({self.bot.get_user(request[1]).mention})")
+                info.append(f"**{request[2]}** ({self.bot.get_user(request[1]).mention if self.bot.get_user(request[1]) else '<@' + str(request[1]) + '> 🚫'})")
         await create_list_pages(bot=self.bot, ctx=ctx, title=title, info=info,
-                                if_empty="There are no Registration Requests", elements_per_page=5)
+                                if_empty="There are no registration requests" if data_type == "register_requests" else
+                                "There are no registered players", elements_per_page=5)
 
     @cog_slash(name="register", description="Registers Minecraft username to Discord."
                                             " Required to sign up for PUGs.",

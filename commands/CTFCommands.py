@@ -123,13 +123,15 @@ class CTFCommands(Cog, name="CTF Commands"):
             for search in args:
                 for k, v in maps.items():
                     if search in k.lower() or search in str(v):
-                        list_maps.append([k, v])
-        
+                        if [k, v] not in list_maps: #Only adds new elements so no dupes
+                            list_maps.append([k, v])
+        amount = len(list_maps)
         if len(args) == 1:
             if not list_maps:
                 return await error_embed(ctx, "No maps found. Did you forget to separate maps with commas (blackout, pagodas III)?")
             map_id = list_maps[0][1]
             map_name = list_maps[0][0]
+
             if os.path.exists(f"assets/map_screenshots/{map_id}.jpg"):
                 file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
                 embed = Embed(title="Maps Found:", description=f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})",
@@ -154,7 +156,7 @@ class CTFCommands(Cog, name="CTF Commands"):
         if len(list_maps) <= 5 and len(list_maps) != 0:  # Shows map ids only if there are 3 results
             map_str.append(f"\n*For match server:*\n`{' '.join(str(item[1]) for item in list_maps)}`")
 
-        await create_list_pages(self.bot, ctx, "Maps Found:", map_str, "No Maps were found")
+        await create_list_pages(self.bot, ctx, f"Maps Found ({amount}):", map_str, "No Maps were found")
 
 
     @cog_slash(name="stats", description="Gets most recent stats from match 1 and 2",
