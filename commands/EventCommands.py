@@ -372,6 +372,8 @@ class EventCommands(Cog, name="Event Commands"):
         results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
         if not signups:
             signups = Signup.fetch_signups_list(event_id)
+        member_ids = [member.id for member in ctx.guild.members]
+        signups = list(filter(lambda signup: signup.user_id in member_ids, signups)) #Filtered list so bot doesn't crash if people leave server after signing up
         subs = list(filter(lambda signup: not signup.can_play and signup.can_sub, signups)) #Players that have reacted can sub but not can play
         signups = list(filter(lambda signup: signup.can_play, signups))
         shuffle(signups)
