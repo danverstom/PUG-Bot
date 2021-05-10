@@ -119,7 +119,7 @@ class AdminCommands(Cog, name="Admin Commands"):
                 manage_commands.create_option(name="map_id", description="ID of map",
                                       required=True, option_type=4)
     ])
-    async def editmaps(self, ctx, operation="", map_id=0):
+    async def editmaps(self, ctx, operation="", map_id: int = 0):
         if not has_permissions(ctx, ADMIN_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
