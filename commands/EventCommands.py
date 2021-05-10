@@ -365,6 +365,9 @@ class EventCommands(Cog, name="Event Commands"):
         except EventDoesNotExistError:
             await error_embed(ctx, "This event does not exist")
             return
+        if not event.is_active:
+            await error_embed(ctx, "This event is no longer active")
+            return
         signups = self.signups.setdefault(event_id)
         results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
         if not signups:
@@ -738,3 +741,38 @@ class EventCommands(Cog, name="Event Commands"):
         await ctx.send(embed=summary)
         if send_channel:
             await send_channel.send(embed=summary)
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[mc.create_option(name="event_id",
+                                         description="The message ID of the event announcement",
+                                         option_type=3, required=True)])
+    async def cancel(self, ctx, event_id):
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        try:
+            event_id = int(event_id)
+        except ValueError:
+            await error_embed(ctx, "Please enter an integer")
+            return
+        try:
+            event = Event.from_event_id(event_id)
+        except EventDoesNotExistError:
+            await error_embed(ctx, "This event does not exist")
+            return False
+        if event.is_active:
+            event.set_is_active(False)
+            event.set_is_signup_active(False)
+            event.update()
+            await success_embed(self.bot.get_channel(event.signup_channel),
+                                f"Set event {event.event_id} / {event.title} to **inactive**")
+            message = await self.bot.get_channel(event.announcement_channel).fetch_message(event.event_id)
+            embed = message.embeds[0]
+            embed.description = embed.description.rsplit("\n", 4)[
+                0]  # Getting rid of the last three lines of the description "React if you can.."
+            embed.description += "\n\n**This event is no longer active.**\n"
+            embed.color = Colour.default()
+            await message.edit(embed=embed)
+            await message.clear_reactions()
+            await success_embed(ctx, "Event has been successfully set to inactive.")
+        else:
+            await error_embed(ctx, "This event is not active")
