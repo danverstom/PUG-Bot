@@ -760,12 +760,13 @@ class EventCommands(Cog, name="Event Commands"):
             await error_embed(ctx, "This event does not exist")
             return False
         if event.is_active:
+            announcement_channel = self.bot.get_channel(event.announcement_channel)
             event.set_is_active(False)
             event.set_is_signup_active(False)
             event.update()
             await success_embed(self.bot.get_channel(event.signup_channel),
                                 f"Set event {event.event_id} / {event.title} to **inactive**")
-            message = await self.bot.get_channel(event.announcement_channel).fetch_message(event.event_id)
+            message = await announcement_channel.fetch_message(event.event_id)
             embed = message.embeds[0]
             embed.description = embed.description.rsplit("\n", 4)[
                 0]  # Getting rid of the last three lines of the description "React if you can.."
@@ -773,6 +774,8 @@ class EventCommands(Cog, name="Event Commands"):
             embed.color = Colour.default()
             await message.edit(embed=embed)
             await message.clear_reactions()
+            signup_role = ctx.guild.get_role(event.signup_role)
+            await announcement_channel.send(f"{signup_role.mention} **{event.title}** has been **cancelled**")
             await success_embed(ctx, "Event has been successfully set to inactive.")
         else:
             await error_embed(ctx, "This event is not active")
