@@ -22,6 +22,8 @@ TIMEZONE = "US/Eastern"
 PUG_INVITE_LINK = "https://discord.gg/Gqpv5yUhAd"
 TEAMS_ROLES = ["Team 1 [Red]", "Team 2 [Blue]"]
 PPM_ROLES = ["Team 1 [Red]", "Team 2 [Blue]", "Green Team", "Yellow Team", "Signed", "Spectator"]
+RANK_ROLES = ["Bronze", "Silver", "Gold", "Platinum", "Diamond"]
+VERIFIED_ROLE = 842020511143821333
 
 SYNC_COMMANDS = True
 BOT_START_MESSAGE = True

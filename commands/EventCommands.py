@@ -780,3 +780,39 @@ class EventCommands(Cog, name="Event Commands"):
             await success_embed(ctx, "Event has been successfully set to inactive.")
         else:
             await error_embed(ctx, "This event is not active")
+
+    async def auto_rank_role(self, ctx, members_list: list):
+        set_ranks = {ctx.guild.get_role(get(ctx.guild.roles, name=role).id) for role in RANK_ROLES}
+        for member in members_list:
+            if VERIFIED_ROLE not in member.roles:
+                continue
+            role_name=""
+            try:
+                player = Player.from_discord_id(member.id)
+                set_member_ranks = set(member.roles)
+            except PlayerDoesNotExistError:
+                continue
+            else:
+                if 1000 < player.elo < 1051: #could introduce these elo bounds in config (LOW_BRONZE, UP_BRONZE etc but probs clutter)
+                    role_name = RANK_ROLES[0]
+                if 1050 < player.elo < 1101:
+                    role_name = RANK_ROLES[1]
+                if 1100 < player.elo < 1151:
+                    role_name = RANK_ROLES[2]
+                if 1150 < player.elo < 1201:
+                    role_name = RANK_ROLES[3]
+                if player.elo > 1200:
+                    role_name = RANK_ROLES[4]
+
+                if role_name: #Only if within elo threshold
+                    role = ctx.guild.get_role(get(ctx.guild.roles, name=role_name).id)
+                    if role not in member.roles:
+                        if set_ranks.intersection(set_member_ranks): #checks if user had old rank roles
+                            for old_role in set_ranks.intersection(set_member_ranks): #removes old rank roles so player doesn't have 2 rank roles
+                                member.remove_roles(old_role)
+                        member.add_roles(role)
+
+                else:
+                    if set_ranks.intersection(set_member_ranks): #Remove old roles (unranked)
+                        for old_role in set_ranks.intersection(set_member_ranks): #for loop here only to be sure there's no hiccups, intersection is going to be 1 element
+                            member.remove_roles(old_role)
