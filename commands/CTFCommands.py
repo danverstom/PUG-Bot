@@ -101,7 +101,7 @@ class CTFCommands(Cog, name="CTF Commands"):
 
     @cog_slash(name="maps", description="Lists all maps or searches for maps by name",
                options=[manage_commands.create_option(name="searches",
-                                                      description="Separate with commas (blackout, pagodas III)",
+                                                      description="Separate multiple maps with commas (blackout, pagodas III)",
                                                       option_type=3, required=False)
                         ], guild_ids=SLASH_COMMANDS_GUILDS)
     async def maps(self, ctx, searches=""):
