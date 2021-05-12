@@ -44,6 +44,7 @@ class EventCommands(Cog, name="Event Commands"):
     async def on_ready(self):
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
         self.check_signups.start()
+        self.global_rank_role.start()
 
     @cog_slash(name="event", description="Creates an event.",
                options=[mc.create_option(name="title",
@@ -151,7 +152,8 @@ class EventCommands(Cog, name="Event Commands"):
                                     f"Set event {event.event_id} / {event.title} to **inactive**")
                 message = await self.bot.get_channel(event.announcement_channel).fetch_message(event.event_id)
                 embed = message.embeds[0]
-                embed.description = embed.description.rsplit("\n", 4)[0] #Getting rid of the last three lines of the description "React if you can.."
+                embed.description = embed.description.rsplit("\n", 4)[
+                    0]  # Getting rid of the last three lines of the description "React if you can.."
                 embed.description += "\n\n**This event is no longer active.**\n"
                 embed.color = Colour.default()
                 await message.edit(embed=embed)
@@ -274,7 +276,7 @@ class EventCommands(Cog, name="Event Commands"):
                         total_to_remove += len(role.members)
                     else:
                         forbidden_roles.append(role.mention)
-        if total_to_remove > 0: #Kinda lame getting the 0/0 progress embed thus the >0
+        if total_to_remove > 0:  # Kinda lame getting the 0/0 progress embed thus the >0
             removing_embed = Embed(title="Removing roles", colour=Colour.dark_purple())
             removing_embed.description = f"Progress: ({total_removed}/{total_to_remove})"
 
@@ -293,9 +295,9 @@ class EventCommands(Cog, name="Event Commands"):
 
         for roles in list(counter.keys()):
             stats += "{} {} roles were removed\n".format(counter[roles], roles)
-        if forbidden_roles: #if there are forbidden roles
+        if forbidden_roles:  # if there are forbidden roles
             await ctx.send(f"You cannot remove these roles: {', '.join(forbidden_roles)}", hidden=True)
-            if not stats: #and not a single valid role
+            if not stats:  # and not a single valid role
                 return
         if stats:
             return await success_embed(ctx, stats)
@@ -373,8 +375,10 @@ class EventCommands(Cog, name="Event Commands"):
         if not signups:
             signups = Signup.fetch_signups_list(event_id)
         member_ids = [member.id for member in ctx.guild.members]
-        signups = list(filter(lambda signup: signup.user_id in member_ids, signups)) #Filtered list so bot doesn't crash if people leave server after signing up
-        subs = list(filter(lambda signup: not signup.can_play and signup.can_sub, signups)) #Players that have reacted can sub but not can play
+        signups = list(filter(lambda signup: signup.user_id in member_ids,
+                              signups))  # Filtered list so bot doesn't crash if people leave server after signing up
+        subs = list(filter(lambda signup: not signup.can_play and signup.can_sub,
+                           signups))  # Players that have reacted can sub but not can play
         signups = list(filter(lambda signup: signup.can_play, signups))
         shuffle(signups)
         if do_priority:
@@ -436,8 +440,9 @@ class EventCommands(Cog, name="Event Commands"):
                 user = self.bot.get_user(signup.user_id)
                 player = Player.exists_discord_id(signup.user_id)
                 tag_str += f"@{user} ({player.minecraft_username if player else 'Unregistered'})\n"
-            await self.bot_channel.send(f"{ctx.author.mention} here is a list of tags to make the setroles process easy."
-                                        f"\n```{tag_str}```")
+            await self.bot_channel.send(
+                f"{ctx.author.mention} here is a list of tags to make the setroles process easy."
+                f"\n```{tag_str}```")
         else:
             await error_embed(ctx, "No players were selected")
 
@@ -519,14 +524,15 @@ class EventCommands(Cog, name="Event Commands"):
                             users_string = f"{role.mention}\n"
                             for member in roles_dict[role]:
                                 users_string += f"{member.mention}"
-                                users_string += "\n" if Player.exists_discord_id(member.id) else " ❌\n" #Add X if unregistered user
+                                users_string += "\n" if Player.exists_discord_id(
+                                    member.id) else " ❌\n"  # Add X if unregistered user
                                 await member.add_roles(role, reason=f"role added by {ctx.author.name} with setroles"
                                                                     f" command")
                                 roles_assigned += 1
                                 if roles_assigned % 5 == 0:
                                     roles_embed.description = f"Progress: {roles_assigned}/{total_roles_count}"
                                     await roles_msg.edit(embed=roles_embed)
-                            if role.name in TEAMS_ROLES: #Average ELO Display
+                            if role.name in TEAMS_ROLES:  # Average ELO Display
                                 elo_list = [Player.from_discord_id(member.id).elo for member in roles_dict[role] if
                                             Player.exists_discord_id(member.id)]
                                 if len(elo_list) > 0:
@@ -665,27 +671,27 @@ class EventCommands(Cog, name="Event Commands"):
                 announcement_url = f"https://discord.com/channels/{event.guild_id}/{event.announcement_channel}/" \
                                    f"{event.event_id}"
                 info_desc += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
-                                          f"> Active: **{str(event.is_active) + (' 🟢' if event.is_active else ' 🔴')}**"
+                             f"> Active: **{str(event.is_active) + (' 🟢' if event.is_active else ' 🔴')}**"
         info_embed.description += info_desc
         if not info_desc:
             info_embed.description = "There is currently no active **event**, what about hosting one?"
         await ctx.send(embed=info_embed)
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS,
-                    options=[
-                        mc.create_option(name="mode", description="Whether to set or change elo",
-                                         option_type=3, required=True,
-                                         choices=[mc.create_choice(name="change", value="change"),
-                                                  mc.create_choice(name="set", value="set")]),
-                        mc.create_option(name="amount", description="Positive or negative number",
-                                         option_type=4, required=True),
-                        mc.create_option(name="role", description="The role to allocate elo to",
-                                         option_type=8, required=False),
-                        mc.create_option(name="user", description="The user to allocate elo to",
-                                         option_type=6, required=False),
-                        mc.create_option(name="send_channel", description="A channel to send the update embed to",
-                                         option_type=7, required=False),
-                    ])
+               options=[
+                   mc.create_option(name="mode", description="Whether to set or change elo",
+                                    option_type=3, required=True,
+                                    choices=[mc.create_choice(name="change", value="change"),
+                                             mc.create_choice(name="set", value="set")]),
+                   mc.create_option(name="amount", description="Positive or negative number",
+                                    option_type=4, required=True),
+                   mc.create_option(name="role", description="The role to allocate elo to",
+                                    option_type=8, required=False),
+                   mc.create_option(name="user", description="The user to allocate elo to",
+                                    option_type=6, required=False),
+                   mc.create_option(name="send_channel", description="A channel to send the update embed to",
+                                    option_type=7, required=False),
+               ])
     async def elo(self, ctx, mode, amount, role=None, user=None, send_channel=None):
         """
         Allows PUG staff to allocate ELO following a match
@@ -741,10 +747,11 @@ class EventCommands(Cog, name="Event Commands"):
         await ctx.send(embed=summary)
         if send_channel:
             await send_channel.send(embed=summary)
+        await self.rank_role_update(input_members)
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[mc.create_option(name="event_id",
-                                         description="The message ID of the event announcement",
-                                         option_type=3, required=True)])
+                                                                          description="The message ID of the event announcement",
+                                                                          option_type=3, required=True)])
     async def cancel(self, ctx, event_id):
         """Allows mods to cancel an event. Sets the event to inactive + tags players that signed up."""
         if not has_permissions(ctx, MOD_ROLE):
@@ -781,19 +788,34 @@ class EventCommands(Cog, name="Event Commands"):
         else:
             await error_embed(ctx, "This event is not active")
 
-    async def auto_rank_role(self, ctx, members_list: list):
-        set_ranks = {ctx.guild.get_role(get(ctx.guild.roles, name=role).id) for role in RANK_ROLES}
+    @tasks.loop(seconds=SIGNUPS_TRACKER_INTERVAL_SECONDS)
+    async def global_rank_role(self):
+        await self.rank_role_update()
+
+
+
+    async def rank_role_update(self, members_list=None):
+        channel_spam = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
+        server = channel_spam.guild
+
+        set_ranks = {server.get_role(get(server.roles, name=role).id) for role in RANK_ROLES}
+        changes_str = ""  # TODO: Promotion/demotion changelog
+
+        if members_list is None: #meant for when this becomes a loop task
+            members_list = set(filter(lambda member: server.get_role(VERIFIED_ROLE) in member.roles, server.members))
+
         for member in members_list:
-            if VERIFIED_ROLE not in member.roles:
+            if server.get_role(VERIFIED_ROLE) not in member.roles:
+                print(member)
                 continue
-            role_name=""
+            role_name = ""
             try:
                 player = Player.from_discord_id(member.id)
                 set_member_ranks = set(member.roles)
             except PlayerDoesNotExistError:
                 continue
             else:
-                if 1000 < player.elo < 1051: #could introduce these elo bounds in config (LOW_BRONZE, UP_BRONZE etc but probs clutter)
+                if 1000 < player.elo < 1051:  # could introduce these elo bounds in config (LOW_BRONZE, UP_BRONZE etc but probs clutter)
                     role_name = RANK_ROLES[0]
                 if 1050 < player.elo < 1101:
                     role_name = RANK_ROLES[1]
@@ -804,15 +826,15 @@ class EventCommands(Cog, name="Event Commands"):
                 if player.elo > 1200:
                     role_name = RANK_ROLES[4]
 
-                if role_name: #Only if within elo threshold
-                    role = ctx.guild.get_role(get(ctx.guild.roles, name=role_name).id)
+                if role_name:  # Only if within elo threshold
+                    role = server.get_role(get(server.roles, name=role_name).id)
                     if role not in member.roles:
-                        if set_ranks.intersection(set_member_ranks): #checks if user had old rank roles
-                            for old_role in set_ranks.intersection(set_member_ranks): #removes old rank roles so player doesn't have 2 rank roles
-                                member.remove_roles(old_role)
-                        member.add_roles(role)
-
+                        if set_ranks.intersection(set_member_ranks):  # checks if user had old rank roles
+                            for old_role in set_ranks.intersection(
+                                    set_member_ranks):  # removes old rank roles so player doesn't have 2 rank roles
+                                await member.remove_roles(old_role)
+                        await member.add_roles(role)
                 else:
-                    if set_ranks.intersection(set_member_ranks): #Remove old roles (unranked)
-                        for old_role in set_ranks.intersection(set_member_ranks): #for loop here only to be sure there's no hiccups, intersection is going to be 1 element
-                            member.remove_roles(old_role)
+                    if set_ranks.intersection(set_member_ranks):  # Remove old roles (unranked)
+                        for old_role in set_ranks.intersection(set_member_ranks):  # for loop here only to be sure there's no hiccups, intersection is going to be 1 element
+                            await member.remove_roles(old_role)
