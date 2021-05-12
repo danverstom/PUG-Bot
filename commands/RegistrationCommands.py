@@ -204,7 +204,7 @@ class RegistrationCommands(Cog, name="User Registration"):
                                                 \nReply with yes or no.""")
 
         def check(m):
-            return m.author == ctx.author
+            return m.author == ctx.author and m.channel == ctx.channel
 
         response = await self.bot.wait_for('message', check=check)
         if response.content.lower() == "y" or response.content.lower() == "yes":

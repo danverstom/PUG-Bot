@@ -451,7 +451,7 @@ class EventCommands(Cog, name="Event Commands"):
             return False
 
         def check(m):
-            return m.author == ctx.author
+            return m.author == ctx.author and m.channel == ctx.channel
 
         roles_dict = {}
         while True:
