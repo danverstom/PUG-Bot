@@ -103,7 +103,7 @@ class EventCommands(Cog, name="Event Commands"):
             return
 
         def check(m):
-            return m.author == ctx.author
+            return m.author == ctx.author and m.channel == ctx.channel
 
         embed = Embed(title="Event Creation", color=Colour.dark_purple())
         embed.add_field(name="Description:", value="Enter the description of the event")
