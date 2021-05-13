@@ -10,7 +10,7 @@ from discord_slash.utils import manage_commands as mc
 from utils.config import *
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
     priority_rng_signups, get_embed_time_string, generate_signups_embed
-from utils.utils import response_embed, error_embed, success_embed, has_permissions
+from utils.utils import response_embed, error_embed, success_embed, has_permissions, rank_role_update
 from database.Event import Event, EventDoesNotExistError
 from database.Signup import Signup
 from database.Player import Player, PlayerDoesNotExistError
@@ -44,7 +44,6 @@ class EventCommands(Cog, name="Event Commands"):
     async def on_ready(self):
         self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
         self.check_signups.start()
-        self.global_rank_role.start()
 
     @cog_slash(name="event", description="Creates an event.",
                options=[mc.create_option(name="title",
@@ -747,7 +746,12 @@ class EventCommands(Cog, name="Event Commands"):
         await ctx.send(embed=summary)
         if send_channel:
             await send_channel.send(embed=summary)
-        await self.rank_role_update(input_members)
+
+        if RANKED_SEASON:
+            changes = await rank_role_update(self.bot, input_members)
+            if changes:
+                await response_embed(ctx, "Rank Update", changes)
+
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[mc.create_option(name="event_id",
                                                                           description="The message ID of the event announcement",
@@ -788,53 +792,17 @@ class EventCommands(Cog, name="Event Commands"):
         else:
             await error_embed(ctx, "This event is not active")
 
-    @tasks.loop(seconds=SIGNUPS_TRACKER_INTERVAL_SECONDS)
-    async def global_rank_role(self):
-        await self.rank_role_update()
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[], description="Update all verified players' rank")
+    async def rankupdate(self, ctx):
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
 
+        if not RANKED_SEASON:
+            return error_embed(ctx, "Sorry, there is not an ongoing ranked season in this guild.")
+        changes = await rank_role_update(self.bot)
+        if changes:
+            await response_embed(ctx, "Rank Update", changes)
+        else:
+            await error_embed(ctx, "No changes found")
 
-
-    async def rank_role_update(self, members_list=None):
-        channel_spam = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
-        server = channel_spam.guild
-
-        set_ranks = {server.get_role(get(server.roles, name=role).id) for role in RANK_ROLES}
-        changes_str = ""  # TODO: Promotion/demotion changelog
-
-        if members_list is None: #meant for when this becomes a loop task
-            members_list = set(filter(lambda member: server.get_role(VERIFIED_ROLE) in member.roles, server.members))
-
-        for member in members_list:
-            if server.get_role(VERIFIED_ROLE) not in member.roles:
-                print(member)
-                continue
-            role_name = ""
-            try:
-                player = Player.from_discord_id(member.id)
-                set_member_ranks = set(member.roles)
-            except PlayerDoesNotExistError:
-                continue
-            else:
-                if 1000 < player.elo < 1051:  # could introduce these elo bounds in config (LOW_BRONZE, UP_BRONZE etc but probs clutter)
-                    role_name = RANK_ROLES[0]
-                if 1050 < player.elo < 1101:
-                    role_name = RANK_ROLES[1]
-                if 1100 < player.elo < 1151:
-                    role_name = RANK_ROLES[2]
-                if 1150 < player.elo < 1201:
-                    role_name = RANK_ROLES[3]
-                if player.elo > 1200:
-                    role_name = RANK_ROLES[4]
-
-                if role_name:  # Only if within elo threshold
-                    role = server.get_role(get(server.roles, name=role_name).id)
-                    if role not in member.roles:
-                        if set_ranks.intersection(set_member_ranks):  # checks if user had old rank roles
-                            for old_role in set_ranks.intersection(
-                                    set_member_ranks):  # removes old rank roles so player doesn't have 2 rank roles
-                                await member.remove_roles(old_role)
-                        await member.add_roles(role)
-                else:
-                    if set_ranks.intersection(set_member_ranks):  # Remove old roles (unranked)
-                        for old_role in set_ranks.intersection(set_member_ranks):  # for loop here only to be sure there's no hiccups, intersection is going to be 1 element
-                            await member.remove_roles(old_role)

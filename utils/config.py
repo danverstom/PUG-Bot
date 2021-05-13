@@ -22,8 +22,7 @@ TIMEZONE = "US/Eastern"
 PUG_INVITE_LINK = "https://discord.gg/Gqpv5yUhAd"
 TEAMS_ROLES = ["Team 1 [Red]", "Team 2 [Blue]"]
 PPM_ROLES = ["Team 1 [Red]", "Team 2 [Blue]", "Green Team", "Yellow Team", "Signed", "Spectator"]
-RANK_ROLES = ["Bronze", "Silver", "Gold", "Platinum", "Diamond"]
-VERIFIED_ROLE = 842020511143821333
+VERIFIED_ROLE = 842346504278900737
 
 SYNC_COMMANDS = True
 BOT_START_MESSAGE = True
@@ -31,6 +30,7 @@ UPDATE_NICKNAMES = True
 PRIORITY_DEFAULT = True
 SIGNUP_DEADLINE_DEFAULT = 30
 SEND_JOIN_MESSAGE = True
+RANKED_SEASON = True
 
 WEB_SERVER_HOSTNAME = "localhost"
 WEB_SERVER_PORT = 8080

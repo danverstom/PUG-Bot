@@ -1,0 +1,31 @@
+{
+  "Bronze": {
+    "lower_bound" : 1020,
+    "upper_bound" : 1049
+  },
+  "Silver": {
+    "lower_bound": 1050,
+    "upper_bound": 1099
+  },
+  "Gold": {
+    "lower_bound": 1100,
+    "upper_bound": 1149
+  },
+  "Platinum": {
+    "lower_bound": 1150,
+    "upper_bound": 1199
+  },
+  "Diamond": {
+    "lower_bound": 1200,
+    "upper_bound": 1249
+  },
+  "Master": {
+    "lower_bound": 1250,
+    "upper_bound": 1299
+  },
+  "Grandmaster": {
+    "lower_bound": 1300,
+    "upper_bound": 100000000
+  }
+}
+

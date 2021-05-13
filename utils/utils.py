@@ -4,7 +4,8 @@ from math import ceil
 from asyncio import TimeoutError
 from json import load, dump
 import aiohttp
-
+from database.Player import Player, PlayerDoesNotExistError
+from utils.config import VERIFIED_ROLE, RANK_ROLES, BOT_OUTPUT_CHANNEL, RANKED_SEASON
 
 async def request_async_json(url, content_type):
     async with aiohttp.ClientSession() as session:
@@ -167,3 +168,60 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
             embed.set_footer(text=f"Page {current_page}/{num_pages} (Saved)")
             await message.edit(embed=embed)
             break
+
+
+
+async def rank_role_update(bot, members_list=None):
+    channel_spam = bot.get_channel(BOT_OUTPUT_CHANNEL)
+    server = channel_spam.guild
+    season_ranks = get_json_data("utils/season_ranks.json")
+
+    if not RANKED_SEASON: #Only if there's a ranked season going
+        return
+
+    set_ranks = {server.get_role(get(server.roles, name=rank).id) for rank in season_ranks}
+    changes_str = ""
+
+    if members_list is None: #meant for when this becomes a loop task
+        members_list = set(filter(lambda member: server.get_role(VERIFIED_ROLE) in member.roles, server.members))
+
+    for member in members_list:
+        set_member_ranks = set(member.roles) #Set of member's rank roles
+
+        if server.get_role(VERIFIED_ROLE) not in member.roles: #Only give roles to verified players
+            continue
+
+        try:
+            player = Player.from_discord_id(member.id)
+        except PlayerDoesNotExistError:
+            if set_ranks.intersection(set_member_ranks):
+                [member.remove_roles(role) for role in set_ranks.intersection(set_member_ranks)] #Remove all season ranks if unregistered
+            continue
+
+        else:
+            role_name = determine_rank(player)
+            if role_name:  # Only if within elo threshold
+                old_rank = ""
+                role = server.get_role(get(server.roles, name=role_name).id)
+                if role not in member.roles:
+                    if set_ranks.intersection(set_member_ranks):  # checks if user had old rank roles
+                        for old_role in set_ranks.intersection(set_member_ranks):  # removes old rank roles so player doesn't have 2 rank roles
+                            await member.remove_roles(old_role)
+                            old_rank = old_role.mention
+                    await member.add_roles(role)
+                    new_rank = role.mention
+                    changes_str += f"{member.mention}: {old_rank} → {new_rank}\n" if old_rank else f"{member.mention} is now {new_rank}\n"
+
+            else:
+                if set_ranks.intersection(set_member_ranks):  # Remove old roles (unranked)
+                    for old_role in set_ranks.intersection(set_member_ranks):  # for loop here only to be sure there's no hiccups, intersection is going to be 1 element
+                        await member.remove_roles(old_role)
+                        changes_str += f"{member.mention} is now unranked\n"
+    return changes_str
+
+def determine_rank(player):
+    data = get_json_data("utils/season_ranks.json")
+    for rank in data.items():
+        if rank[1]["lower_bound"] <= player.elo <= rank[1]["upper_bound"]:
+            return rank[0]
+    return None

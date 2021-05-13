@@ -5,7 +5,7 @@ from database.Player import Player, PlayerDoesNotExistError, UsernameAlreadyExis
     DiscordAlreadyExistsError
 from database.database import check_user_requests, add_register_request, get_register_request, \
     remove_register_request, get_all_register_requests, get_sorted_elo
-from utils.utils import error_embed, success_embed, response_embed, create_list_pages, has_permissions
+from utils.utils import error_embed, success_embed, response_embed, create_list_pages, has_permissions, rank_role_update
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL,\
     ELO_FLOOR, ADMIN_ROLE, PUBLIC_BOT_CHANNEL, UPDATE_NICKNAMES, SEND_JOIN_MESSAGE
 from mojang import MojangAPI
@@ -17,7 +17,7 @@ import logging
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
-from utils.config import SLASH_COMMANDS_GUILDS, BOT_START_MESSAGE
+from utils.config import SLASH_COMMANDS_GUILDS, BOT_START_MESSAGE, RANKED_SEASON
 
 
 class RegistrationCommands(Cog, name="User Registration"):
@@ -292,6 +292,10 @@ class RegistrationCommands(Cog, name="User Registration"):
                             value = int(value)
                             if player.set_elo(value):
                                 await success_embed(ctx, f"Set {discord_tag.mention}'s elo: **{old_elo}** -> **{value}**")
+                                if RANKED_SEASON:
+                                    changes = await rank_role_update(self.bot, [ctx.guild.get_member(user.id)])
+                                    if changes:
+                                        await response_embed(ctx, "Rank Update", changes)
                             else:
                                 await error_embed(ctx, f"Elo given (**{value}**) is below Elo floor (**{ELO_FLOOR}**)")
                         else:
