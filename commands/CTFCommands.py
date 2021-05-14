@@ -406,8 +406,8 @@ class CTFCommands(Cog, name="CTF Commands"):
             end_time = melted_df.iloc[index][0].split(" - ")[0]
             name = match_df.iloc[1][1]
 
-            start = parser.parse(start_time, tzinfos={"EST": "UTC-4"})
-            end = parser.parse(end_time, tzinfos={"EST": "UTC-4"})
+            start = parser.parse(start_time, tzinfos={"EST": tz})
+            end = parser.parse(end_time, tzinfos={"EST": tz})
 
             matches.append(Match(name, start, end))
         matches.sort()
