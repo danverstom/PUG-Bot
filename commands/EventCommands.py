@@ -10,7 +10,7 @@ from discord_slash.utils import manage_commands as mc
 from utils.config import *
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
     priority_rng_signups, get_embed_time_string, generate_signups_embed
-from utils.utils import response_embed, error_embed, success_embed, has_permissions, rank_role_update
+from utils.utils import response_embed, error_embed, success_embed, has_permissions, rank_role_update, create_list_pages
 from database.Event import Event, EventDoesNotExistError
 from database.Signup import Signup
 from database.Player import Player, PlayerDoesNotExistError
@@ -802,7 +802,7 @@ class EventCommands(Cog, name="Event Commands"):
             return error_embed(ctx, "Sorry, there is not an ongoing ranked season in this guild.")
         changes = await rank_role_update(self.bot)
         if changes:
-            await response_embed(ctx, "Rank Update", changes)
+            await create_list_pages(self.bot, ctx, "Rank Update", list(changes.split("\n")))
         else:
             await error_embed(ctx, "No changes found")
 

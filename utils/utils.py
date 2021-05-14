@@ -5,7 +5,7 @@ from asyncio import TimeoutError
 from json import load, dump
 import aiohttp
 from database.Player import Player, PlayerDoesNotExistError
-from utils.config import VERIFIED_ROLE, RANK_ROLES, BOT_OUTPUT_CHANNEL, RANKED_SEASON
+from utils.config import VERIFIED_ROLE, BOT_OUTPUT_CHANNEL, RANKED_SEASON
 
 async def request_async_json(url, content_type):
     async with aiohttp.ClientSession() as session:
