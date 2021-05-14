@@ -125,10 +125,13 @@ class CTFCommands(Cog, name="CTF Commands"):
                     if search in k.lower() or search in str(v):
                         if [k, v] not in list_maps: #Only adds new elements so no dupes
                             list_maps.append([k, v])
-        amount = len(list_maps)
-        if len(args) == 1:
-            if not list_maps:
-                return await error_embed(ctx, "No maps found. Did you forget to separate maps with commas (blackout, pagodas III)?")
+
+        amount = len(list_maps) #Amount of maps found
+
+        if not list_maps: #No results
+            return await error_embed(ctx,"No maps found. Did you forget to separate maps with commas (blackout, pagodas III)?")
+
+        if len(list_maps) == 1: #Image for single search result
             map_id = list_maps[0][1]
             map_name = list_maps[0][0]
 
@@ -140,7 +143,7 @@ class CTFCommands(Cog, name="CTF Commands"):
                 response = await ctx.send("Fetching maps...")
                 await response.edit(content="Done!")
                 await ctx.channel.send(embed=embed, file=file)
-            else:
+            else: #Handling single search results without an image
                 embed = Embed(title="Maps Found:",
                               description=f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})",
                               color=Colour.dark_purple())
@@ -152,7 +155,8 @@ class CTFCommands(Cog, name="CTF Commands"):
         
         for (map_name, map_id) in list_maps:
             map_str.append(f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})")
-            
+        if len(list_maps)>5: #Sort maps by name but only for >5 results otherwise match string gets scuffed
+            map_str = sorted(map_str)
         if len(list_maps) <= 5 and len(list_maps) != 0:  # Shows map ids only if there are 3 results
             map_str.append(f"\n*For match server:*\n`{' '.join(str(item[1]) for item in list_maps)}`")
 
@@ -367,10 +371,11 @@ class CTFCommands(Cog, name="CTF Commands"):
         row = df.loc[0]
         res = None
         tz = timezone(TIMEZONE)
+        datetime_now = datetime.now(tz)
         if os.name == "nt":
-            res = row[row == (datetime.now(tz).today().strftime("%#m/%#d/%Y"))].index
+            res = row[row == (datetime_now.strftime("%#m/%#d/%Y"))].index
         else:
-            res = row[row == (datetime.now(tz).today().strftime("%-m/%-d/%Y"))].index
+            res = row[row == (datetime_now.strftime("%-m/%-d/%Y"))].index
         matches = []
 
         days = df.iloc[0:2, res[0]:22] #if we wanted to make SS past, it would be here
@@ -401,15 +406,14 @@ class CTFCommands(Cog, name="CTF Commands"):
             end_time = melted_df.iloc[index][0].split(" - ")[0]
             name = match_df.iloc[1][1]
 
-            start = parser.parse(start_time, tzinfos={"EST": "UTC-4"})
-            end = parser.parse(end_time, tzinfos={"EST": "UTC-4"})
+            start = parser.parse(start_time, tzinfos={"EST": tz})
+            end = parser.parse(end_time, tzinfos={"EST": tz})
 
             matches.append(Match(name, start, end))
         matches.sort()
 
-        if matches:
-            return await success_embed(ctx, "\n".join(list(map(lambda x: str(x), matches[:7]))))  # lambda
-        await success_embed(ctx, "No upcoming matches")
+        matches = list(filter(lambda x: datetime_now.time() < x.end.time() or datetime_now.date() != x.end.date(), matches))
+        return await create_list_pages(self.bot, ctx, "Matches Found", list(map(lambda x: str(x), matches)), "No matches found :(", "\n", 5)  # lambda
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[
         manage_commands.create_option(name="ign", description="The ign of the player you would like to search for",

@@ -103,7 +103,7 @@ class EventCommands(Cog, name="Event Commands"):
             return
 
         def check(m):
-            return m.author == ctx.author
+            return m.author == ctx.author and m.channel == ctx.channel
 
         embed = Embed(title="Event Creation", color=Colour.dark_purple())
         embed.add_field(name="Description:", value="Enter the description of the event")
@@ -451,7 +451,7 @@ class EventCommands(Cog, name="Event Commands"):
             return False
 
         def check(m):
-            return m.author == ctx.author
+            return m.author == ctx.author and m.channel == ctx.channel
 
         roles_dict = {}
         while True:
@@ -746,6 +746,7 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="The message ID of the event announcement",
                                          option_type=3, required=True)])
     async def cancel(self, ctx, event_id):
+        """Allows mods to cancel an event. Sets the event to inactive + tags players that signed up."""
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False

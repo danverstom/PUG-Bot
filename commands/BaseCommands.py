@@ -3,7 +3,7 @@ from random import randint, choice
 from discord.embeds import Embed
 from discord import Colour
 from discord_slash.cog_ext import cog_slash, manage_commands
-from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE
+from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, TIMEZONE
 from utils.utils import create_list_pages, has_permissions
 from database.Player import Player
 from database.database import get_sorted_elo
@@ -29,7 +29,7 @@ class BaseCommands(Cog, name="Base Commands"):
 
     @cog_slash(name="time", description="Show system time", options=[], guild_ids=SLASH_COMMANDS_GUILDS)
     async def time(self, ctx):
-        tz = timezone('US/Eastern') 
+        tz = timezone(TIMEZONE) 
         time = datetime.now(tz)
         await ctx.send(f"The time is {time.strftime('%H:%M:%S')}")
 
