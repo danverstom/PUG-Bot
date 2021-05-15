@@ -145,7 +145,7 @@ class EventCommands(Cog, name="Event Commands"):
         for event in list(self.events.values()):
             event.update()
             # print(f"Event: \n{event.title} Active: {event.is_active}\nTime: {event.time_est}\nDeadline: {event.signup_deadline}")
-            if datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.time_est) + timedelta(hours=3):
+            if datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.time_est) + timedelta(hours=3) and event.is_active:
                 event.set_is_active(False)
                 await success_embed(self.bot.get_channel(event.signup_channel),
                                     f"Set event {event.event_id} / {event.title} to **inactive**")
@@ -215,7 +215,10 @@ class EventCommands(Cog, name="Event Commands"):
                 for user_id in can_play_users:
                     if user_id not in reaction_member_ids:
                         member = guild.get_member(user_id)
-                        await member.add_roles(signup_role)
+                        if member is None:
+                            continue
+                        if signup_role not in member.roles: # next line 
+                            await member.add_roles(signup_role) #takes a request even though user already has role
                         logging.info(f"{event.title}: Allocated role {signup_role.name} to {member}")
                 embed = signup_message.embeds[0]
                 if can_play:
