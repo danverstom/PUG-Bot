@@ -413,7 +413,7 @@ class CTFCommands(Cog, name="CTF Commands"):
         matches.sort()
 
         matches = list(filter(lambda x: datetime_now.time() < x.end.time() or datetime_now.date() != x.end.date(), matches))
-        return await create_list_pages(self.bot, ctx, "Matches Found", list(map(lambda x: str(x), matches)), "No matches found :(", "\n", 5)  # lambda
+        return await create_list_pages(self.bot, ctx, f"Matches Found (Match {server})", list(map(lambda x: str(x), matches)), "No matches found :(", "\n", 5)  # lambda
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[
         manage_commands.create_option(name="ign", description="The ign of the player you would like to search for",
