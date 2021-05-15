@@ -215,7 +215,10 @@ class EventCommands(Cog, name="Event Commands"):
                 for user_id in can_play_users:
                     if user_id not in reaction_member_ids:
                         member = guild.get_member(user_id)
-                        await member.add_roles(signup_role)
+                        if member is None:
+                            continue
+                        if signup_role not in member.roles: # next line 
+                            await member.add_roles(signup_role) #takes a request even though user already has role
                         logging.info(f"{event.title}: Allocated role {signup_role.name} to {member}")
                 embed = signup_message.embeds[0]
                 if can_play:

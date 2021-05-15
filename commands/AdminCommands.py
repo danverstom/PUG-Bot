@@ -128,6 +128,12 @@ class AdminCommands(Cog, name="Admin Commands"):
         map_id = int(map_id)
 
         if operation == "add":
+            with open("utils/maps.json", "r+") as file:
+                data = load(file)
+                for k, v in data.items():
+                    if int(v) == map_id:
+                        return await error_embed(ctx, "Map already exists")
+
             embed = Embed(title="Adding map to database", description="Enter the name of the map", color=Colour.dark_purple())
             embed.set_footer(text="Type \"cancel\" to cancel")
             message = await ctx.send(embed=embed)
