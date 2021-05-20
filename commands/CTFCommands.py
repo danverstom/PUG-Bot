@@ -51,8 +51,8 @@ class Match:
 
     def __str__(self):
         if os.name == "nt":
-            return f"**{self.name}**\n{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%#d')}\n{self.start_time()} - {self.end_time()} EST\n"
-        return f"**{self.name}**\n{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%-d')}\n{self.start_time()} - {self.end_time()} EST\n"
+            return f"{self.name}\n{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%#d')}\n{self.start_time()} - {self.end_time()} EST\n"
+        return f"{self.name}\n{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%-d')}\n{self.start_time()} - {self.end_time()} EST\n"
 
     def __lt__(self, other):
         return self.datetime < other.datetime
@@ -102,9 +102,12 @@ class CTFCommands(Cog, name="CTF Commands"):
     @cog_slash(name="maps", description="Lists all maps or searches for maps by name",
                options=[manage_commands.create_option(name="searches",
                                                       description="Separate multiple maps with commas (blackout, pagodas III)",
-                                                      option_type=3, required=False)
+                                                      option_type=3, required=False),
+                        manage_commands.create_option(name="rotation_maps",
+                                                      description="Show all maps or rotation only (default is rotation)",
+                                                      option_type=5, required=False)
                         ], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def maps(self, ctx, searches=""):
+    async def maps(self, ctx, searches="", rotation_maps=True):
         """
         Lists all maps  in rotation when no searches are provided
         Searches for maps when searches are given
@@ -114,6 +117,11 @@ class CTFCommands(Cog, name="CTF Commands"):
             maps = load(file)
         map_str = list()
         args = list(map(lambda x: x.strip(), filter(None, searches.lower().split(","))))
+
+        if not rotation_maps: #Merg
+            with open("utils/all_maps.json") as file:
+                all_maps = load(file)
+                maps = {**maps, **all_maps}
 
         list_maps = None
         if not searches:
@@ -160,7 +168,7 @@ class CTFCommands(Cog, name="CTF Commands"):
         if len(list_maps) <= 5 and len(list_maps) != 0:  # Shows map ids only if there are 3 results
             map_str.append(f"\n*For match server:*\n`{' '.join(str(item[1]) for item in list_maps)}`")
 
-        await create_list_pages(self.bot, ctx, f"Maps Found ({amount}):", map_str, "No Maps were found")
+        await create_list_pages(self.bot, ctx, f"Maps Found ({amount}):", map_str, "No Maps were found", random_item=True)
 
 
     @cog_slash(name="stats", description="Gets most recent stats from match 1 and 2",
@@ -339,81 +347,61 @@ class CTFCommands(Cog, name="CTF Commands"):
             await create_list_pages(self.bot, ctx, "Team threads", teams_info, "Empty :(", "\n", 1,
                                     thumbnails=thumbnails)
 
-    @cog_slash(name="ss", description="Shows upcoming matches", guild_ids=SLASH_COMMANDS_GUILDS,
-               options=[
-                   manage_commands.create_option(
-                       name="server",
-                       description="Which match server to view",
-                       option_type=3,
-                       required=False,
-                       choices=[
-                           manage_commands.create_choice(
-                               name="Match 1",
-                               value="1"
-                           ),
-                           manage_commands.create_choice(
-                               name="Match 2",
-                               value="2")]
-                   )
-               ]
-               )
-    async def ss(self, ctx, server="1"):
+    @cog_slash(name="ss", description="Shows upcoming matches", guild_ids=SLASH_COMMANDS_GUILDS)
+    async def ss(self, ctx):
         await ctx.defer()
         gc = gspread.service_account(filename='utils/service_account.json')
-        if server == "1":
-            values = gc.open_by_key("1CrQOxzaXC6iSjwZwQvu6DNIYsCDg-uQ4x5UiaWLHzxg").worksheet("Upcoming Matches").get(
-                "c10:w59")
-        else:
-            values = gc.open_by_key("1CrQOxzaXC6iSjwZwQvu6DNIYsCDg-uQ4x5UiaWLHzxg").worksheet(
-                "Upcoming Matches (Server 2)").get("c10:w59")
-
-        df = pd.DataFrame.from_records(values)
-        row = df.loc[0]
-        res = None
-        tz = timezone(TIMEZONE)
-        if os.name == "nt":
-            res = row[row == (datetime.now(tz).today().strftime("%#m/%#d/%Y"))].index
-        else:
-            res = row[row == (datetime.now(tz).today().strftime("%-m/%-d/%Y"))].index
+        value1 = gc.open_by_key("1CrQOxzaXC6iSjwZwQvu6DNIYsCDg-uQ4x5UiaWLHzxg").worksheet("Upcoming Matches").get("c10:w59")
+        value2 = gc.open_by_key("1CrQOxzaXC6iSjwZwQvu6DNIYsCDg-uQ4x5UiaWLHzxg").worksheet("Upcoming Matches (Server 2)").get("c10:w59")
+        matchservers = {"1": value1, "2": value2} 
         matches = []
+        for match, values in matchservers.items():
+            df = pd.DataFrame.from_records(values)
+            row = df.loc[0]
+            res = None
+            tz = timezone(TIMEZONE)
+            datetime_now = datetime.now(tz)
+            if os.name == "nt":
+                res = row[row == (datetime_now.strftime("%#m/%#d/%Y"))].index
+            else:
+                res = row[row == (datetime_now.strftime("%-m/%-d/%Y"))].index
 
-        days = df.iloc[0:2, res[0]:22] #if we wanted to make SS past, it would be here
-        df2 = df.iloc[2:, res[0]:22] #and here
+            days = df.iloc[0:2, res[0]:22] #if we wanted to make SS past, it would be here
+            df2 = df.iloc[2:, res[0]:22] #and here
 
-        days.iloc[0, :] = days.iloc[0, :] + " " + days.iloc[1, :] #combine days and dates into one row
-        days = days.iloc[0] #change dataframe into just that one row with days/dates
+            days.iloc[0, :] = days.iloc[0, :] + " " + days.iloc[1, :] #combine days and dates into one row
+            days = days.iloc[0] #change dataframe into just that one row with days/dates
 
-        melted_df = pd.melt(df2) #"melt" all columns into one single column (one after another)
-        melted_df = melted_df.replace(to_replace=days.index, value=days) #replace numerical index of days to actual date strings
+            melted_df = pd.melt(df2) #"melt" all columns into one single column (one after another)
+            melted_df = melted_df.replace(to_replace=days.index, value=days) #replace numerical index of days to actual date strings
 
-        time_column = pd.concat([df.iloc[2:, 0]]*len(df2.columns)).reset_index(drop=True) #repeat the times
+            time_column = pd.concat([df.iloc[2:, 0]]*len(df2.columns)).reset_index(drop=True) #repeat the times
 
-        melted_df.iloc[:, 0] = melted_df.iloc[:, 0] + " " + time_column #then combine days+date with time, so our dataframe has columns of [Day, date, time], and [matchname]
-        melted_df = melted_df.replace(["", None], "#~#~#").replace("^", None).ffill() # 'detect' all events. THIS INCLUDES TIMES WHERE THERES NO MATCHES!
-        grouped_df = melted_df.groupby([(melted_df.iloc[:, 1] != melted_df.iloc[:, 1].shift()).cumsum()]) # group by consecutive values
-        #grouped_df = grouped_df #add .filter(lambda x: x.iloc[0, 1] != "#~#~#") on the end of this line to get 1 dataframe of all valid matches!
+            melted_df.iloc[:, 0] = melted_df.iloc[:, 0] + " " + time_column #then combine days+date with time, so our dataframe has columns of [Day, date, time], and [matchname]
+            melted_df = melted_df.replace(["", None], "#~#~#").replace("^", None).ffill() # 'detect' all events. THIS INCLUDES TIMES WHERE THERES NO MATCHES!
+            grouped_df = melted_df.groupby([(melted_df.iloc[:, 1] != melted_df.iloc[:, 1].shift()).cumsum()]) # group by consecutive values
+            #grouped_df = grouped_df #add .filter(lambda x: x.iloc[0, 1] != "#~#~#") on the end of this line to get 1 dataframe of all valid matches!
 
-        for group_index, group_df in grouped_df: #got it down to one iteration of just detected events
-            #GROUP_INDEX/GROUP_DF REPRESENTS ALL THE GROUPS DETECTED IN THE SS! EVEN EMPTY EVENTS! (where nothing is happening)
-            if group_df.iloc[0, 1] == "#~#~#": continue #SO WE REJECT THE EMPTY EVENTS
+            for group_index, group_df in grouped_df: #got it down to one iteration of just detected events
+                #GROUP_INDEX/GROUP_DF REPRESENTS ALL THE GROUPS DETECTED IN THE SS! EVEN EMPTY EVENTS! (where nothing is happening)
+                if group_df.iloc[0, 1] == "#~#~#": continue #SO WE REJECT THE EMPTY EVENTS
 
-            match_df = group_df.iloc[[0, -1]]
-            start_time = match_df.iloc[0][0].split(" - ")[0]
-            index = match_df.index[1]+1
-            if index == len(melted_df.index): #case for the last day, last time on SS
-                index = match_df.index[1]
-            end_time = melted_df.iloc[index][0].split(" - ")[0]
-            name = match_df.iloc[1][1]
+                match_df = group_df.iloc[[0, -1]]
+                start_time = match_df.iloc[0][0].split(" - ")[0]
+                index = match_df.index[1]+1
+                if index == len(melted_df.index): #case for the last day, last time on SS
+                    index = match_df.index[1]
+                end_time = melted_df.iloc[index][0].split(" - ")[0]
+                name = match_df.iloc[1][1]
 
-            start = parser.parse(start_time, tzinfos={"EST": "UTC-4"})
-            end = parser.parse(end_time, tzinfos={"EST": "UTC-4"})
+                start = parser.parse(start_time, tzinfos={"EST": tz})
+                end = parser.parse(end_time, tzinfos={"EST": tz})
 
-            matches.append(Match(name, start, end))
+                matches.append(Match(f"**{name}** *(Match {match})*", start, end))
         matches.sort()
 
-        if matches:
-            return await success_embed(ctx, "\n".join(list(map(lambda x: str(x), matches[:7]))))  # lambda
-        await success_embed(ctx, "No upcoming matches")
+        matches = list(filter(lambda x: datetime_now.time() < x.end.time() or datetime_now.date() != x.end.date(), matches))
+        return await create_list_pages(self.bot, ctx, f"Matches Found", list(map(lambda x: str(x), matches)), "No matches found :(", "\n", 5)  # lambda
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[
         manage_commands.create_option(name="ign", description="The ign of the player you would like to search for",

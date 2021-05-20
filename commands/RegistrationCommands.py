@@ -321,7 +321,10 @@ class RegistrationCommands(Cog, name="User Registration"):
         Displays a user's profile
         """
         if user:
-            player_id = user.id
+            if not isinstance(user, int):
+                player_id = user.id
+            else:
+                player_id = user
         else:
             player_id = ctx.author.id
         try:

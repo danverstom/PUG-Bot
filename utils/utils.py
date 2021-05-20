@@ -4,6 +4,7 @@ from math import ceil
 from asyncio import TimeoutError
 from json import load, dump
 import aiohttp
+from random import choice
 
 
 async def request_async_json(url, content_type):
@@ -54,7 +55,7 @@ async def response_embed(ctx, title, description):
 
 
 async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "Empty List", sep: str = "\n",
-                            elements_per_page: int = 10, thumbnails=None, can_be_reversed=False):
+                            elements_per_page: int = 10, thumbnails=None, can_be_reversed=False, random_item=False):
     if not info:
         await ctx.send(embed=Embed(title=title, description=if_empty, colour=Colour.dark_red()))
         return
@@ -88,9 +89,11 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
         await message.add_reaction("🔃")
     await message.add_reaction("✅")
     await message.add_reaction("❌")
+    if random_item:
+        await message.add_reaction("🔀")
 
     def check(r, u):
-        return r.message.id == message.id and u == ctx.author and str(r.emoji) in ["◀", "▶", "✅", "❌", "🔃"]
+        return r.message.id == message.id and u == ctx.author and str(r.emoji) in ["◀", "▶", "✅", "❌", "🔃", "🔀"]
 
     while True:
         try:
@@ -153,6 +156,11 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                         embed.set_thumbnail(url=thumbnails[current_page - 1])
 
                 embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
+                await message.edit(embed=embed)
+                await message.remove_reaction(reaction, user)
+            elif str(reaction.emoji) == "🔀" and random_item:
+                embed = Embed(title=title, description=choice(info),
+                              colour=Colour.dark_purple())
                 await message.edit(embed=embed)
                 await message.remove_reaction(reaction, user)
             elif str(reaction.emoji) == "❌":

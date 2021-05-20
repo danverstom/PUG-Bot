@@ -78,10 +78,6 @@ class BaseCommands(Cog, name="Base Commands"):
                                 thumbnails=[f"https://cravatar.eu/helmavatar/{data[0][0]}/128.png"] if data else [],
                                 can_be_reversed=True)
 
-    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
-    async def error_test_command(self, ctx):
-        int("bonjour")
-        await ctx.send("test")
 
     @cog_slash(name="schedule", description="Create a quick copypaste schedule message",
                options=[manage_commands.create_option(name="alternation",
