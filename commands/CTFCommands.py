@@ -102,9 +102,12 @@ class CTFCommands(Cog, name="CTF Commands"):
     @cog_slash(name="maps", description="Lists all maps or searches for maps by name",
                options=[manage_commands.create_option(name="searches",
                                                       description="Separate multiple maps with commas (blackout, pagodas III)",
-                                                      option_type=3, required=False)
+                                                      option_type=3, required=False),
+                        manage_commands.create_option(name="rotation_maps",
+                                                      description="Show all maps or rotation only (default is rotation)",
+                                                      option_type=5, required=False)
                         ], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def maps(self, ctx, searches=""):
+    async def maps(self, ctx, searches="", rotation_maps=True):
         """
         Lists all maps  in rotation when no searches are provided
         Searches for maps when searches are given
@@ -114,6 +117,11 @@ class CTFCommands(Cog, name="CTF Commands"):
             maps = load(file)
         map_str = list()
         args = list(map(lambda x: x.strip(), filter(None, searches.lower().split(","))))
+
+        if not rotation_maps: #Merg
+            with open("utils/all_maps.json") as file:
+                all_maps = load(file)
+                maps = {**maps, **all_maps}
 
         list_maps = None
         if not searches:
@@ -160,7 +168,7 @@ class CTFCommands(Cog, name="CTF Commands"):
         if len(list_maps) <= 5 and len(list_maps) != 0:  # Shows map ids only if there are 3 results
             map_str.append(f"\n*For match server:*\n`{' '.join(str(item[1]) for item in list_maps)}`")
 
-        await create_list_pages(self.bot, ctx, f"Maps Found ({amount}):", map_str, "No Maps were found")
+        await create_list_pages(self.bot, ctx, f"Maps Found ({amount}):", map_str, "No Maps were found", random_item=True)
 
 
     @cog_slash(name="stats", description="Gets most recent stats from match 1 and 2",

@@ -152,7 +152,13 @@ class EventCommands(Cog, name="Event Commands"):
                 message = await self.bot.get_channel(event.announcement_channel).fetch_message(event.event_id)
                 embed = message.embeds[0]
                 embed.description = embed.description.rsplit("\n", 4)[0] #Getting rid of the last three lines of the description "React if you can.."
-                embed.description += "\n\n**This event is no longer active.**\n"
+
+                signups = self.signups.setdefault(event.event_id)
+                if not signups:
+                    signups = Signup.fetch_signups_list(event.event_id)
+                num_signups = len(list(filter(lambda sign: sign.can_play, signups)))
+
+                embed.description += f"\n\n**This event is no longer active**\n_({num_signups} signups)_\n"
                 embed.color = Colour.default()
                 await message.edit(embed=embed)
                 await message.clear_reactions()
@@ -171,6 +177,7 @@ class EventCommands(Cog, name="Event Commands"):
                 if signups:
                     await self.bot.get_channel(event.signup_channel).send(embed=generate_signups_embed(self.bot,
                                                                                                        signups, event))
+                    await self.bot.get_channel(event.announcement_channel).send(f"_Signups for **{event.title}** are now closed_")
                 else:
                     await error_embed(self.bot.get_channel(event.signup_channel), "No signups on signup deadline :(\n"
                                                                                   f"{event.title}")
@@ -220,24 +227,25 @@ class EventCommands(Cog, name="Event Commands"):
                         if signup_role not in member.roles: # next line 
                             await member.add_roles(signup_role) #takes a request even though user already has role
                         logging.info(f"{event.title}: Allocated role {signup_role.name} to {member}")
-                embed = signup_message.embeds[0]
-                if can_play:
-                    value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
-                             for index, user in enumerate(can_play)]
-                    embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value="\n".join(value),
-                                       inline=False)
-                    logging.info(f"{event.title}: Generated new can_play field")
-                else:
-                    embed.set_field_at(index=0, name=f"✅ Players: 0", value="No one :(", inline=False)
-                if can_sub:
-                    value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
-                             for index, user in enumerate(can_sub)]
-                    embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub)}", value="\n".join(value), inline=False)
-                    logging.info(f"{event.title}: Generated new can_sub field")
-                else:
-                    embed.set_field_at(index=1, name=f"🛗 Subs: 0", value="No one :(", inline=False)
-                await signup_message.edit(embed=embed)
-                logging.info(f"{event.title}: Finished editing signup message")
+                if event.is_active:
+                    embed = signup_message.embeds[0]
+                    if can_play:
+                        value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
+                                for index, user in enumerate(can_play)]
+                        embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value="\n".join(value),
+                                        inline=False)
+                        logging.info(f"{event.title}: Generated new can_play field")
+                    else:
+                        embed.set_field_at(index=0, name=f"✅ Players: 0", value="No one :(", inline=False)
+                    if can_sub:
+                        value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
+                                for index, user in enumerate(can_sub)]
+                        embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub)}", value="\n".join(value), inline=False)
+                        logging.info(f"{event.title}: Generated new can_sub field")
+                    else:
+                        embed.set_field_at(index=1, name=f"🛗 Subs: 0", value="No one :(", inline=False)
+                    await signup_message.edit(embed=embed)
+                    logging.info(f"{event.title}: Finished editing signup message")
 
             if not event.is_active:
                 del self.events[event.event_id]
@@ -774,7 +782,7 @@ class EventCommands(Cog, name="Event Commands"):
             embed = message.embeds[0]
             embed.description = embed.description.rsplit("\n", 4)[
                 0]  # Getting rid of the last three lines of the description "React if you can.."
-            embed.description += "\n\n**This event is no longer active.**\n"
+            embed.description += "\n\n**This event was cancelled.**\n"
             embed.color = Colour.default()
             await message.edit(embed=embed)
             await message.clear_reactions()
