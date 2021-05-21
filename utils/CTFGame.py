@@ -1,5 +1,5 @@
 from requests import get
-from re import split
+from re import search, split
 from pandas.io.html import read_html
 from pandas import DataFrame
 
@@ -42,8 +42,11 @@ class CTFGame:
         kit_table = kit_table.drop(['players_teleported', 'mobs_spawned', 'fire_axes'], axis=1)
         self.kit_table = kit_table[kit_table['damage_dealt'] > 0]
 
-        map_loc = split('(<h1 id=\"map-name\">)|(</h1>)', game_html)
-        self.map_name = map_loc[6][5:]
+        map_loc = search('Map: [^<]*</h1>', game_html)
+        if map_loc:
+            self.map_name = map_loc.group()[5:-5]
+        else:
+            self.map_name = ''
 
         mvp_loc = split('(title="u the real mvp :V">)|(</a>)', game_html)
         if len(mvp_loc) > 3:

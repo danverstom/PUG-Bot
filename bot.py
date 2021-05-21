@@ -20,6 +20,7 @@ from commands.CTFCommands import CTFCommands
 from commands.EventCommands import EventCommands
 from commands.HelpCommand import HelpCommand
 from commands.AdminCommands import AdminCommands
+from commands.GameCommands import GameCommands
 
 
 # Adding commands to the bot now that its ready
@@ -29,6 +30,7 @@ bot.add_cog(CTFCommands(bot))
 bot.add_cog(EventCommands(bot))
 bot.add_cog(HelpCommand(bot, slash))
 bot.add_cog(AdminCommands(bot, slash, bot_token))
+bot.add_cog(GameCommands(bot))
 
 
 @bot.event

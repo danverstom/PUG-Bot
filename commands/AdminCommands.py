@@ -1,11 +1,13 @@
 from discord.ext.commands import Cog, has_role
 from discord import File, Embed, Colour
 from utils.utils import get_json_data, error_embed, success_embed, response_embed, has_permissions
+from utils.image_util import compress
 import utils.config
 import os
 import sys
 import platform
 import subprocess
+from json import dump, load
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
@@ -79,3 +81,98 @@ class AdminCommands(Cog, name="Admin Commands"):
         else:
             utils.config.debug = True
             await success_embed(ctx, "Toggled debug mode **on**")
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[manage_commands.create_option(name="operation", description="add/dell",
+                                      required=True, option_type=3, choices=[
+                manage_commands.create_choice(name="add", value="add"),
+                manage_commands.create_choice(name="del", value="del")
+                                                        ]
+                                      ),
+                manage_commands.create_option(name="ID", description="ID of map",
+                                      required=True, option_type=4)
+    ])
+    async def editmaps(self, ctx, operation="", map_id=0):
+        if not has_permissions(ctx, ADMIN_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        def check(m):
+            return m.author == ctx.author and m.channel == ctx.channel
+        map_id = int(map_id)
+
+        if operation == "add":
+            embed = Embed(title="Adding map to database", description="Enter the name of the map", color=Colour.dark_purple())
+            embed.set_footer(text="Type \"cancel\" to cancel")
+            message = await ctx.send(embed=embed)
+            response = await self.bot.wait_for("message", check=check)
+            if not response.content:
+                return await error_embed(ctx, "Not a string")
+            if response.content.lower() == "cancel":
+                return await ctx.send(embed=Embed(description="❌ Adding map cancelled", color=Colour.dark_red()))
+                
+            name = response.content
+
+            embed = Embed(title="Adding map to database", description="Add an image for the map\nThis can be a direct upload, or a direct link to an image (not supported yet)", color=Colour.dark_purple())
+            embed.set_footer(text="Type \"cancel\" to cancel")
+            message = await ctx.send(embed=embed)
+            response = await self.bot.wait_for("message", check=check)
+            if response.content.lower() == "cancel":
+                return await ctx.send(embed=Embed(description="❌ Adding map cancelled", color=Colour.dark_red()))
+            if not response.attachments:
+                return await error_embed(ctx, "No image attached")
+            if not response.attachments[0].content_type.startswith("image"):
+                return await error_embed(ctx, "File uploaded is not image")
+            attachment = response.attachments[0]
+
+            embed = Embed(title="Confirm addition (y/n)", description=f"Are you sure you want to add {name} ({map_id})?", color=Colour.dark_purple())
+            embed.set_image(url=attachment.url)
+
+            message = await ctx.send(embed=embed)
+            response = await self.bot.wait_for("message", check=check)
+            is_correct = response.content.lower() == "y" or response.content.lower() == "yes"
+            if not is_correct:
+                return await ctx.send(embed=Embed(description="❌ Adding map cancelled", color=Colour.dark_red()))
+                
+
+            new_data = {name: map_id}
+            data = None
+            with open("utils/maps.json", "r+") as file:
+                data = load(file)
+                data.update(new_data)
+                
+            with open("utils/maps.json", "w") as file:
+                dump(data,file, sort_keys=True, indent=4)
+
+            await attachment.save(f"assets/map_screenshots/{map_id}.jpg")
+            compress(f"assets/map_screenshots/{map_id}.jpg")
+            await response_embed(ctx, "✅ Map added", "")
+        elif operation == "del":
+            name = None
+            with open("utils/maps.json", "r+") as file:
+                data = load(file)
+ 
+                for k, v in data.items():
+                    if int(v) == map_id:
+                        name = k
+                        data.pop(k)
+                        break
+                if name is None:
+                    return await error_embed(ctx, "Map not found")
+                    
+                file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
+                embed = Embed(file=file, title="Confirm deletion (y/n)", description=f"Are you sure you want to delete {name} ({map_id})?", color=Colour.dark_purple())
+                embed.set_image(url=f"attachment://{map_id}.png")
+
+                message = await ctx.send(file=file, embed=embed)
+                response = await self.bot.wait_for("message", check=check)
+                
+                is_correct = response.content.lower() == "y" or response.content.lower() == "yes"
+                if not is_correct:
+                    return await ctx.send(embed=Embed(description="❌ Deleting map cancelled", color=Colour.dark_red()))
+                
+                with open("utils/maps.json", "w") as file:
+                    dump(data,file, sort_keys=True, indent=4)
+                os.remove(f"assets/map_screenshots/{map_id}.jpg")
+                return await response_embed(ctx, "✅ Map deleted", "")
+
+
+

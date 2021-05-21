@@ -1,26 +1,33 @@
 from discord.ext.commands import Cog
 from discord import File, Embed, Colour
+
+from database.Player import Player
 from utils.CTFGame import get_server_games, CTFGame
-from utils.utils import response_embed, success_embed, create_list_pages
+from utils.utils import response_embed, success_embed, create_list_pages, error_embed, request_async_json, has_permissions
 from random import choice
 from json import load, dump
 from re import split
 from requests import get
 from discord.ext import tasks
 from bs4 import BeautifulSoup
-from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL, GENERAL_CHAT
+from utils.config import FORUM_THREADS_INTERVAL_HOURS, BOT_OUTPUT_CHANNEL, GENERAL_CHAT, TIMEZONE
 from os import path
+import aiohttp
+from asyncio import sleep as async_sleep
+import logging
+from utils.plot_utils import *
 
 # ss
 import os
 import gspread
 import pandas as pd
 from dateutil import parser
-from datetime import date
+from datetime import datetime
+from pytz import timezone
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
-from utils.config import SLASH_COMMANDS_GUILDS
+from utils.config import SLASH_COMMANDS_GUILDS, ADMIN_ROLE
 
 
 class Match:
@@ -50,9 +57,6 @@ class Match:
     def __lt__(self, other):
         return self.datetime < other.datetime
 
-    # i really didnt have to make this class
-
-
 class CTFCommands(Cog, name="CTF Commands"):
     """
     This category contains ctf commands that can be used by anyone
@@ -78,60 +82,70 @@ class CTFCommands(Cog, name="CTF Commands"):
         """
         Picks a random map out of a preset map pool
         """
+        await ctx.defer()
         with open("utils/rng_maps.json") as file:
             maps = load(file)
         random_map = choice(list(maps.keys()))
 
         file = File(f"assets/map_screenshots/{maps[random_map]}.jpg", filename=f"{maps[random_map]}.png")
         embed = Embed(title="RNG Map",
-                      description=f"You will be playing [{random_map}](https://www.brawl.com/games/ctf/maps/{maps[random_map]}) ({maps[random_map]})",
+                      description=f"You will be playing [{random_map}](https://www.brawl.com/games/ctf/maps/"
+                                  f"{maps[random_map]}) ({maps[random_map]})\n_(Used by {ctx.author.mention})_",
                       color=Colour.dark_purple())
         embed.set_image(url=f"attachment://{maps[random_map]}.png")
-        await ctx.send(file=file, embed=embed)
+        response = await ctx.send("Grabbing a map from the pool")
+        await ctx.channel.send(file=file, embed=embed)
+        await response.delete()
 
-    @cog_slash(name="maps", description="Lists all maps in rotation that contains the given search",
-               options=[manage_commands.create_option(name="search",
-                                                      description="The string to search with",
-                                                      option_type=3, required=False),
-                        manage_commands.create_option(name="search_2",
-                                                      description="A second map to search for",
-                                                      option_type=3, required=False),
-                        manage_commands.create_option(name="search_3",
-                                                      description="A third map to search for",
+
+    @cog_slash(name="maps", description="Lists all maps or searches for maps by name",
+               options=[manage_commands.create_option(name="searches",
+                                                      description="Separate with commas (blackout, pagodas III)",
                                                       option_type=3, required=False)
                         ], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def maps(self, ctx, search="", search_2="", search_3=""):
+    async def maps(self, ctx, searches=""):
         """
-        Finds all maps in rotation that contains the input
+        Lists all maps  in rotation when no searches are provided
+        Searches for maps when searches are given
         """
+        await ctx.defer()
         with open("utils/maps.json") as file:
             maps = load(file)
-
         map_str = list()
+        args = list(map(lambda x: x.strip(), filter(None, searches.lower().split(","))))
 
-        if search:
-            list_maps = [(map_name, maps[map_name]) for map_name in list(maps.keys()) if
-                         search.lower() in map_name.lower()]
-        else:
+        list_maps = None
+        if not searches:
             list_maps = list(maps.items())
-
-        if search_2:
-            list_maps_2 = [(map_name, maps[map_name]) for map_name in list(maps.keys()) if
-                           search_2.lower() in map_name.lower()]
-            list_maps += list_maps_2
-
-        if search_3:
-            list_maps_3 = [(map_name, maps[map_name]) for map_name in list(maps.keys()) if
-                           search_3.lower() in map_name.lower()]
-            list_maps += list_maps_3
-
+        else:
+            list_maps = []
+            for search in args:
+                for k, v in maps.items():
+                    if search in k.lower() or search in str(v):
+                        list_maps.append([k, v])
+        
+        if len(args) == 1:
+            if not list_maps:
+                return await error_embed(ctx, "No maps found. Did you forget to separate maps with commas (blackout, paogdas III)?")
+            map_id = list_maps[0][1]
+            map_name = list_maps[0][0]
+            file = File(f"assets/map_screenshots/{map_id}.jpg", filename=f"{map_id}.png")
+            embed = Embed(title="Maps Found:", description=f"**{map_name}** [({map_id})](https://www.brawl.com/games/ctf/maps/{map_id})",
+              color=Colour.dark_purple())
+            embed.set_image(url=f"attachment://{map_id}.png")
+            response = await ctx.send("Fetching maps...")
+            await response.edit(content="Done!")
+            await ctx.channel.send(embed=embed, file=file)
+            return
+        
         for (map_name, map_id) in list_maps:
             map_str.append(f"[{map_name}](https://www.brawl.com/games/ctf/maps/{map_id}) ({map_id})")
-
-        if len(list_maps) == 3:  # Shows map ids only if there are 3 results
+            
+        if len(list_maps) <= 5 and len(list_maps) != 0:  # Shows map ids only if there are 3 results
             map_str.append(f"\n*For match server:*\n`{' '.join(str(item[1]) for item in list_maps)}`")
 
         await create_list_pages(self.bot, ctx, "Maps Found:", map_str, "No Maps were found")
+
 
     @cog_slash(name="stats", description="Gets most recent stats from match 1 and 2",
                guild_ids=SLASH_COMMANDS_GUILDS, options=[])
@@ -139,6 +153,7 @@ class CTFCommands(Cog, name="CTF Commands"):
         """
         Gets most recent stats from match 1 and 2
         """
+        await ctx.defer()
         match_1 = get_server_games("1.ctfmatch.brawl.com")
         match_2 = get_server_games("2.ctfmatch.brawl.com")
         match_1.reverse()
@@ -318,6 +333,7 @@ class CTFCommands(Cog, name="CTF Commands"):
                ]
                )
     async def ss(self, ctx, server="1"):
+        await ctx.defer()
         gc = gspread.service_account(filename='utils/service_account.json')
         if server == "1":
             values = gc.open_by_key("1CrQOxzaXC6iSjwZwQvu6DNIYsCDg-uQ4x5UiaWLHzxg").worksheet("Upcoming Matches").get(
@@ -327,14 +343,13 @@ class CTFCommands(Cog, name="CTF Commands"):
                 "Upcoming Matches (Server 2)").get("c10:w59")
 
         df = pd.DataFrame.from_records(values)
-        row = df.loc[0]  
+        row = df.loc[0]
         res = None
+        tz = timezone(TIMEZONE)
         if os.name == "nt":
-            res = row[row == (date.today().strftime("%#m/%d/%Y"))].index
+            res = row[row == (datetime.now(tz).today().strftime("%#m/%#d/%Y"))].index
         else:
-            res = row[row == (date.today().strftime(
-                "%-m/%d/%Y"))].index  
-
+            res = row[row == (datetime.now(tz).today().strftime("%-m/%-d/%Y"))].index
         matches = []
 
         days = df.iloc[0:2, res[0]:22] #if we wanted to make SS past, it would be here
@@ -348,16 +363,16 @@ class CTFCommands(Cog, name="CTF Commands"):
 
         time_column = pd.concat([df.iloc[2:, 0]]*len(df2.columns)).reset_index(drop=True) #repeat the times
 
-        melted_df.iloc[:, 0] = melted_df.iloc[:, 0] + " " + time_column #then combine days+date with time, so our dataframe has columns of [Day, date, time], and [matchname] 
-        melted_df = melted_df.replace(["", None], "#~#~#").replace("^", None).ffill() # 'detect' all events. THIS INCLUDES TIMES WHERE THERES NO MATCHES! 
+        melted_df.iloc[:, 0] = melted_df.iloc[:, 0] + " " + time_column #then combine days+date with time, so our dataframe has columns of [Day, date, time], and [matchname]
+        melted_df = melted_df.replace(["", None], "#~#~#").replace("^", None).ffill() # 'detect' all events. THIS INCLUDES TIMES WHERE THERES NO MATCHES!
         grouped_df = melted_df.groupby([(melted_df.iloc[:, 1] != melted_df.iloc[:, 1].shift()).cumsum()]) # group by consecutive values
         #grouped_df = grouped_df #add .filter(lambda x: x.iloc[0, 1] != "#~#~#") on the end of this line to get 1 dataframe of all valid matches!
 
         for group_index, group_df in grouped_df: #got it down to one iteration of just detected events
             #GROUP_INDEX/GROUP_DF REPRESENTS ALL THE GROUPS DETECTED IN THE SS! EVEN EMPTY EVENTS! (where nothing is happening)
             if group_df.iloc[0, 1] == "#~#~#": continue #SO WE REJECT THE EMPTY EVENTS
-            
-            match_df = group_df.iloc[[0, -1]] 
+
+            match_df = group_df.iloc[[0, -1]]
             start_time = match_df.iloc[0][0].split(" - ")[0]
             index = match_df.index[1]+1
             if index == len(melted_df.index): #case for the last day, last time on SS
@@ -365,8 +380,8 @@ class CTFCommands(Cog, name="CTF Commands"):
             end_time = melted_df.iloc[index][0].split(" - ")[0]
             name = match_df.iloc[1][1]
 
-            start = parser.parse(start_time, tzinfos={"EST": "UTC-4"}) 
-            end = parser.parse(end_time, tzinfos={"EST": "UTC-4"}) 
+            start = parser.parse(start_time, tzinfos={"EST": "UTC-4"})
+            end = parser.parse(end_time, tzinfos={"EST": "UTC-4"})
 
             matches.append(Match(name, start, end))
         matches.sort()
@@ -374,3 +389,117 @@ class CTFCommands(Cog, name="CTF Commands"):
         if matches:
             return await success_embed(ctx, "\n".join(list(map(lambda x: str(x), matches[:7]))))  # lambda
         await success_embed(ctx, "No upcoming matches")
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[
+        manage_commands.create_option(name="ign", description="The ign of the player you would like to search for",
+                                      required=False, option_type=3),
+        manage_commands.create_option(name="mode", description="Whether to look for stats in casual or competitive",
+                                      required=False, option_type=3, choices=[
+                manage_commands.create_choice(name="Competitive", value="competitive"),
+                manage_commands.create_choice(name="Casual", value="casual")])
+    ])
+    async def playerstats(self, ctx, ign=None, mode="competitive"):
+        """Gets player stats using 915's stats website"""
+        if not ctx.responded:
+            await ctx.defer()
+        get_player_id_url = "https://by48xt0cuf.execute-api.us-east-1.amazonaws.com/default/request-player?name={}"
+        stats_from_id_url = "https://by48xt0cuf.execute-api.us-east-1.amazonaws.com/default/request-player?id={}"
+        new_player_request_url = "https://qe824lieck.execute-api.us-east-1.amazonaws.com/default/new-player?id={}"
+        if ign:
+            username = ign
+        else:
+            username = Player.exists_discord_id(ctx.author.id).minecraft_username
+        if not username:
+            await error_embed(ctx, "Please input a player or `/register`")
+            return
+        response = await request_async_json(get_player_id_url.format(username), 'text/plain')
+        if response:
+            json = response[1]
+            logging.info(json)
+            if str(json).startswith("No player found"):
+                await error_embed(ctx, f"Could not find player with name `{username}`")
+                return
+            if json["uuid"]:
+                player_id = json["id"]
+            else:
+                await error_embed(ctx, f"The following player does not have a UUID in the API `{username}`")
+                return
+        else:
+            await error_embed(ctx, f"Failed to get player ID for name `{username}`")
+            return
+        discord_message = await ctx.send(content="Grabbing your data")
+        stats_response = await request_async_json(stats_from_id_url.format(player_id), 'text/plain')
+        json_response = stats_response[1]
+        if json_response["data"]:
+            data = json_response["data"]
+        else:
+            logging.info(f"Player data for `{username}` is not loaded yet")
+            await discord_message.edit(content="Your data is not loaded yet, hold tight")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(new_player_request_url.format(player_id)) as r:
+                    if r.status == 200:
+                        text = await r.text()
+                        if text == "Success":
+                            logging.info("Successfully loaded new data")
+                            await discord_message.edit(content="Your data is being loaded.")
+                            await async_sleep(10)
+                            stats_response = await request_async_json(stats_from_id_url.format(player_id), 'text/plain')
+                            json_response = stats_response[1]
+                            data = json_response["data"]
+                            if not data:
+                                await discord_message.edit(content=f"Account `{username}` doesn't appear to have any"
+                                                                   f" data, sorry. Try again later.")
+                                return
+                            else:
+                                await discord_message.edit(content="Data loaded")
+                        else:
+                            await error_embed(ctx, text)
+                            return
+                    else:
+                        await discord_message.edit(content="Request to load new player data failed")
+                        return
+        class_stats_list = []
+        link = "https://www.nineonefive.xyz/stats/"
+        for class_name in data[mode].keys():
+            class_stats = data[mode][class_name]
+            class_stats_string = f"**{class_name.title()}**\n\n" + "\n"\
+                .join([f"**{stat_key.replace('_', ' ').title()}**: `{int(round(float(class_stats[stat_key]), 0))}`"
+                       for stat_key in class_stats.keys() if class_stats[stat_key] != "0"]) + "\n"
+
+            # Damage per 20 minutes
+            if float(class_stats["damage_dealt"]) > 1000 and float(class_stats["playtime"]) > 1000:
+                dmg = float(class_stats["damage_dealt"])
+                n_20 = float(class_stats["playtime"]) / 1200
+                dmg_per_20 = int(round(dmg / n_20, 0))
+                class_stats_string += f"\n**Damage per 20m**: `{dmg_per_20}`"
+
+            # KDR
+            if float(class_stats["kills"]) > 0 and float(class_stats["deaths"]) > 0:
+                kdr = round(float(class_stats["kills"])/float(class_stats["deaths"]), 3)
+                class_stats_string += f"\n**KDR**: `{kdr}`"
+
+            # Cap success
+            if float(class_stats["flags_captured"]) > 0 and float(class_stats["flags_stolen"]) > 0:
+                cap_eff = round(float(class_stats["flags_captured"]) / float(class_stats["flags_stolen"]) * 100, 2)
+                class_stats_string += f"\n**Capture Success**: `{cap_eff}%`"
+
+            class_stats_string += f"\n\n[Stats sourced from 915's brilliant website]({link})"
+            class_stats_list.append(class_stats_string)
+
+        await discord_message.edit(content="Plotting a beautiful graph")
+        if not len(data[mode].keys()) > 0:
+            await discord_message.edit(content=f"{username} has not played {mode}")
+            return
+        sizes = [int(data[mode][key]["playtime"]) for key in data[mode].keys()]
+        avg_size = sum(sizes) / len(sizes)
+        labels = [(key.title() if float(data[mode][key]["playtime"]) > avg_size else "") for key in data[mode].keys()]
+        # TODO: sort these lists to make the pie chart look better
+        data_stream = pie_chart(labels, sizes, explode=[0.1 if label else 0 for label in labels],
+                                title="Playtime by class")
+        data_stream.seek(0)
+        chart_file = File(data_stream, filename="pie_chart.png")
+        await discord_message.edit(content="Done! Sending results...")
+        await ctx.send(file=chart_file)
+        await create_list_pages(self.bot, ctx, info=class_stats_list, title=f"{mode.title()} stats | {username}",
+                                elements_per_page=1, thumbnails=[f"https://cravatar.eu/helmavatar/{username}/128.png"],
+                                can_be_reversed=True)

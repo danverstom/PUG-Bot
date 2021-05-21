@@ -1,4 +1,5 @@
 from mojang import MojangAPI
+from random import choice, seed
 
 from utils.config import ELO_FLOOR
 from database.database import fetch_players_minecraft_id, fetch_players_minecraft_username, fetch_players_discord_id, \
@@ -150,6 +151,14 @@ class Player:
             raise PlayerDoesNotExistError()
 
     @classmethod
+    def exists_discord_id(cls, discord_id):
+        data = fetch_players_discord_id(discord_id)
+        if data:
+            return cls(data)
+        else:
+            return False
+
+    @classmethod
     def fetch_players_list(cls):
         result = fetch_players_list_discord_id()
         player_list = []
@@ -160,3 +169,9 @@ class Player:
     @staticmethod
     def player_check(minecraft_id, discord_id):
         return player_check(minecraft_id, discord_id)
+
+    @classmethod
+    def fetch_random_player(cls):
+        seed()
+        return choice(Player.fetch_players_list())
+

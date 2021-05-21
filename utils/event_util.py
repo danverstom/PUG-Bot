@@ -4,41 +4,122 @@ from re import fullmatch
 
 from discord import Embed, Colour
 from pytz import timezone
+from utils.config import TIMEZONE
+import os
 
 from database.Player import Player, PlayerDoesNotExistError
 from database.Signup import Signup
 from utils.utils import error_embed
-from random import shuffle
+from random import shuffle, seed
+from dateutil import parser
 
 
-def get_embed_time_string(time):
+def generate_signups_embed(bot, signups, event):
+    embed = Embed(title=f"Signups - {event.title}", colour=Colour.dark_purple())
+    playing_signups = []
+    sub_signups = []
+    unregistered_signups = [signup for signup in signups if not Player.exists_discord_id(signup.user_id)]
+    for signup in signups:
+        if signup.can_play:
+            playing_signups.append(signup)
+        if signup.can_sub:
+            sub_signups.append(signup)
+    signups_tag_str = ""
+    subs_tag_str = ""
+    if len(playing_signups) > 0:
+        for signup in playing_signups:
+            user = bot.get_user(signup.user_id)
+            player = Player.exists_discord_id(signup.user_id)
+            signups_tag_str += f"@{user} ({player.minecraft_username if player else 'Unregistered'})\n"
+    else:
+        signups_tag_str = "Nobody :("
+    if len(sub_signups) > 0:
+        for signup in sub_signups:
+            user = bot.get_user(signup.user_id)
+            subs_tag_str += f"@{user} \n"
+    else:
+        subs_tag_str = "Nobody :("
+    embed.add_field(name="Signed", value=f"```{signups_tag_str}```", inline=False)
+    embed.add_field(name="Can Sub", value=f"```{subs_tag_str}```", inline=False)
+    if unregistered_signups:
+        tags = "\n".join([f"@{bot.get_user(signup.user_id)} " for signup in unregistered_signups])
+        embed.add_field(name="Unregistered:", value=f"```{tags}```", inline=False)
+    return embed
+
+
+def get_embed_time_string(datetime):
     # Get string of event time
-    if time.hour >= 13:
-        hour = time.hour - 12
-        time_suffix = "pm"
-    elif time.hour == 12:
-        hour = time.hour
-        time_suffix = "pm"
-    elif time.hour > 0:
-        hour = time.hour
-        time_suffix = "am"
+    current_datetime = datetime.now(timezone(TIMEZONE))
+    r = "-"
+    if os.name == "nt":
+        r = "#"  # TODO better ways of removing padding?
+    string = datetime.strftime(f"%{r}I:%M%p")
+
+    if datetime.date() == current_datetime.date():  # if dd-mm-yyyy is the same
+        pass
+    elif current_datetime.year == datetime.year:  # both in the same year
+        string += " " + datetime.strftime(f"%B %{r}d")
     else:
-        hour = time.hour + 12
-        time_suffix = "am"
-    if time.minute == 0:
-        minute = ""
-    elif time.minute < 10:
-        minute = f":0{time.minute}"
+        string += " " + datetime.strftime(f"%B %{r}d %Y")
+    return string
+
+
+async def get_event_time(ctx, time_string, date_string, deadline):
+    current_datetime = datetime.now(timezone(TIMEZONE))
+    # Get time of event
+    event_time = None
+    try:
+        event_time = parser.parse(time_string)
+    except Exception as e:
+        await error_embed(ctx, "Event time is not in a valid format.  Use HH:MMam/pm or HH:MM")
+        return False
+
+    # Get date of event
+    event_date = None
+    if not date_string:
+        event_date = date(current_datetime.year, current_datetime.month, current_datetime.day)
+        if (event_time.hour < current_datetime.hour) or (
+                event_time.hour == current_datetime.hour and event_time.minute <= current_datetime.minute):
+            event_date += timedelta(days=1)
     else:
-        minute = f":{time.minute}"
-    if time.date() == time.date():
-        date_string = ""
-    elif time.year == time.year:
-        date_string = f" - {month_name[time.month]} {time.day}"
-    else:
-        date_string = f" - {month_name[time.month]} {time.day}, {time.year}"
-    event_string = f"{hour}{minute}{time_suffix}{date_string}"
-    return event_string
+        try:
+            event_date = parser.parse(date_string,
+                                      dayfirst=True)  # could remove dayfirst for MM-DD-YYYY for the americans
+        except Exception as e:
+            await error_embed(ctx, "Event date is not in a valid format. Use DD-MM-YYYY")
+            return False
+
+    event_datetime = datetime.combine(event_date, event_time.time())
+    event_datetime = timezone(TIMEZONE).localize(event_datetime)  # turn into offset-aware datetime object
+
+    if event_datetime < current_datetime:
+        await error_embed(ctx, "Event time is before the current time.")
+        return False
+
+    r = "-"
+    if os.name == "nt":
+        r = "#"  # TODO better ways of removing padding?
+
+    # Get string of event time
+    event_string = event_datetime.strftime(f"%{r}I:%M%p")
+    if date_string:
+        if current_datetime.year == event_datetime.year:
+            event_string += " " + event_date.strftime(f"%B %{r}d")
+        else:
+            event_string += " " + event_date.strftime(f"%B %{r}d %Y")
+
+    # Get string of signup deadline
+    signup_deadline = event_datetime - timedelta(minutes=deadline)
+    if signup_deadline <= current_datetime:
+        signup_deadline = event_datetime
+
+    deadline_string = signup_deadline.strftime(f"%{r}I:%M%p")
+    if date_string:
+        if current_datetime.year == event_datetime.year:
+            deadline_string += " " + event_date.strftime(f"%B %{r}d")
+        else:
+            deadline_string += " " + event_date.strftime(f"%B %{r}d %Y")
+    return [(event_datetime, event_string), (signup_deadline, deadline_string)]
 
 
 def priority_rng_signups(playing_signups_list, size):
@@ -52,6 +133,7 @@ def priority_rng_signups(playing_signups_list, size):
     :param size: The amount of players you would like to include in the output list
     :return: (selected_players, benched_players, unregistered_signups)
     """
+    seed()
     players = []
     unregistered_signups = []
     for signup in playing_signups_list:
@@ -79,137 +161,6 @@ async def check_if_cancel(ctx, response):
         return False
 
 
-async def get_event_time(ctx, event_time, event_date, deadline):
-    current_datetime = datetime.now(timezone('EST'))
-
-    # Get time of event
-    hour = 0
-    minute = 0
-    if fullmatch("^((0?[1-9])|(1[0-2]))(:[0-5][0-9])?[ap]m$", event_time):
-        is_hour = True
-        is_minute = False
-        if_m = False
-        for c in event_time:
-            if is_hour:
-                if c == ':':
-                    is_minute = True
-                    is_hour = False
-                elif c == 'a' or c == 'p':
-                    if_m = True
-                    is_hour = False
-                else:
-                    hour *= 10
-                    hour += int(c)
-            elif is_minute:
-                if c == 'a' or c == 'p':
-                    if_m = True
-                    is_minute = False
-                else:
-                    minute *= 10
-                    minute += int(c)
-            if if_m:
-                if hour == 12 and (c == 'p' or c == 'a'):
-                    hour = 0
-                if c == 'p':
-                    hour += 12
-    elif fullmatch("^(([01]?[0-9])|(2[0-3]))(:[0-5][0-9])?$", event_time):
-        is_hour = True
-        is_minute = False
-        for c in event_time:
-            if is_hour:
-                if c == ':':
-                    is_minute = True
-                    is_hour = False
-                else:
-                    hour *= 10
-                    hour += int(c)
-            elif is_minute:
-                minute *= 10
-                minute += int(c)
-    else:
-        await error_embed(ctx, "Event time is not in a valid format.  Use HH:MMam/pm or HH:MM")
-        return False
-    event_time = time(hour=hour, minute=minute, tzinfo=timezone('EST'))
-
-    # Get date of event
-    if not event_date:
-        event_date = date(current_datetime.year, current_datetime.month, current_datetime.day)
-        if event_time.hour < current_datetime.hour:
-            event_date += timedelta(days=1)
-        elif event_time.hour == current_datetime.hour and event_time.minute <= current_datetime.minute:
-            event_date += timedelta(days=1)
-    else:
-        try:
-            event_date = date.fromisoformat(event_date)
-        except ValueError:
-            await error_embed(ctx, "Event date is not in a valid format.  Use YYYY-MM-DD")
-            return False
-    event_datetime = datetime.combine(event_date, event_time, timezone('EST'))
-
-    if event_datetime < current_datetime:
-        await error_embed(ctx, "Event time is before the current time.")
-        return False
-
-    # Get string of event time
-    if event_datetime.hour >= 13:
-        hour = event_datetime.hour - 12
-        time_suffix = "pm"
-    elif event_datetime.hour == 12:
-        hour = event_datetime.hour
-        time_suffix = "pm"
-    elif event_datetime.hour > 0:
-        hour = event_datetime.hour
-        time_suffix = "am"
-    else:
-        hour = event_datetime.hour + 12
-        time_suffix = "am"
-    if event_datetime.minute == 0:
-        minute = ""
-    elif event_datetime.minute < 10:
-        minute = f":0{event_datetime.minute}"
-    else:
-        minute = f":{event_datetime.minute}"
-    if event_datetime.date() == current_datetime.date():
-        date_string = ""
-    elif event_datetime.year == current_datetime.year:
-        date_string = f" - {month_name[event_datetime.month]} {event_datetime.day}"
-    else:
-        date_string = f" - {month_name[event_datetime.month]} {event_datetime.day}, {event_datetime.year}"
-    event_string = f"{hour}{minute}{time_suffix}{date_string}"
-
-    # Get string of signup deadline
-    signup_deadline = event_datetime - timedelta(minutes=deadline)
-    if signup_deadline <= current_datetime:
-        signup_deadline = event_datetime
-    if signup_deadline.hour >= 13:
-        hour = signup_deadline.hour - 12
-        time_suffix = "pm"
-    elif signup_deadline.hour == 12:
-        hour = signup_deadline.hour
-        time_suffix = "pm"
-    elif signup_deadline.hour > 0:
-        hour = signup_deadline.hour
-        time_suffix = "am"
-    else:
-        hour = signup_deadline.hour + 12
-        time_suffix = "am"
-    if signup_deadline.minute == 0:
-        minute = ""
-    elif signup_deadline.minute < 10:
-        minute = f":0{signup_deadline.minute}"
-    else:
-        minute = f":{signup_deadline.minute}"
-    if signup_deadline.date() == current_datetime.date():
-        date_string = ""
-    elif signup_deadline.year == current_datetime.year:
-        date_string = f" - {month_name[signup_deadline.month]} {signup_deadline.day}"
-    else:
-        date_string = f" - {month_name[signup_deadline.month]} {signup_deadline.day}, {signup_deadline.year}"
-    deadline_string = f"{hour}{minute}{time_suffix}{date_string}"
-
-    return [(event_datetime, event_string), (signup_deadline, deadline_string)]
-
-
 def save_signups(db_signups, signups):
     [signup.update_db() for signup in signups]
     [signup.delete() for signup in db_signups if signup not in signups]
@@ -220,7 +171,7 @@ def reaction_changes(signups, can_play, is_muted, can_sub, event_id):
     old_is_muted = [user.user_id for user in signups if user.is_muted]
     old_can_sub = [user.user_id for user in signups if user.can_sub]
 
-    diff = set(old_can_play) == set(can_play) or set(old_is_muted) == set(is_muted) or set(old_can_sub) == set(can_sub)
+    diff = set(old_can_play) != set(can_play) or set(old_is_muted) != set(is_muted) or set(old_can_sub) != set(can_sub)
 
     stl_can_play = [user for user in old_can_play if user in can_play]
     add_can_play = [user for user in can_play if user not in old_can_play]

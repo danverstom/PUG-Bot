@@ -4,20 +4,20 @@ from discord.channel import TextChannel
 from discord.ext import tasks
 from discord.ext.commands import Cog
 from discord.utils import get
-from discord_slash.cog_ext import cog_slash
+from discord_slash.cog_ext import cog_slash, cog_subcommand
 from discord_slash.utils import manage_commands as mc
 
 from utils.config import SLASH_COMMANDS_GUILDS, MOD_ROLE, SIGNUPS_TRACKER_INTERVAL_SECONDS, SIGNED_ROLE_NAME, \
-    BOT_OUTPUT_CHANNEL
+    BOT_OUTPUT_CHANNEL, ADMIN_ROLE, GENERAL_CHAT, TIMEZONE, SPECTATOR_ROLE_NAME
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
-    priority_rng_signups, get_embed_time_string
+    priority_rng_signups, get_embed_time_string, generate_signups_embed
 from utils.utils import response_embed, error_embed, success_embed, has_permissions
 from database.Event import Event, EventDoesNotExistError
 from database.Signup import Signup
 from database.Player import Player, PlayerDoesNotExistError
 from asyncio import TimeoutError
-from random import shuffle
-
+from random import shuffle, seed
+import logging
 from datetime import datetime, timedelta
 from pytz import timezone
 
@@ -64,15 +64,15 @@ class EventCommands(Cog, name="Event Commands"):
                                          description="Time (in EST) of the event.",
                                          option_type=3, required=True),
                         mc.create_option(name="event_date",
-                                         description="Date of the event.  Must be in YYYY-MM-DD format",
+                                         description="Date of the event.  Must be in DD-MM-YYYY format",
                                          option_type=3, required=False),
                         mc.create_option(name="signup_deadline",
                                          description="Amount of time (in minutes) before the event for signup "
-                                                     "deadline.  Default is 20 minutes",
+                                                     "deadline.  Default is 30 minutes",
                                          option_type=4, required=False)],
                guild_ids=SLASH_COMMANDS_GUILDS)
     async def event(self, ctx, title, announcement_channel, mention_role, signup_channel, signup_role, event_time,
-                    event_date="", signup_deadline=20):
+                    event_date="", signup_deadline=30):
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
@@ -111,8 +111,8 @@ class EventCommands(Cog, name="Event Commands"):
         if await check_if_cancel(ctx, response):
             return
         description = response.content
-        await message.delete()
-        await response.delete()
+        # await message.delete()
+        # await response.delete()
 
         embed_description = f"**Title:** {title}\n**Time:** {event_time_package[0][1]}\n**Signup Deadline:** " \
                             f"{event_time_package[1][1]}\n**Description:**\n{description}\n**Announcement Channel:** " \
@@ -122,8 +122,8 @@ class EventCommands(Cog, name="Event Commands"):
                                              color=Colour.dark_purple()))
         response = await self.bot.wait_for("message", check=check)
         is_correct = response.content.lower() == "y" or response.content.lower() == "yes"
-        await message.delete()
-        await response.delete()
+        # await message.delete()
+        # await response.delete()
         if not is_correct:
             await ctx.send(embed=Embed(description="❌ Event Creation Cancelled", color=Colour.dark_red()))
             return
@@ -132,7 +132,7 @@ class EventCommands(Cog, name="Event Commands"):
                                                  mention_role, event_time_package[0][1], event_time_package[1][1])
 
         new_event = Event.add_event(event_message_ids[0], title, description, event_time_package[0][0].isoformat(),
-                                    datetime.now(timezone('EST')).isoformat(), ctx.author.id, ctx.guild.id,
+                                    datetime.now(timezone(TIMEZONE)).isoformat(), ctx.author.id, ctx.guild.id,
                                     announcement_channel.id, signup_channel.id, event_message_ids[1], signup_role.id,
                                     event_time_package[1][0].isoformat())
         self.events[event_message_ids[0]] = new_event
@@ -143,7 +143,7 @@ class EventCommands(Cog, name="Event Commands"):
         for event in list(self.events.values()):
             event.update()
             # print(f"Event: \n{event.title} Active: {event.is_active}\nTime: {event.time_est}\nDeadline: {event.signup_deadline}")
-            if datetime.now(timezone('EST')) >= datetime.fromisoformat(event.time_est) + timedelta(days=1):
+            if datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.time_est) + timedelta(hours=3):
                 event.set_is_active(False)
                 await success_embed(self.bot.get_channel(event.signup_channel),
                                     f"Set event {event.event_id} / {event.title} to **inactive**")
@@ -152,22 +152,21 @@ class EventCommands(Cog, name="Event Commands"):
                 embed.description = "This event is no longer active."
                 await message.edit(embed=embed)
                 await message.clear_reactions()
+                spectator_role = get(message.guild.roles, name=SPECTATOR_ROLE_NAME)
+                for member in spectator_role.members:
+                    await member.remove_roles(spectator_role, reason=f"Removing spectator role after {event.title}")
+                    logging.info(f"{event.title}: Removed spectator role from {member}")
             elif not event.is_signups_active:
                 continue
-            elif datetime.now(timezone('EST')) >= datetime.fromisoformat(event.signup_deadline):
+            elif datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.signup_deadline):
                 event.set_is_signup_active(False)
                 signups = self.signups.setdefault(event.event_id)
                 if not signups:
                     signups = Signup.fetch_signups_list(event.event_id)
                 signups = list(filter(lambda sign: sign.can_play, signups))
                 if signups:
-                    tag_str = ""
-                    for signup in signups:
-                        user = self.bot.get_user(signup.user_id)
-                        tag_str += f"@{user} \n"
-                    await success_embed(self.bot.get_channel(event.signup_channel), f"Signups on signup deadline:"
-                                                                                    f"\n```{tag_str}```\n"
-                                                                                    f"{event.title}")
+                    await self.bot.get_channel(event.signup_channel).send(embed=generate_signups_embed(self.bot,
+                                                                                                       signups, event))
                 else:
                     await error_embed(self.bot.get_channel(event.signup_channel), "No signups on signup deadline :(\n"
                                                                                   f"{event.title}")
@@ -196,28 +195,42 @@ class EventCommands(Cog, name="Event Commands"):
 
             [signups, change] = reaction_changes(signups, can_play_users, is_muted_users, can_sub_users, event.event_id)
             if change:
+                logging.info(f"{event.title}: Reaction change detected")
                 save_signups(self.signups[event.event_id], signups)
+                logging.info(f"{event.title}: Signups saved")
                 self.signups[event.event_id] = signups
                 can_play = [user for user in signups if user.can_play]
                 can_sub = [user for user in signups if user.can_sub]
                 guild = self.bot.get_guild(event.guild_id)
                 signup_role = guild.get_role(event.signup_role)
-                [await guild.get_member(signup.user_id).add_roles(signup_role) for signup in can_play]
+                for member in signup_role.members:
+                    if member.id not in can_play_users:
+                        await member.remove_roles(signup_role)
+                        logging.info(f"{event.title}: Removed role {signup_role.name} from {member}")
+                reaction_member_ids = [member.id for member in signup_role.members]
+                for user_id in can_play_users:
+                    if user_id not in reaction_member_ids:
+                        member = guild.get_member(user_id)
+                        await member.add_roles(signup_role)
+                        logging.info(f"{event.title}: Allocated role {signup_role.name} to {member}")
                 embed = signup_message.embeds[0]
                 if can_play:
                     value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
                              for index, user in enumerate(can_play)]
                     embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value="\n".join(value),
                                        inline=False)
+                    logging.info(f"{event.title}: Generated new can_play field")
                 else:
                     embed.set_field_at(index=0, name=f"✅ Players: 0", value="No one :(", inline=False)
                 if can_sub:
                     value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
                              for index, user in enumerate(can_sub)]
                     embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub)}", value="\n".join(value), inline=False)
+                    logging.info(f"{event.title}: Generated new can_sub field")
                 else:
                     embed.set_field_at(index=1, name=f"🛗 Subs: 0", value="No one :(", inline=False)
                 await signup_message.edit(embed=embed)
+                logging.info(f"{event.title}: Finished editing signup message")
 
             if not event.is_active:
                 del self.events[event.event_id]
@@ -284,36 +297,13 @@ class EventCommands(Cog, name="Event Commands"):
             await error_embed(ctx, "Please enter an integer")
             return
         signups = Signup.fetch_signups_list(event_id)
-        playing_signups = []
-        sub_signups = []
         try:
             event = Event.from_event_id(event_id)
         except EventDoesNotExistError:
             await error_embed(ctx, "This event does not exist")
             return False
-        embed = Embed(title=f"Signups - {event.title}", colour=Colour.dark_purple())
         if signups:
-            for signup in signups:
-                if signup.can_play:
-                    playing_signups.append(signup)
-                if signup.can_sub:
-                    sub_signups.append(signup)
-            signups_tag_str = ""
-            subs_tag_str = ""
-            if len(playing_signups) > 0:
-                for signup in playing_signups:
-                    user = self.bot.get_user(signup.user_id)
-                    signups_tag_str += f"@{user} \n"
-            else:
-                signups_tag_str = "Nobody :("
-            if len(sub_signups) > 0:
-                for signup in sub_signups:
-                    user = self.bot.get_user(signup.user_id)
-                    subs_tag_str += f"@{user} \n"
-            else:
-                subs_tag_str = "Nobody :("
-            embed.add_field(name="Signed", value=f"```{signups_tag_str}```", inline=False)
-            embed.add_field(name="Can Sub", value=f"```{subs_tag_str}```", inline=False)
+            embed = generate_signups_embed(self.bot, signups, event)
             await ctx.send(embed=embed)
         else:
             await error_embed(ctx, "There are no signups for this event")
@@ -323,44 +313,95 @@ class EventCommands(Cog, name="Event Commands"):
                                          option_type=3, required=True),
                         mc.create_option(name="size",
                                          description="The maximum players to include in the RNG list. Default 22",
-                                         option_type=4, required=False)], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def rngsignups(self, ctx, event_id, size=22):
+                                         option_type=4, required=False),
+                        mc.create_option(name="priority_role",
+                                         description="A role to prioritise over other roles",
+                                         option_type=8, required=False),
+                        mc.create_option(name="results_channel",
+                                         description="The channel to send the RNG results",
+                                         option_type=7, required=False),
+                        mc.create_option(name="do_priority",
+                                         description="Whether to process priority",
+                                         option_type=5, required=False)
+                        ], guild_ids=SLASH_COMMANDS_GUILDS)
+    async def rngsignups(self, ctx, event_id, size=22, priority_role=None, results_channel=None, do_priority=True):
         """Randomises signups for an event"""
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
+        seed()
         try:
             event_id = int(event_id)
+            event = Event.from_event_id(event_id)
         except ValueError:
             await error_embed(ctx, "Please enter an integer for the event ID. This is the message ID of the event "
                                    "announcement.")
             return
+        except EventDoesNotExistError:
+            await error_embed(ctx, "This event does not exist")
+            return
         signups = self.signups.setdefault(event_id)
+        results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
         if not signups:
             signups = Signup.fetch_signups_list(event_id)
         signups = list(filter(lambda signup: signup.can_play, signups))
         shuffle(signups)
+        if do_priority:
+            # key is player.priority if player exists else its 0
+            signups = sorted(signups, key=lambda signup: Player.from_discord_id(signup.user_id)
+                             .priority if Player.exists_discord_id(signup.user_id) else -1, reverse=True)
+            results_embed.description = "Here are the results - these take into account priority, for which you must" \
+                                        " be registered. In order to register, use the `/register` command"
+        else:
+            results_embed.description = f"Here are the results - these do not take into account priority, as" \
+                                        f" priority is reserved for PUGs and requires players to be registered."
+        if priority_role:
+            signups = sorted(signups, key=lambda signup: 1 if priority_role in ctx.guild.get_member(signup.user_id)
+                             .roles else 0, reverse=True)
         selected_players = signups[:size]
         benched_players = signups[size:]
-        results_embed = Embed(title="RNG Signups - Results", colour=Colour.green())
-        results_embed.description = f"Here are the results - these do not take into account priority, as priority is " \
-                                    f"reserved for PUGs and requires all players to be registered."
+
         if selected_players:
             results_embed.add_field(name=f"Playing ({len(selected_players)})", value='\n'.join(
-                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
+                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') +
+                 ('🛗' if signup.can_sub else '') +
+                 ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
                  selected_players]))
+            if do_priority:
+                for signup in selected_players:
+                    player = Player.exists_discord_id(signup.user_id)
+                    if player:
+                        player.change_priority(-1)
         if benched_players:
             results_embed.add_field(name=f"Not Playing ({len(benched_players)})", value='\n'.join(
-                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') for signup in
+                [self.bot.get_user(signup.user_id).mention + ('🔇' if signup.is_muted else '') +
+                 ('🛗' if signup.can_sub else '') +
+                 ("" if Player.exists_discord_id(signup.user_id) else " (Unregistered)") for signup in
                  benched_players]))
-        await ctx.send(content=f"{get(ctx.guild.roles, name=SIGNED_ROLE_NAME).mention} RNG results:",
-                       embed=results_embed)
-        tag_str = ""
-        for signup in selected_players:
-            user = self.bot.get_user(signup.user_id)
-            tag_str += f"@{user} \n"
-        await self.bot_channel.send(f"{ctx.author.mention} here is a list of tags to make the setroles process easy."
-                                    f"\n```{tag_str}```")
+            if do_priority:
+                for signup in benched_players:
+                    player = Player.exists_discord_id(signup.user_id)
+                    if player:
+                        player.change_priority(1)
+        signed_role = ctx.guild.get_role(event.signup_role)
+        if not results_channel:
+            await ctx.send(content=f"{signed_role.mention} RNG results:",
+                           embed=results_embed)
+        else:
+            await results_channel.send(content=f"{get(ctx.guild.roles, name=SIGNED_ROLE_NAME).mention} RNG results:",
+                                       embed=results_embed)
+            await success_embed(ctx, f"Sent results embed to {results_channel}")
+
+        if selected_players:
+            tag_str = ""
+            for signup in selected_players:
+                user = self.bot.get_user(signup.user_id)
+                player = Player.exists_discord_id(signup.user_id)
+                tag_str += f"@{user} ({player.minecraft_username if player else 'Unregistered'})\n"
+            await self.bot_channel.send(f"{ctx.author.mention} here is a list of tags to make the setroles process easy."
+                                        f"\n```{tag_str}```")
+        else:
+            await error_embed(ctx, "No players were selected")
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
     async def setroles(self, ctx):
@@ -467,12 +508,14 @@ class EventCommands(Cog, name="Event Commands"):
                 if len(members) > 0:
                     if len(response.role_mentions) == 1:
                         role = response.role_mentions[0]
-                        server = ctx.message.guild
+                        server = ctx.guild
                         bot_member = server.get_member(self.bot.user.id)
 
                         if bot_member.top_role.position <= role.position:
                             await error_embed(ctx, "This role is too high to be set by the bot. Please enter a "
                                                    "different role.")
+                        elif ctx.author.top_role.position <= role.position:
+                            await error_embed(ctx, "You cannot give others this role")
                         else:
                             roles_dict[role] = members
                     else:
@@ -497,6 +540,7 @@ class EventCommands(Cog, name="Event Commands"):
                         ])
     async def postpone(self, ctx, event_id, minutes, hours=0, days=0):
         """Postpones an event"""
+        await ctx.defer()
         if not has_permissions(ctx, MOD_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
@@ -514,8 +558,8 @@ class EventCommands(Cog, name="Event Commands"):
         signup_deadline = datetime.fromisoformat(event.get_signup_deadline())
         new_event_time = event_time + postpone_amount
         new_signup_deadline = signup_deadline + postpone_amount
-        now = datetime.now(timezone('EST'))
-        if datetime.now(timezone('EST')) >= new_event_time + timedelta(minutes=5):
+        now = datetime.now(timezone(TIMEZONE))
+        if datetime.now(timezone(TIMEZONE)) >= new_event_time + timedelta(minutes=5):
             await error_embed(ctx, "You must postpone the event to a time at least 5 minutes away from now")
             return
         if new_signup_deadline < now + timedelta(minutes=1):
@@ -530,15 +574,16 @@ class EventCommands(Cog, name="Event Commands"):
         event.set_is_signup_active(True)
         event.update()
         embed = announcement_message.embeds[0]
-        embed.description = f"**Time:**\n{get_embed_time_string(new_event_time)}\n\n**Signup Deadline:**" \
+        new_time_string = get_embed_time_string(new_event_time)
+        embed.description = f"**Time:**\n{new_time_string}\n\n**Signup Deadline:**" \
                             f"\n{get_embed_time_string(new_signup_deadline)}\n\n{event.description}\n\nReact with ✅ to play" \
                             f"\nReact with 🔇 if you cannot speak\nReact with 🛗 if you are able to sub"
         embed.title += " (POSTPONED)" if "(POSTPONED)" not in embed.title else ""
         signup_role = ctx.guild.get_role(event.signup_role)
         await announcement_message.edit(embed=embed)
         await announcement_channel.send(f"{signup_role.mention} **{event.title}** has been **postponed** to"
-                                        f" **{get_embed_time_string(new_event_time)} (EST)**")
-        await success_embed(ctx, f"**{event.title}** has been **postponed** to **{get_embed_time_string(new_event_time)}"
+                                        f" **{new_time_string} (EST)**")
+        await success_embed(ctx, f"**{event.title}** has been **postponed** to **{new_time_string}"
                                  f" (EST)**")
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
@@ -573,3 +618,67 @@ class EventCommands(Cog, name="Event Commands"):
             info_embed.description += f"\n[**{event.title}**]({announcement_url}) `{event.time_est}`\n> `{event.event_id}`\n" \
                                       f"> Active: **{str(event.is_active) + (' 🟢' if event.is_active else ' 🔴')}**"
         await ctx.send(embed=info_embed)
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS,
+                    options=[
+                        mc.create_option(name="mode", description="Whether to set or change elo",
+                                         option_type=3, required=True,
+                                         choices=[mc.create_choice(name="change", value="change"),
+                                                  mc.create_choice(name="set", value="set")]),
+                        mc.create_option(name="amount", description="Positive or negative number",
+                                         option_type=4, required=True),
+                        mc.create_option(name="role", description="The role to allocate elo to",
+                                         option_type=8, required=False),
+                        mc.create_option(name="user", description="The user to allocate elo to",
+                                         option_type=6, required=False),
+                        mc.create_option(name="send_channel", description="A channel to send the update embed to",
+                                         option_type=7, required=False),
+                    ])
+    async def elo(self, ctx, mode, amount, role=None, user=None, send_channel=None):
+        """
+        Allows PUG staff to allocate ELO following a match
+        """
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        input_members = []
+        changes_str = ""
+        unregistered_members = ""
+        server = ctx.guild
+        if role:
+            if role.members:
+                input_members += role.members
+            else:
+                await error_embed(ctx, "The specified role has no members")
+                return
+        if user:
+            input_members.append(server.get_member(user.id))
+        total_input = len(input_members)
+        for member in input_members:
+            try:
+                player = Player.from_discord_id(member.id)
+            except PlayerDoesNotExistError:
+                unregistered_members += f"{member.mention}\n"
+                total_input -= 1
+            else:
+                prev_elo = player.get_elo()
+                if mode == "set":
+                    if player.set_elo(amount):
+                        changes_str += f"{member.mention} `{prev_elo}` → `{player.get_elo()}`\n"
+                    else:
+                        await error_embed(ctx, "Could not set ELO to that value")
+                        return
+                elif mode == "change":
+                    player.change_elo(amount)
+                    changes_str += f"{member.mention} `{prev_elo} → {player.get_elo()}`\n"
+        summary = Embed(title="Summary of ELO changes", color=Colour.dark_purple())
+        if changes_str:
+            summary.add_field(name=f"ELO changes: ({total_input})", value=changes_str)
+        else:
+            summary.description = "No changes were made to ELO"
+        if unregistered_members:
+            summary.add_field(name="Unregistered members:", inline=False,
+                              value=f"The following players need to register to receive ELO:\n{unregistered_members}")
+        await ctx.send(embed=summary)
+        if send_channel:
+            await send_channel.send(embed=summary)
