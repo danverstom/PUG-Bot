@@ -162,7 +162,8 @@ class GameCommands(Cog, name="CTF Commands"):
                             response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
                         except TimeoutError:
                             self.in_progress = False
-                            await round_message.reply("Game timed out; you took too long to answer. "
+                            await round_message.reply(f"Game timed out; you took too long to answer. "
+                                                      f"The player was **{random_ign}**. "
                                                       "Start a new game to play again.")
                             return
                         content = response.content.lower()
