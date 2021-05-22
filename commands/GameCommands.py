@@ -85,16 +85,21 @@ class GameCommands(Cog, name="CTF Commands"):
         with open("utils/maps.json") as file:
             maps = load(file)
         map_names = maps.keys()
-        random_map_filename = choice(listdir(self.maps_dir))
 
         self.in_progress = True
         winners = []
         await ctx.send("Welcome to Game of Maps! Respond with `>[map_name]` to guess the map.")
         for round_num in range(1, 6):
             while True:
-                random_map_filename = choice(listdir(self.maps_dir))
-                path, map_id = self.maps_dir + random_map_filename, int(random_map_filename.split(" ")[0])
-                file = File(path, filename="random_map.jpg")
+                map_name = choice(list(map_names))
+                map_id = maps[map_name]
+                if not get_close_matches(str(map_id), listdir(self.maps_dir)): #Skip maps without screenshots
+                    continue
+                map_img_path = self.maps_dir + choice(get_close_matches(str(map_id) + " (", listdir(self.maps_dir), 10))
+                print(get_close_matches(str(map_id) + " (", listdir(self.maps_dir), 10))
+
+                print(map_name, map_id, map_img_path)
+                file = File(map_img_path, filename="random_map.jpg")
                 round_message = await ctx.send(content=f"Round {round_num}:", file=file)
                 guessed = False
                 n_guesses = 0
