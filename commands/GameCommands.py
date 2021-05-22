@@ -12,6 +12,7 @@ from os import listdir
 from random import choice, shuffle, random, seed
 from json import load
 from difflib import get_close_matches
+from re import match
 
 
 # Slash commands support
@@ -93,12 +94,15 @@ class GameCommands(Cog, name="CTF Commands"):
             while True:
                 map_name = choice(list(map_names))
                 map_id = maps[map_name]
-                if not get_close_matches(str(map_id), listdir(self.maps_dir)): #Skip maps without screenshots
-                    continue
-                map_img_path = self.maps_dir + choice(get_close_matches(str(map_id) + " (", listdir(self.maps_dir), 10))
-                print(get_close_matches(str(map_id) + " (", listdir(self.maps_dir), 10))
+                expr = rf"^({map_id} \(\d{{1,2}}\).jpg)"  #Regex for dupe screenshots
 
+                if not list(filter(lambda v: match(expr, v), listdir(self.maps_dir))): #Skip maps without screenshots
+                    continue
+
+                all_imgs = list(filter(lambda v: match(expr, v), listdir(self.maps_dir))) #Returns list with all regex matches
+                map_img_path = self.maps_dir + choice(all_imgs)
                 print(map_name, map_id, map_img_path)
+
                 file = File(map_img_path, filename="random_map.jpg")
                 round_message = await ctx.send(content=f"Round {round_num}:", file=file)
                 guessed = False
