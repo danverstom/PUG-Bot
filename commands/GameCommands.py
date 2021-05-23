@@ -70,8 +70,10 @@ class GameCommands(Cog, name="CTF Commands"):
         else:
             return False
 
-    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
-    async def gameofmaps(self, ctx):
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[
+        manage_commands.create_option(name="streak", description="Play a game of streaks",
+                                      required=False, option_type=5)])
+    async def gameofmaps(self, ctx, streak=False):
         """Compete with other players and show off your map knowledge!"""
         if self.in_progress:
             await error_embed(ctx, "There is already a game in progress")
@@ -89,6 +91,56 @@ class GameCommands(Cog, name="CTF Commands"):
 
         self.in_progress = True
         winners = []
+
+        if streak:
+            round_num = 0
+            await ctx.send("Welcome to Game of Maps **Streak**! Respond with `>[map_name]` to guess the map, and get as many consecutive right guesses as possible.")
+            while True:
+                map_name = choice(list(map_names))
+                map_id = maps[map_name]
+                expr = rf"^({map_id} \(\d{{1,2}}\).jpg)"  # Regex for dupe screenshots
+
+                if not list(filter(lambda v: match(expr, v), listdir(self.maps_dir))):  # Skip maps without screenshots
+                    continue
+                round_num+=1
+                all_imgs = list(filter(lambda v: match(expr, v), listdir(self.maps_dir)))  # Returns list with all regex matches
+                map_img_path = self.maps_dir + choice(all_imgs)
+                print(map_name, map_id, map_img_path)
+
+                file = File(map_img_path, filename="random_map.jpg")
+                round_message = await ctx.send(content=f"**Round {round_num}**:", file=file)
+                try:
+                    response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
+                except TimeoutError:
+                    self.in_progress = False
+                    await round_message.reply("Game timed out; you took too long to answer. "
+                                              "Start a new game to play again.")
+                    return
+                content = response.content.lower()
+                if content.startswith(">"):
+                    map_guess = get_close_matches(content.strip(">"), map_names)
+                    if map_guess:
+                        if maps[map_guess[0]] == map_id:
+                            await response.add_reaction("✅")
+                            await response.reply(f"You guessed correctly! ({map_guess[0]})")
+                            winners.append(response.author)
+                        else:
+                            await response.add_reaction("❌")
+                            self.in_progress = False
+                            await ctx.send (f"Wrong guess. Game finished. You lost at **Round {round_num}.**")
+                            if winners:
+                                await ctx.send("Thanks for playing " +
+                                               " ".join(list(set(winner.mention for winner in winners))))
+                            return
+                    else:
+                        await response.add_reaction("❌")
+                        self.in_progress = False
+                        await ctx.send(f"Wrong guess. Game finished. You lost at **Round {round_num}.**")
+                        if winners:
+                            await ctx.channel.send("Thanks for playing " +
+                                           " ".join(list(set(winner.mention for winner in winners))))
+                        return
+
         await ctx.send("Welcome to Game of Maps! Respond with `>[map_name]` to guess the map.")
         for round_num in range(1, 6):
             while True:
