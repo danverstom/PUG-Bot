@@ -13,6 +13,8 @@ from random import choice, shuffle, random, seed
 from json import load
 from difflib import get_close_matches
 from re import match
+from PIL import Image, ImageFilter
+from io import BytesIO
 
 
 # Slash commands support
@@ -70,8 +72,11 @@ class GameCommands(Cog, name="CTF Commands"):
         else:
             return False
 
-    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
-    async def gameofmaps(self, ctx):
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, name="gameofmaps", description="Compete with other players and show off your map knowledge!",
+               options=[manage_commands.create_option(name="hard",
+                                                      description="Blurred images",
+                                                      option_type=5, required=False)])
+    async def gameofmaps(self, ctx, hard=False):
         """Compete with other players and show off your map knowledge!"""
         if self.in_progress:
             await error_embed(ctx, "There is already a game in progress")
@@ -102,8 +107,14 @@ class GameCommands(Cog, name="CTF Commands"):
                 all_imgs = list(filter(lambda v: match(expr, v), listdir(self.maps_dir))) #Returns list with all regex matches
                 map_img_path = self.maps_dir + choice(all_imgs)
                 print(map_name, map_id, map_img_path)
-
                 file = File(map_img_path, filename="random_map.jpg")
+                if hard:
+                    OriImage = Image.open(map_img_path)
+                    gaussImg = OriImage.filter(ImageFilter.GaussianBlur(40))
+                    with BytesIO() as image_binary:
+                        gaussImg.save(image_binary, 'PNG', quality=20, optimize=True)
+                        image_binary.seek(0)
+                        file = File(fp=image_binary, filename='image.png')
                 round_message = await ctx.send(content=f"Round {round_num}:", file=file)
                 guessed = False
                 n_guesses = 0
