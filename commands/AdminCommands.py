@@ -56,15 +56,16 @@ class AdminCommands(Cog, name="Admin Commands"):
 
     @cog_slash(name="restart", description="Restarts the bot",
                guild_ids=SLASH_COMMANDS_GUILDS,
-               options=[manage_commands.create_option(name="remove_commands",
-                                                      option_type=5,
-                                                      description="if true, remove commands before restart",
-                                                      required=False),
+               options=[
                manage_commands.create_option(name="pull_changes",
                                              option_type=5,
                                              description="if true, pull the latest changes from github",
+                                             required=False),
+               manage_commands.create_option(name="remove_commands",
+                                             option_type=5,
+                                             description="if true, remove commands before restart",
                                              required=False)])
-    async def restart(self, ctx, remove_commands=False, pull_changes=False):
+    async def restart(self, ctx, pull_changes=False, remove_commands=False):
         if not has_permissions(ctx, ADMIN_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
