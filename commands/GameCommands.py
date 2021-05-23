@@ -105,7 +105,6 @@ class GameCommands(Cog, name="CTF Commands"):
                 round_num+=1
                 all_imgs = list(filter(lambda v: match(expr, v), listdir(self.maps_dir)))  # Returns list with all regex matches
                 map_img_path = self.maps_dir + choice(all_imgs)
-                print(map_name, map_id, map_img_path)
 
                 file = File(map_img_path, filename="random_map.jpg")
                 round_message = await ctx.send(content=f"**Round {round_num}**:", file=file)
@@ -114,6 +113,7 @@ class GameCommands(Cog, name="CTF Commands"):
                 except TimeoutError:
                     self.in_progress = False
                     await round_message.reply("Game timed out; you took too long to answer. "
+                                              f"Map was {map_name}. "
                                               "Start a new game to play again.")
                     return
                 content = response.content.lower()
@@ -127,7 +127,9 @@ class GameCommands(Cog, name="CTF Commands"):
                         else:
                             await response.add_reaction("❌")
                             self.in_progress = False
-                            await ctx.send (f"Wrong guess. Game finished. You lost at **Round {round_num}.**")
+                            await ctx.send (f"Wrong guess. Game finished. "
+                                            f"Map was {map_name}. "
+                                            f"You lost at **Round {round_num}.**")
                             if winners:
                                 await ctx.send("Thanks for playing " +
                                                " ".join(list(set(winner.mention for winner in winners))))
@@ -135,7 +137,9 @@ class GameCommands(Cog, name="CTF Commands"):
                     else:
                         await response.add_reaction("❌")
                         self.in_progress = False
-                        await ctx.send(f"Wrong guess. Game finished. You lost at **Round {round_num}.**")
+                        await ctx.send(f"Wrong guess. Game finished. "
+                                            f"Map was {map_name}. "
+                                            f"You lost at **Round {round_num}.**")
                         if winners:
                             await ctx.channel.send("Thanks for playing " +
                                            " ".join(list(set(winner.mention for winner in winners))))
@@ -153,7 +157,6 @@ class GameCommands(Cog, name="CTF Commands"):
 
                 all_imgs = list(filter(lambda v: match(expr, v), listdir(self.maps_dir))) #Returns list with all regex matches
                 map_img_path = self.maps_dir + choice(all_imgs)
-                print(map_name, map_id, map_img_path)
 
                 file = File(map_img_path, filename="random_map.jpg")
                 round_message = await ctx.send(content=f"Round {round_num}:", file=file)
@@ -165,6 +168,7 @@ class GameCommands(Cog, name="CTF Commands"):
                     except TimeoutError:
                         self.in_progress = False
                         await round_message.reply("Game timed out; you took too long to answer. "
+                                                  f"Map was {map_name}. "
                                                   "Start a new game to play again.")
                         return
                     content = response.content.lower()
