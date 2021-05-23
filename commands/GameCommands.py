@@ -15,8 +15,7 @@ from difflib import get_close_matches
 from re import match
 from PIL import Image, ImageFilter
 from io import BytesIO
-import time
-
+from time import time
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
 from utils.config import SLASH_COMMANDS_GUILDS
@@ -96,7 +95,7 @@ class GameCommands(Cog, name="CTF Commands"):
         await ctx.send("Welcome to Game of Maps! Respond with `>[map_name]` to guess the map.")
         for round_num in range(1, 6):
             while True:
-                start_time = time.time()
+                start_time = time()
                 map_name = choice(list(map_names))
                 map_id = maps[map_name]
                 expr = rf"^({map_id} \(\d{{1,2}}\).jpg)"  #Regex for dupe screenshots
@@ -110,17 +109,17 @@ class GameCommands(Cog, name="CTF Commands"):
                 file = File(map_img_path, filename="random_map.jpg")
                 if hard:
                     OriImage = Image.open(map_img_path)
-                    print(f"Opened image in {time.time() - start_time}s")
+                    print(f"Opened image in {time() - start_time}s")
                     gaussImg = OriImage.filter(ImageFilter.GaussianBlur(40))
-                    print(f"Blurred image in {time.time() - start_time}s")
+                    print(f"Blurred image in {time() - start_time}s")
                     with BytesIO() as image_binary:
                         gaussImg.save(image_binary, 'PNG', quality=20, optimize=True)
-                        print(f"Saved image in {time.time() - start_time}s")
+                        print(f"Saved image in {time() - start_time}s")
                         image_binary.seek(0)
-                        print(f"Seeked image in {time.time() - start_time}s")
+                        print(f"Seeked image in {time() - start_time}s")
                         file = File(fp=image_binary, filename='image.png')
                 round_message = await ctx.send(content=f"Round {round_num}:", file=file)
-                print(f"Sent image in {time.time() - start_time}s")
+                print(f"Sent image in {time() - start_time}s")
                 guessed = False
                 n_guesses = 0
                 while not guessed:
