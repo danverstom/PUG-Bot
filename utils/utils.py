@@ -112,7 +112,32 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                 embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
                 await message.edit(embed=embed)
                 await message.remove_reaction(reaction, user)
+            elif str(reaction.emoji) == "▶" and current_page == num_pages: #Jump from last page to first page
+                current_page = 1
+                embed = Embed(title=title, description=contents[current_page - 1],
+                              colour=Colour.dark_purple())
 
+                if thumbnails:
+                    if len(thumbnails) == 1:
+                        embed.set_thumbnail(url=thumbnails[0])
+                    else:
+                        embed.set_thumbnail(url=thumbnails[current_page - 1])
+                embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
+                await message.edit(embed=embed)
+                await message.remove_reaction(reaction, user)
+            elif str(reaction.emoji) == "◀" and current_page == 1: #Jump from first page to last page
+                current_page = num_pages
+                embed = Embed(title=title, description=contents[current_page - 1],
+                              colour=Colour.dark_purple())
+
+                if thumbnails:
+                    if len(thumbnails) == 1:
+                        embed.set_thumbnail(url=thumbnails[0])
+                    else:
+                        embed.set_thumbnail(url=thumbnails[current_page - 1])
+                embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
+                await message.edit(embed=embed)
+                await message.remove_reaction(reaction, user)
             elif str(reaction.emoji) == "◀" and current_page > 1:
                 current_page -= 1
                 embed = Embed(title=title, description=contents[current_page - 1],

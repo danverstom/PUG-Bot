@@ -12,6 +12,7 @@ from os import listdir
 from random import choice, shuffle, random, seed
 from json import load
 from difflib import get_close_matches
+from re import match
 
 
 # Slash commands support
@@ -69,8 +70,10 @@ class GameCommands(Cog, name="CTF Commands"):
         else:
             return False
 
-    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
-    async def gameofmaps(self, ctx):
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[
+        manage_commands.create_option(name="streak", description="Play a game of streaks",
+                                      required=False, option_type=5)])
+    async def gameofmaps(self, ctx, streak=False):
         """Compete with other players and show off your map knowledge!"""
         if self.in_progress:
             await error_embed(ctx, "There is already a game in progress")
@@ -85,16 +88,77 @@ class GameCommands(Cog, name="CTF Commands"):
         with open("utils/maps.json") as file:
             maps = load(file)
         map_names = maps.keys()
-        random_map_filename = choice(listdir(self.maps_dir))
 
         self.in_progress = True
         winners = []
+
+        if streak:
+            round_num = 0
+            await ctx.send("Welcome to Game of Maps **Streak**! Respond with `>[map_name]` to guess the map, and get as many consecutive right guesses as possible.")
+            while True:
+                map_name = choice(list(map_names))
+                map_id = maps[map_name]
+                expr = rf"^({map_id} \(\d{{1,2}}\).jpg)"  # Regex for dupe screenshots
+
+                if not list(filter(lambda v: match(expr, v), listdir(self.maps_dir))):  # Skip maps without screenshots
+                    continue
+                round_num+=1
+                all_imgs = list(filter(lambda v: match(expr, v), listdir(self.maps_dir)))  # Returns list with all regex matches
+                map_img_path = self.maps_dir + choice(all_imgs)
+
+                file = File(map_img_path, filename="random_map.jpg")
+                round_message = await ctx.send(content=f"**Round {round_num}**:", file=file)
+                try:
+                    response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
+                except TimeoutError:
+                    self.in_progress = False
+                    await round_message.reply("Game timed out; you took too long to answer. "
+                                              f"Map was {map_name}. "
+                                              "Start a new game to play again.")
+                    return
+                content = response.content.lower()
+                if content.startswith(">"):
+                    map_guess = get_close_matches(content.strip(">"), map_names)
+                    if map_guess:
+                        if maps[map_guess[0]] == map_id:
+                            await response.add_reaction("✅")
+                            await response.reply(f"You guessed correctly! ({map_guess[0]})")
+                            winners.append(response.author)
+                        else:
+                            await response.add_reaction("❌")
+                            self.in_progress = False
+                            await ctx.send (f"Wrong guess. Game finished. "
+                                            f"Map was {map_name}. "
+                                            f"You lost at **Round {round_num}.**")
+                            if winners:
+                                await ctx.send("Thanks for playing " +
+                                               " ".join(list(set(winner.mention for winner in winners))))
+                            return
+                    else:
+                        await response.add_reaction("❌")
+                        self.in_progress = False
+                        await ctx.send(f"Wrong guess. Game finished. "
+                                            f"Map was {map_name}. "
+                                            f"You lost at **Round {round_num}.**")
+                        if winners:
+                            await ctx.channel.send("Thanks for playing " +
+                                           " ".join(list(set(winner.mention for winner in winners))))
+                        return
+
         await ctx.send("Welcome to Game of Maps! Respond with `>[map_name]` to guess the map.")
         for round_num in range(1, 6):
             while True:
-                random_map_filename = choice(listdir(self.maps_dir))
-                path, map_id = self.maps_dir + random_map_filename, int(random_map_filename.split(" ")[0])
-                file = File(path, filename="random_map.jpg")
+                map_name = choice(list(map_names))
+                map_id = maps[map_name]
+                expr = rf"^({map_id} \(\d{{1,2}}\).jpg)"  #Regex for dupe screenshots
+
+                if not list(filter(lambda v: match(expr, v), listdir(self.maps_dir))): #Skip maps without screenshots
+                    continue
+
+                all_imgs = list(filter(lambda v: match(expr, v), listdir(self.maps_dir))) #Returns list with all regex matches
+                map_img_path = self.maps_dir + choice(all_imgs)
+
+                file = File(map_img_path, filename="random_map.jpg")
                 round_message = await ctx.send(content=f"Round {round_num}:", file=file)
                 guessed = False
                 n_guesses = 0
@@ -104,6 +168,7 @@ class GameCommands(Cog, name="CTF Commands"):
                     except TimeoutError:
                         self.in_progress = False
                         await round_message.reply("Game timed out; you took too long to answer. "
+                                                  f"Map was {map_name}. "
                                                   "Start a new game to play again.")
                         return
                     content = response.content.lower()
@@ -162,7 +227,8 @@ class GameCommands(Cog, name="CTF Commands"):
                             response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
                         except TimeoutError:
                             self.in_progress = False
-                            await round_message.reply("Game timed out; you took too long to answer. "
+                            await round_message.reply(f"Game timed out; you took too long to answer. "
+                                                      f"The player was **{random_ign}**. "
                                                       "Start a new game to play again.")
                             return
                         content = response.content.lower()

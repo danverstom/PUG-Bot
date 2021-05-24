@@ -158,7 +158,7 @@ class EventCommands(Cog, name="Event Commands"):
                     signups = Signup.fetch_signups_list(event.event_id)
                 num_signups = len(list(filter(lambda sign: sign.can_play, signups)))
 
-                embed.description += f"\n\n**This event is no longer active**\n_({num_signups} signups)_\n"
+                embed.description += f"\n\n**This event is no longer active.**\n_({num_signups} signups)_\n"
                 embed.color = Colour.default()
                 await message.edit(embed=embed)
                 await message.clear_reactions()
@@ -782,7 +782,11 @@ class EventCommands(Cog, name="Event Commands"):
             embed = message.embeds[0]
             embed.description = embed.description.rsplit("\n", 4)[
                 0]  # Getting rid of the last three lines of the description "React if you can.."
-            embed.description += "\n\n**This event was cancelled.**\n"
+            signups = self.signups.setdefault(event.event_id)
+            if not signups:
+                signups = Signup.fetch_signups_list(event.event_id)
+            num_signups = len(list(filter(lambda sign: sign.can_play, signups)))
+            embed.description += f"\n\n**This event was cancelled.**\n_({num_signups} signups)_\n"
             embed.color = Colour.default()
             await message.edit(embed=embed)
             await message.clear_reactions()
