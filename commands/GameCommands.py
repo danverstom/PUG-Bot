@@ -12,7 +12,7 @@ from os import listdir
 from random import choice, shuffle, random, seed
 from json import load
 from difflib import get_close_matches
-from re import match, sub
+from re import match
 
 
 # Slash commands support
@@ -31,7 +31,7 @@ class GameCommands(Cog, name="CTF Commands"):
         self.in_progress = False
         self.maps_dir = "assets/map_closeups/"
         self.timeout = 300
-        self.repost_guesses = 5
+        self.repost_guesses = 10
 
     @Cog.listener('on_message')
     async def pokemon_easteregg(self, message):
