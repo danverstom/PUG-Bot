@@ -78,10 +78,6 @@ class GameCommands(Cog, name="CTF Commands"):
         if self.in_progress:
             await error_embed(ctx, "There is already a game in progress")
             return
-        if not has_permissions(ctx, ADMIN_ROLE):
-            await ctx.send("Game of maps is temporarily disabled to due changed rotation (code requires rewrite)")
-            return False
-
         def check(message):
             return message.content.startswith(">") and message.channel == ctx.channel
 
