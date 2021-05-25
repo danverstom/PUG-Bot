@@ -12,7 +12,7 @@ from os import listdir
 from random import choice, shuffle, random, seed
 from json import load
 from difflib import get_close_matches
-from re import match
+from re import match, sub
 
 
 # Slash commands support
@@ -31,7 +31,7 @@ class GameCommands(Cog, name="CTF Commands"):
         self.in_progress = False
         self.maps_dir = "assets/map_closeups/"
         self.timeout = 300
-        self.repost_guesses = 10
+        self.repost_guesses = 5
 
     @Cog.listener('on_message')
     async def pokemon_easteregg(self, message):
@@ -103,7 +103,7 @@ class GameCommands(Cog, name="CTF Commands"):
                 map_img_path = self.maps_dir + choice(all_imgs)
 
                 file = File(map_img_path, filename="random_map.jpg")
-                round_message = await ctx.send(content=f"**Round {round_num}**:", file=file)
+                round_message = await ctx.channel.send(content=f"**Round {round_num}**:", file=file)
                 try:
                     response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
                 except TimeoutError:
@@ -123,17 +123,17 @@ class GameCommands(Cog, name="CTF Commands"):
                         else:
                             await response.add_reaction("❌")
                             self.in_progress = False
-                            await ctx.send (f"Wrong guess. Game finished. "
+                            await ctx.channel.send (f"Wrong guess. Game finished. "
                                             f"Map was {map_name}. "
                                             f"You lost at **Round {round_num}.**")
                             if winners:
-                                await ctx.send("Thanks for playing " +
+                                await ctx.channel.send("Thanks for playing " +
                                                " ".join(list(set(winner.mention for winner in winners))))
                             return
                     else:
                         await response.add_reaction("❌")
                         self.in_progress = False
-                        await ctx.send(f"Wrong guess. Game finished. "
+                        await ctx.channel.send(f"Wrong guess. Game finished. "
                                             f"Map was {map_name}. "
                                             f"You lost at **Round {round_num}.**")
                         if winners:
@@ -155,7 +155,7 @@ class GameCommands(Cog, name="CTF Commands"):
                 map_img_path = self.maps_dir + choice(all_imgs)
 
                 file = File(map_img_path, filename="random_map.jpg")
-                round_message = await ctx.send(content=f"Round {round_num}:", file=file)
+                round_message = await ctx.channel.send(content=f"Round {round_num}:", file=file)
                 guessed = False
                 n_guesses = 0
                 while not guessed:
@@ -164,7 +164,7 @@ class GameCommands(Cog, name="CTF Commands"):
                     except TimeoutError:
                         self.in_progress = False
                         await round_message.reply("Game timed out; you took too long to answer. "
-                                                  f"Map was {map_name}. "
+                                                  f"Map was **{map_name}**. "
                                                   "Start a new game to play again.")
                         return
                     content = response.content.lower()
@@ -186,10 +186,10 @@ class GameCommands(Cog, name="CTF Commands"):
                         n_guesses += 1
                 break
         if winners:
-            await ctx.send("Game finished! Congratulations to the winners - " +
+            await ctx.channel.send("Game finished! Congratulations to the winners - " +
                            " ".join(list(set(winner.mention for winner in winners))))
         else:
-            await ctx.send("Game of Stats finished!")
+            await ctx.channel.send("Game of Stats finished!")
         self.in_progress = False
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
@@ -215,7 +215,7 @@ class GameCommands(Cog, name="CTF Commands"):
                 all_names = [item["name"].lower() for item in names_dict]
                 pie_file = await self.comp_playtime_pie(random_ign)
                 if pie_file:
-                    round_message = await ctx.send(content=f"Round {round_num}:", file=pie_file)
+                    round_message = await ctx.channel.send(content=f"Round {round_num}:", file=pie_file)
                     guessed = False
                     n_guesses = 0
                     while not guessed:
@@ -243,15 +243,15 @@ class GameCommands(Cog, name="CTF Commands"):
                     break
                 else:
                     if attempts > 5:
-                        ctx.send("There were errors getting stats or generating pie charts")
+                        ctx.channel.send("There were errors getting stats or generating pie charts")
                         return
                     attempts += 1
                     continue
         if winners:
-            await ctx.send("Game finished! Congratulations to the winners - " +
+            await ctx.channel.send("Game finished! Congratulations to the winners - " +
                            " ".join(list(set(winner.mention for winner in winners))))
         else:
-            await ctx.send("Game of Stats finished!")
+            await ctx.channel.send("Game of Stats finished!")
         self.in_progress = False
 
 
