@@ -113,6 +113,9 @@ class Player:
         self.discord_id = discord_id
         return True
 
+    def is_striked(self):
+        return bool(get_active_strikes(self.discord_id))
+
     @classmethod
     def add_player(cls, minecraft_id, discord_id, priority=0, elo=1000):
         minecraft_username = MojangAPI.get_username(minecraft_id)
