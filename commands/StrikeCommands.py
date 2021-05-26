@@ -66,6 +66,9 @@ class StrikeCommands(Cog, name="Strike Commands"):
                    ),
                ], guild_ids=SLASH_COMMANDS_GUILDS)
     async def strike(self, ctx, user: User, reason: str):
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
         duration_days = calculate_new_strike_duration(user.id)
         time_now = datetime.now(timezone(TIMEZONE))
         expiry_date = time_now + timedelta(days=duration_days)
