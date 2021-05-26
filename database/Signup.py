@@ -1,6 +1,6 @@
 from database.database import add_signup, check_signups_user_event, fetch_signups_user_event, \
     fetch_signups_list_event_id, delete_signup, update_signups_can_play, update_signups_is_muted, update_signups_can_sub
-
+from database.strikes import get_active_user_strikes
 
 class SignupAlreadyExistsError(Exception):
     """Exception raised when signup is already in the database"""
@@ -68,6 +68,9 @@ class Signup:
 
     def is_unsigned(self):
         return not self.can_play and not self.can_sub
+
+    def is_striked(self):
+        return bool(get_active_user_strikes(self.user_id))
 
     @classmethod
     def create_signup(cls, user_id, event_id, can_play=False, is_muted=False, can_sub=False):

@@ -6,6 +6,8 @@ from discord.ext.commands import Cog
 from discord.utils import get
 from discord_slash.cog_ext import cog_slash, cog_subcommand
 from discord_slash.utils import manage_commands as mc
+from discord.errors import Forbidden
+
 
 from utils.config import *
 from utils.event_util import get_event_time, check_if_cancel, announce_event, reaction_changes, save_signups, \
@@ -206,6 +208,26 @@ class EventCommands(Cog, name="Event Commands"):
 
             [signups, change] = reaction_changes(signups, can_play_users, is_muted_users, can_sub_users, event.event_id)
             if change:
+                # Determine which signups are striked
+                striked_signups = list(filter(lambda signup: signup.is_striked(), signups))
+                logging.info(f"Striked signups: {len(striked_signups)}")
+
+                # Create new filtered signups list
+                signups = list(filter(lambda signup: not signup.is_striked(), signups))
+                logging.info(f"Regular signups: {len(signups)}")
+
+                # Remove reactions from striked users & send them DMs
+                striked_user_ids = [signup.user_id for signup in striked_signups]
+                for reaction in reactions:  # Iterate through all reactions
+                    if reaction.emoji in ["✅", "🔇", "🛗"]:  # Check to see if the emoji is event related
+                        users = await reaction.users().flatten()  # See docs https://discordpy.readthedocs.io/en/stable/api.html?highlight=remove_reaction#discord.Reaction.users
+                        for user in users:  # Loop through all users who reacted
+                            if user.id in striked_user_ids:  # Check to see if the users are striked
+                                # Remove the reaction and log it 
+                                logging.info(f"{event.title}: Removing reaction {reaction.emoji} {user.name}")
+                                await reaction.remove(user)
+
+
                 logging.info(f"{event.title}: Reaction change detected")
                 save_signups(self.signups[event.event_id], signups)
                 logging.info(f"{event.title}: Signups saved")
