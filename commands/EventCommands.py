@@ -242,7 +242,7 @@ class EventCommands(Cog, name="Event Commands"):
                         logging.info(f"{event.title}: Removed role {signup_role.name} from {member}")
                 reaction_member_ids = [member.id for member in signup_role.members]
                 for user_id in can_play_users:
-                    if user_id not in reaction_member_ids:
+                    if user_id not in reaction_member_ids and user_id not in striked_user_ids:
                         member = guild.get_member(user_id)
                         if member is None:
                             continue

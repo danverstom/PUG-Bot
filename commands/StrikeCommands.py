@@ -201,7 +201,7 @@ class StrikeCommands(Cog, name="Strike Commands"):
                     )
                 except Forbidden:
                     logging.info(f"Could not send DM to {user.name} about their strike")
-            elif strike_expiry_date + timedelta(months=1) <= time_now:  # Strikes get deleted 1 month after expiry date
+            elif strike_expiry_date + timedelta(days=30) <= time_now:  # Strikes get deleted 30 days after expiry date
                 remove_strike(strike[0])
                 user = self.bot.get_user(strike[1])
                 await response_embed(
