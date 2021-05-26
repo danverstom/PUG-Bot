@@ -6,6 +6,8 @@ from database.database import fetch_players_minecraft_id, fetch_players_minecraf
     fetch_players_list_discord_id, update_players_priority, update_players_elo, update_players_minecraft_username, \
     update_players_minecraft_id, update_players_discord_id, check_players_minecraft_id, check_players_discord_id, \
     add_player, delete_player, player_check
+from database.strikes import get_active_strikes
+
 
 
 class PlayerDoesNotExistError(Exception):
