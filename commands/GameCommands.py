@@ -33,6 +33,11 @@ class GameCommands(Cog, name="CTF Commands"):
         self.timeout = 300
         self.repost_guesses = 10
 
+    @tasks.loop(seconds=1)
+    async def bullet_countdown(self):
+        self.timeout -= 1
+        print(self.timeout)
+
     @Cog.listener('on_message')
     async def pokemon_easteregg(self, message):
         if message.content.startswith(';pokemon'):
@@ -72,8 +77,10 @@ class GameCommands(Cog, name="CTF Commands"):
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[
         manage_commands.create_option(name="streak", description="Play a game of streaks",
+                                      required=False, option_type=5),
+        manage_commands.create_option(name="bullet", description="Race against time",
                                       required=False, option_type=5)])
-    async def gameofmaps(self, ctx, streak=False):
+    async def gameofmaps(self, ctx, streak=False, bullet=False):
         """Compete with other players and show off your map knowledge!"""
         if self.in_progress:
             await error_embed(ctx, "There is already a game in progress")
@@ -88,6 +95,9 @@ class GameCommands(Cog, name="CTF Commands"):
         self.in_progress = True
         winners = []
 
+        if bullet:
+            self.timeout = 10
+
         if streak:
             round_num = 0
             await ctx.send("Welcome to Game of Maps **Streak**! Respond with `>[map_name]` to guess the map, and get as many consecutive right guesses as possible.")
@@ -95,7 +105,6 @@ class GameCommands(Cog, name="CTF Commands"):
                 map_name = choice(list(map_names))
                 map_id = maps[map_name]
                 expr = rf"^({map_id} \(\d{{1,2}}\).jpg)"  # Regex for dupe screenshots
-
                 if not list(filter(lambda v: match(expr, v), listdir(self.maps_dir))):  # Skip maps without screenshots
                     continue
                 round_num+=1
@@ -104,12 +113,15 @@ class GameCommands(Cog, name="CTF Commands"):
 
                 file = File(map_img_path, filename="random_map.jpg")
                 round_message = await ctx.channel.send(content=f"**Round {round_num}**:", file=file)
+                if bullet:
+                    self.bullet_countdown.start()
                 try:
                     response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
                 except TimeoutError:
                     self.in_progress = False
+                    self.bullet_countdown.cancel()
                     await round_message.reply("Game timed out; you took too long to answer. "
-                                              f"Map was {map_name}. "
+                                              f"Map was **{map_name}**. "
                                               "Start a new game to play again.")
                     return
                 content = response.content.lower()
@@ -120,26 +132,29 @@ class GameCommands(Cog, name="CTF Commands"):
                             await response.add_reaction("✅")
                             await response.reply(f"You guessed correctly! ({map_guess[0]})")
                             winners.append(response.author)
+                            if bullet:
+                                self.timeout += 4
+                                self.bullet_countdown.cancel()
                         else:
                             await response.add_reaction("❌")
                             self.in_progress = False
                             await ctx.channel.send (f"Wrong guess. Game finished. "
-                                            f"Map was {map_name}. "
+                                            f"Map was **{map_name}**. "
                                             f"You lost at **Round {round_num}.**")
                             if winners:
                                 await ctx.channel.send("Thanks for playing " +
                                                " ".join(list(set(winner.mention for winner in winners))))
-                            return
+                            return self.bullet_countdown.cancel() if bullet else False
                     else:
                         await response.add_reaction("❌")
                         self.in_progress = False
                         await ctx.channel.send(f"Wrong guess. Game finished. "
-                                            f"Map was {map_name}. "
+                                            f"Map was **{map_name}**. "
                                             f"You lost at **Round {round_num}.**")
                         if winners:
                             await ctx.channel.send("Thanks for playing " +
                                            " ".join(list(set(winner.mention for winner in winners))))
-                        return
+                        return self.bullet_countdown.cancel() if bullet else False
 
         await ctx.send("Welcome to Game of Maps! Respond with `>[map_name]` to guess the map.")
         for round_num in range(1, 6):
@@ -156,6 +171,8 @@ class GameCommands(Cog, name="CTF Commands"):
 
                 file = File(map_img_path, filename="random_map.jpg")
                 round_message = await ctx.channel.send(content=f"Round {round_num}:", file=file)
+                if bullet:
+                    self.bullet_countdown.start()
                 guessed = False
                 n_guesses = 0
                 while not guessed:
@@ -163,6 +180,7 @@ class GameCommands(Cog, name="CTF Commands"):
                         response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
                     except TimeoutError:
                         self.in_progress = False
+                        self.bullet_countdown.cancel()
                         await round_message.reply("Game timed out; you took too long to answer. "
                                                   f"Map was **{map_name}**. "
                                                   "Start a new game to play again.")
@@ -175,6 +193,9 @@ class GameCommands(Cog, name="CTF Commands"):
                                 await response.add_reaction("✅")
                                 await response.reply(f"You guessed correctly! ({map_guess[0]})")
                                 winners.append(response.author)
+                                if bullet:
+                                    self.timeout += 4
+                                    self.bullet_countdown.cancel()
                                 guessed = True
                             else:
                                 await response.add_reaction("❌")
@@ -191,6 +212,7 @@ class GameCommands(Cog, name="CTF Commands"):
         else:
             await ctx.channel.send("Game of Stats finished!")
         self.in_progress = False
+        return self.bullet_countdown.cancel() if bullet else False
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
     async def gameofstats(self, ctx):
@@ -253,5 +275,9 @@ class GameCommands(Cog, name="CTF Commands"):
         else:
             await ctx.channel.send("Game of Stats finished!")
         self.in_progress = False
+
+
+
+
 
 
