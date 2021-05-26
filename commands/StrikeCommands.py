@@ -12,14 +12,9 @@ from pytz import timezone
 from discord.errors import Forbidden
 from discord.ext import tasks
 
-
-# TODO: Create task loop which checks + updates strikes
-#       this should set is_active=False (needs another DB method) after the expiry period and then
-#       delete the record from the db entirely after a period of days defined in config.py
-
-# TODO: Add Player.is_striked() method
-# TODO: block striked players from signing up to events
 # TODO: Allocate + maintain "Striked" role to striked players (task loop)
+# TODO: Make commands / command names more intuitive
+# TODO: Make view strikes embed use fields
 
 def calculate_new_strike_duration(user_id):
     default_strike_days = 1
