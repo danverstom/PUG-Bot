@@ -112,7 +112,10 @@ class GameCommands(Cog, name="CTF Commands"):
                 map_img_path = self.maps_dir + choice(all_imgs)
 
                 file = File(map_img_path, filename="random_map.jpg")
-                round_message = await ctx.channel.send(content=f"**Round {round_num}**:", file=file)
+                round_message = await ctx.channel.send(content=f"**Round {round_num}**:", file=file) if not bullet else await ctx.channel.send(content=f"**Round {round_num}**:\n"
+                                                                                                                                                       f"You have **{self.timeout} seconds** left", file=file)
+
+
                 if bullet:
                     self.bullet_countdown.start()
                 try:
