@@ -17,21 +17,29 @@ conn.execute(
 conn.commit()
 c = conn.cursor()
 
-def get_active_strikes(user_id):
+def get_active_user_strikes(user_id):
     c.execute("SELECT * FROM strikes WHERE user_id = ? AND is_active = 1", (user_id,))
     return c.fetchall()
 
-def get_inactive_strikes(user_id):
+def get_inactive_user_strikes(user_id):
     c.execute("SELECT * FROM strikes WHERE user_id = ? AND is_active = 0", (user_id,))
     return c.fetchall()
 
-def get_all_strikes(user_id):
+def get_all_user_strikes(user_id):
     c.execute("SELECT * FROM strikes WHERE user_id = ?", (user_id,))
+    return c.fetchall()
+
+def get_all_strikes():
+    c.execute("SELECT * FROM strikes")
     return c.fetchall()
 
 def get_strike(id):
     c.execute("SELECT * FROM strikes WHERE strike_id = ?", (id,))
     return c.fetchone()
+
+def change_active_status(id, status):
+    c.execute("UPDATE strikes SET is_active = ? WHERE strike_id = ?", (status, id))
+    conn.commit()
 
 def add_strike(user_id, striked_by, striked_at, expiry_date, strike_reason):
     c.execute(

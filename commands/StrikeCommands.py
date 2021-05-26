@@ -9,6 +9,9 @@ from utils.event_util import get_embed_time_string
 from database.strikes import *
 from datetime import timedelta, datetime
 from pytz import timezone
+from discord.errors import Forbidden
+from discord.ext import tasks
+
 
 # TODO: Create task loop which checks + updates strikes
 #       this should set is_active=False (needs another DB method) after the expiry period and then
@@ -20,16 +23,34 @@ from pytz import timezone
 
 def calculate_new_strike_duration(user_id):
     default_strike_days = 1
-    total_strikes = len(get_all_strikes(user_id))
+    total_strikes = len(get_all_user_strikes(user_id))
     if not total_strikes:
         return default_strike_days
     else:
         return default_strike_days + default_strike_days * (total_strikes**2)
 
 
+def get_strike_info_string(strike, user):
+        return (
+            f"ID: `{strike[0]}`\n"
+            f"User: {user.mention}\n"
+            f"Issued: `{get_embed_time_string(datetime.fromisoformat(strike[3]))}`\n"
+            f"Expiry: `{get_embed_time_string(datetime.fromisoformat(strike[4]))}`\n"
+            f"Reason: {strike[5]}\n"
+        )
+
+
 class StrikeCommands(Cog, name="Strike Commands"):
     def __init__(self, bot):
         self.bot = bot
+
+    @Cog.listener()
+    async def on_ready(self):
+        self.bot_channel = self.bot.get_channel(BOT_OUTPUT_CHANNEL)
+        self.update_strikes.start()
+
+    def cog_unload(self):
+        self.update_usernames.cancel()
 
     @cog_slash(name="strike",
                description="Strike a player",
@@ -53,7 +74,7 @@ class StrikeCommands(Cog, name="Strike Commands"):
         duration_days = calculate_new_strike_duration(user.id)
         time_now = datetime.now(timezone(TIMEZONE))
         expiry_date = time_now + timedelta(days=duration_days)
-        total_strikes = len(get_all_strikes(user.id))
+        total_strikes = len(get_all_user_strikes(user.id))
         add_strike(
             user_id=user.id, 
             striked_by=ctx.author.id, 
@@ -65,7 +86,7 @@ class StrikeCommands(Cog, name="Strike Commands"):
             await response_embed(
                 user, 
                 f"You were striked in {ctx.guild.name}",
-                f"Since you were striked {total_strikes} time{'s' if total_strikes else ''} before, this strike will last {duration_days} days.\n"
+                f"Since you were striked {total_strikes} time{'s' if total_strikes != 1 else ''} before, this strike will last {duration_days} days.\n"
                 f"Reason: `{reason}`"
             )
         except Forbidden:
@@ -87,8 +108,8 @@ class StrikeCommands(Cog, name="Strike Commands"):
     async def strike_view(self, ctx, user = False):
         if not user:
             user = ctx.author
-        active_strikes = get_active_strikes(user.id)
-        inactive_strikes = get_inactive_strikes(user.id)
+        active_strikes = get_active_user_strikes(user.id)
+        inactive_strikes = get_inactive_user_strikes(user.id)
         content = ""
         if not active_strikes and not inactive_strikes:
             content = f"{user.mention} has no strikes."
@@ -135,7 +156,6 @@ class StrikeCommands(Cog, name="Strike Commands"):
             await error_embed(ctx, "Could not find a strike associated with this ID. Try again.")
             return
         member = ctx.guild.get_member(strike[1])
-        print(member)
         member_mention = member.mention if member else "`Not In Server`"
         await response_embed(
             ctx, 
@@ -157,3 +177,47 @@ class StrikeCommands(Cog, name="Strike Commands"):
         
         remove_strike(strike_id)
         await success_embed(ctx, "Removed strike")
+
+
+    @tasks.loop(minutes=1)
+    async def update_strikes(self):
+        time_now = datetime.now(timezone(TIMEZONE))
+        all_strikes = get_all_strikes()
+        for strike in all_strikes:
+            strike_expiry_date = datetime.fromisoformat(strike[4])
+            strike_date = datetime.fromisoformat(strike[3])
+            if strike[6] and strike_expiry_date <= time_now:  # If the strike is active and due to expire
+                change_active_status(strike[0], False)
+                user = self.bot.get_user(strike[1])
+                await response_embed(
+                    self.bot_channel, 
+                    "Strike Expired", 
+                    get_strike_info_string(strike, user)
+                )
+                try:
+                    await response_embed(
+                        user, 
+                        "Strike no longer active", 
+                        get_strike_info_string(strike, user) + 
+                        "_if you have other strikes active, you may not be able to sign up for events_"
+                    )
+                except Forbidden:
+                    logging.info(f"Could not send DM to {user.name} about their strike")
+            elif strike_expiry_date + timedelta(months=1) <= time_now:  # Strikes get deleted 1 month after expiry date
+                remove_strike(strike[0])
+                user = self.bot.get_user(strike[1])
+                await response_embed(
+                    self.bot_channel, 
+                    "Strike Deleted", 
+                    get_strike_info_string(strike, user) + 
+                    f"_this strike will no longer count towards the length of {user.mention}'s new strikes_"
+                )
+                try:
+                    await response_embed(
+                        user, 
+                        "Strike deleted from your record", 
+                        get_strike_info_string(strike, user) + 
+                        "_this strike will no longer count towards the length of new strikes_"
+                    )
+                except Forbidden:
+                    logging.info(f"Could not send DM to {user.name} about their strike")

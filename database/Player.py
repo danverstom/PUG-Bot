@@ -6,7 +6,7 @@ from database.database import fetch_players_minecraft_id, fetch_players_minecraf
     fetch_players_list_discord_id, update_players_priority, update_players_elo, update_players_minecraft_username, \
     update_players_minecraft_id, update_players_discord_id, check_players_minecraft_id, check_players_discord_id, \
     add_player, delete_player, player_check
-from database.strikes import get_active_strikes
+from database.strikes import get_active_user_strikes
 
 
 
@@ -116,7 +116,7 @@ class Player:
         return True
 
     def is_striked(self):
-        return bool(get_active_strikes(self.discord_id))
+        return bool(get_active_user_strikes(self.discord_id))
 
     @classmethod
     def add_player(cls, minecraft_id, discord_id, priority=0, elo=1000):
