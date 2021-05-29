@@ -1,6 +1,6 @@
 from discord.ext.commands import Cog, has_role
 from discord import File, Embed, Colour
-from utils.utils import get_json_data, error_embed, success_embed, response_embed, has_permissions
+from utils.utils import get_json_data, error_embed, success_embed, response_embed, has_permissions, create_list_pages
 from utils.image_util import compress
 from database.Player import Player
 import utils.config
@@ -258,3 +258,15 @@ class AdminCommands(Cog, name="Admin Commands"):
         backup_filename = f"backups/database-{time}.db"
         copyfile("database/database.db", backup_filename)
         await success_embed(ctx, f"Created backup file: `{backup_filename}`")
+
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def missingmaps(self, ctx):
+        if not has_permissions(ctx, ADMIN_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+        maps = get_json_data("utils/maps.json")
+        missing = []
+        for ctfmap in maps:
+            if not os.path.exists(f"assets/map_screenshots/{maps[ctfmap]}.jpg"):
+                missing.append(f"{ctfmap} ({maps[ctfmap]})")
+        await create_list_pages(self.bot, ctx, "Missing Screenshots", missing)
