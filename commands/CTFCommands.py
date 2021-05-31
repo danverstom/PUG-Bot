@@ -365,7 +365,8 @@ class CTFCommands(Cog, name="CTF Commands"):
                 res = row[row == (datetime_now.strftime("%#m/%#d/%Y"))].index
             else:
                 res = row[row == (datetime_now.strftime("%-m/%-d/%Y"))].index
-
+            if res.empty: # That is if SS is outdated and needs updating
+                return await error_embed(ctx, "Spreadsheet needs to be updated, contact a mod.")
             days = df.iloc[0:2, res[0]:22] #if we wanted to make SS past, it would be here
             df2 = df.iloc[2:, res[0]:22] #and here
 
