@@ -137,7 +137,7 @@ class GameCommands(Cog, name="CTF Commands"):
                     response = await self.bot.wait_for("message", timeout=self.timeout if not bullet else self.bullet_timeout, check=check)
                 except TimeoutError:
                     self.in_progress = False
-                    self.bullet_countdown.cancel()
+                    self.bullet_countdown.cancel() if bullet else None
                     await round_message.reply("Game timed out; you took too long to answer. "
                                               f"Map was **{map_name}**. "
                                               "Start a new game to play again.")
@@ -206,7 +206,7 @@ class GameCommands(Cog, name="CTF Commands"):
                         response = await self.bot.wait_for("message", timeout=self.timeout if not bullet else self.bullet_timeout, check=check)
                     except TimeoutError:
                         self.in_progress = False
-                        self.bullet_countdown.cancel()
+                        self.bullet_countdown.cancel() if bullet else None
                         await round_message.reply("Game timed out; you took too long to answer. "
                                                   f"Map was **{map_name}**. "
                                                   "Start a new game to play again.")
@@ -240,21 +240,33 @@ class GameCommands(Cog, name="CTF Commands"):
         self.in_progress = False
         return self.bullet_countdown.cancel() if bullet else False
 
-    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
-    async def gameofstats(self, ctx):
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[
+        manage_commands.create_option(name="streak", description="Play a game of streaks",
+                                      required=False, option_type=5),
+        manage_commands.create_option(name="bullet", description="Race against time",
+                                      required=False, option_type=5),
+        manage_commands.create_option(name="solo", description="Start a solo run without people messing up your run",
+                                      required=False, option_type=5)])
+    async def gameofstats(self, ctx, streak=False, bullet=False, solo=False):
         """Compete with other members to guess the player from their stats"""
         if self.in_progress:
             await error_embed(ctx, "There is already a game in progress")
             return
 
         def check(message):
-            return message.content.startswith(">") and message.channel == ctx.channel
+            if solo:
+                return message.content.startswith(
+                    ">") and message.channel == ctx.channel and message.author == ctx.author
+            else:
+                return message.content.startswith(">") and message.channel == ctx.channel
 
         self.in_progress = True
         winners = []
         attempts = 0
-        await ctx.send("Welcome to Game of Stats! Respond with `>[IGN]` to guess the player. Old names work too.")
-        for round_num in range(1, 6):
+        await ctx.send(f"Welcome to Game of Stats! Respond with `>[IGN]` to guess the player. Old names work too."
+                       f"\n{'Current Modes:' if solo or bullet or streak else ''} {'**Streak**' if streak else ''} {'**Solo**' if solo else ''} {'**Bullet**' if bullet else ''}")
+
+        for round_num in range(1, (6 if not streak else 999999)):  # If streak=True, then range becomes from 1 to inf
             while True:
                 random_player = Player.fetch_random_player()
                 random_ign = random_player.minecraft_username
@@ -263,14 +275,22 @@ class GameCommands(Cog, name="CTF Commands"):
                 all_names = [item["name"].lower() for item in names_dict]
                 pie_file = await self.comp_playtime_pie(random_ign)
                 if pie_file:
-                    round_message = await ctx.channel.send(content=f"Round {round_num}:", file=pie_file)
+                    round_message = await ctx.channel.send(content=f"Round {round_num}:"
+                                                                   f" ({'You have **' + str(self.bullet_timeout) + 's**' if bullet else ''})"  # Shows remaining time if bullet
+                                                                   f"\n{'Current IGN starts with: `' + random_ign[0] + '`' if not (streak or bullet or solo) else ''}",  # First letter hint if vanilla mode
+                                                           file=pie_file)
+
+                    if bullet:  # Start countdown timer after pie chart is sent
+                        self.bullet_countdown.start()
+
                     guessed = False
                     n_guesses = 0
                     while not guessed:
                         try:
-                            response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
+                            response = await self.bot.wait_for("message", timeout=self.timeout if not bullet else self.bullet_timeout, check=check)
                         except TimeoutError:
                             self.in_progress = False
+                            self.bullet_countdown.cancel() if bullet else None  # Cancels bullet loop task if timeout
                             await round_message.reply(f"Game timed out; you took too long to answer. "
                                                       f"The player was **{random_ign}**. "
                                                       "Start a new game to play again.")
@@ -279,11 +299,24 @@ class GameCommands(Cog, name="CTF Commands"):
                         if content.startswith(">"):
                             if content.strip(">") in all_names:
                                 await response.add_reaction("✅")
-                                await response.reply(f"You guessed correctly! ({random_ign})")
+                                await response.reply(f"You guessed correctly! (**{random_ign}**)")
+                                if bullet:
+                                    self.bullet_timeout += 4  # Increments bullet timer on correct guess
+                                    self.bullet_countdown.cancel()  # Cancels bullet loop task to prevent timer from running till the next round/image
                                 winners.append(response.author)
                                 guessed = True
                             else:
                                 await response.add_reaction("❌")
+                                if streak:
+                                    self.in_progress = False  # End game if wrong guess
+                                    await ctx.channel.send(f"Wrong guess. Game finished. "
+                                                           f"IGN was **{random_ign}**. "
+                                                           f"You lost at **Round {round_num}.**")
+                                    if winners:
+                                        await ctx.channel.send("Thanks for playing " +
+                                                               " ".join(
+                                                                   list(set(winner.mention for winner in winners))))
+                                    return self.bullet_countdown.cancel() if bullet else False  # Dip from function & cancel bullet loop task if there is one in case of wrong streak guess
                             if n_guesses >= self.repost_guesses:
                                 await round_message.reply(content=round_message.attachments[0].url)
                                 n_guesses = 0
@@ -300,4 +333,4 @@ class GameCommands(Cog, name="CTF Commands"):
                                    " ".join(list(set(winner.mention for winner in winners))))
         else:
             await ctx.channel.send("Game of Stats finished!")
-        self.in_progress = False
+        self.in_progress = False  # Vanilla mode closing
