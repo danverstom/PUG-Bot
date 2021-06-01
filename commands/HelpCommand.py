@@ -2,7 +2,7 @@ from discord.ext.commands import Cog
 from discord import File, Embed, Colour
 from utils.utils import get_json_data
 from difflib import get_close_matches
-from utils.utils import error_embed
+from utils.utils import error_embed, create_list_pages
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
 from utils.config import SLASH_COMMANDS_GUILDS
@@ -23,6 +23,7 @@ class HelpCommand(Cog, name="Help Command"):
     ])
     async def help(self, ctx, command_name=None):
         print("Help command used")
+        info_list = []
         if command_name:
             commands = None
             try:
@@ -45,10 +46,8 @@ class HelpCommand(Cog, name="Help Command"):
                     options_string += f"`{option['name']}` {'[REQUIRED]' if option['required'] else ''}\n" \
                                       f"> *{option['description']}*{choices}\n"
                 options_string = options_string[:-1]
-                info += f"**/{command}**\n{commands[command].description}\n\n{options_string}\n\n*Servers: {guilds}*"
+                info_list.append(f"**/{command}**\n{commands[command].description}\n\n{options_string}\n\n*Servers: {guilds}*")
             else:
-                info += f"**/{command}** - {commands[command].description}\n"
+                info_list.append(f"**/{command}** - {commands[command].description}\n")
 
-
-        embed = Embed(title="Help", colour=Colour.dark_purple(), description=info)
-        await ctx.send(embed=embed)
+        await create_list_pages(self.bot, ctx, "Help", sorted(info_list), elements_per_page=15, sep="")
