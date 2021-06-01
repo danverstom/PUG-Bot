@@ -151,7 +151,7 @@ class GameCommands(Cog, name="CTF Commands"):
                             await response.reply(f"You guessed correctly! ({map_guess[0]})")
                             winners.append(response.author)
                             if bullet:
-                                self.timeout += 4
+                                self.bullet_timeout += 4
                                 self.bullet_countdown.cancel()
                         else:
                             await response.add_reaction("❌")
@@ -220,7 +220,7 @@ class GameCommands(Cog, name="CTF Commands"):
                                 await response.reply(f"You guessed correctly! ({map_guess[0]})")
                                 winners.append(response.author)
                                 if bullet:
-                                    self.timeout += 4
+                                    self.bullet_timeout += 4
                                     self.bullet_countdown.cancel()
                                 guessed = True
                             else:
