@@ -9,10 +9,18 @@ from utils.event_util import get_embed_time_string
 from discord.errors import Forbidden
 from discord.ext import tasks
 
+from database.referrals import *
+from logging import info
+
 """
 Used this article as a guide for tracking invites:
 https://medium.com/@tonite/finding-the-invite-code-a-user-used-to-join-your-discord-server-using-discord-py-5e3734b8f21f
 """
+
+# TODO: add check in the database method to see if the user has already been referred, in which case return False and handle it here
+# TODO: add referrals leaderboard
+# TODO: issue prizes to those who refer players
+# TODO: implement has_user_played
 
 class ReferralCommands(Cog, name="Referral Commands"):
     def __init__(self, bot):
@@ -32,6 +40,8 @@ class ReferralCommands(Cog, name="Referral Commands"):
         for invite in invites_before_join:
             if invite.uses < self.find_invite_by_code(invites_after_join, invite.code).uses:
                 self.invite_cache[member.guild.id] = invites_after_join
+                log_referral(invite.code, member.id, invite.inviter.id)
+                info(f"Member {member.name} joined using invite code {invite.code} created by {invite.inviter.name}")
                 await self.bot_channel.send(
                     f"Member {member.mention} joined using invite code {invite.code} created by {invite.inviter.mention}"
                 )
