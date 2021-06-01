@@ -31,12 +31,13 @@ class GameCommands(Cog, name="CTF Commands"):
         self.in_progress = False
         self.maps_dir = "assets/map_closeups/"
         self.timeout = 300
+        self.bullet_timeout = 10
         self.repost_guesses = 10
 
     @tasks.loop(seconds=1)
     async def bullet_countdown(self):
-        self.timeout -= 1
-        print(self.timeout)
+        self.bullet_timeout -= 1
+        print(self.bullet_timeout)
 
     @Cog.listener('on_message')
     async def pokemon_easteregg(self, message):
@@ -91,10 +92,10 @@ class GameCommands(Cog, name="CTF Commands"):
 
         def check(message):
             if solo:
-                return message.content.startswith(">") and message.channel == ctx.channel and message.author == ctx.author
+                return message.content.startswith(
+                    ">") and message.channel == ctx.channel and message.author == ctx.author
             else:
                 return message.content.startswith(">") and message.channel == ctx.channel
-
 
         with open("utils/maps.json") as file:
             maps = load(file)
@@ -103,8 +104,6 @@ class GameCommands(Cog, name="CTF Commands"):
         self.in_progress = True
         winners = []
 
-        if bullet:
-            self.timeout = 10
 
         if streak:
             round_num = 0
@@ -114,6 +113,11 @@ class GameCommands(Cog, name="CTF Commands"):
                 map_name = choice(list(map_names))
                 map_id = maps[map_name]
                 expr = rf"^({map_id} \(\d{{1,2}}\).jpg)"  # Regex for dupe screenshots
+
+                if not listdir(self.maps_dir):  # Return if maps directory is empty (prevents infinite loop?)
+                    self.in_progress = False
+                    return await error_embed(ctx, "No maps found in the maps directory :(, contact a dev.")
+
                 if not list(filter(lambda v: match(expr, v), listdir(self.maps_dir))):  # Skip maps without screenshots
                     continue
                 round_num += 1
@@ -125,12 +129,12 @@ class GameCommands(Cog, name="CTF Commands"):
                 round_message = await ctx.channel.send(content=f"**Round {round_num}**:",
                                                        file=file) if not bullet else await ctx.channel.send(
                     content=f"**Round {round_num}**:\n"
-                            f"You have **{self.timeout} seconds** left", file=file)
+                            f"You have **{self.bullet_timeout} seconds** left", file=file)
 
                 if bullet:
                     self.bullet_countdown.start()
                 try:
-                    response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
+                    response = await self.bot.wait_for("message", timeout=self.timeout if not bullet else self.bullet_timeout, check=check)
                 except TimeoutError:
                     self.in_progress = False
                     self.bullet_countdown.cancel()
@@ -177,6 +181,10 @@ class GameCommands(Cog, name="CTF Commands"):
                 map_id = maps[map_name]
                 expr = rf"^({map_id} \(\d{{1,2}}\).jpg)"  # Regex for dupe screenshots
 
+                if not listdir(self.maps_dir):  # Return if maps directory is empty (prevents infinite loop?)
+                    self.in_progress = False
+                    return await error_embed(ctx, "No maps found in the maps directory :(, contact a dev.")
+
                 if not list(filter(lambda v: match(expr, v), listdir(self.maps_dir))):  # Skip maps without screenshots
                     continue
 
@@ -185,14 +193,17 @@ class GameCommands(Cog, name="CTF Commands"):
                 map_img_path = self.maps_dir + choice(all_imgs)
 
                 file = File(map_img_path, filename="random_map.jpg")
-                round_message = await ctx.channel.send(content=f"Round {round_num}:", file=file)
+                round_message = await ctx.channel.send(content=f"**Round {round_num}**:",  # Bullet countdown on message if bullet
+                                                       file=file) if not bullet else await ctx.channel.send(
+                    content=f"**Round {round_num}**:\n"
+                            f"You have **{self.bullet_timeout} seconds** left", file=file)
                 if bullet:
                     self.bullet_countdown.start()
                 guessed = False
                 n_guesses = 0
                 while not guessed:
                     try:
-                        response = await self.bot.wait_for("message", timeout=self.timeout, check=check)
+                        response = await self.bot.wait_for("message", timeout=self.timeout if not bullet else self.bullet_timeout, check=check)
                     except TimeoutError:
                         self.in_progress = False
                         self.bullet_countdown.cancel()
