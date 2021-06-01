@@ -8,7 +8,7 @@ from utils.utils import create_list_pages, has_permissions
 from database.Player import Player
 from database.database import get_sorted_elo
 from datetime import datetime, timedelta
-from pytz import timezone
+from dateutil.tz import gettz
 
 
 class BaseCommands(Cog, name="Base Commands"):
@@ -29,7 +29,7 @@ class BaseCommands(Cog, name="Base Commands"):
 
     @cog_slash(name="time", description="Show system time", options=[], guild_ids=SLASH_COMMANDS_GUILDS)
     async def time(self, ctx):
-        tz = timezone(TIMEZONE) 
+        tz = gettz(TIMEZONE) 
         time = datetime.now(tz)
         await ctx.send(f"The time is {time.strftime('%H:%M:%S')}")
 
