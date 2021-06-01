@@ -7,7 +7,7 @@ from database.database import check_user_requests, add_register_request, get_reg
     remove_register_request, get_all_register_requests, get_sorted_elo
 from utils.utils import error_embed, success_embed, response_embed, create_list_pages, has_permissions
 from utils.config import MOD_ROLE, BOT_OUTPUT_CHANNEL, IGN_TRACKER_INTERVAL_HOURS, REGISTER_REQUESTS_CHANNEL,\
-    ELO_FLOOR, ADMIN_ROLE, PUBLIC_BOT_CHANNEL, UPDATE_NICKNAMES, SEND_JOIN_MESSAGE
+    ELO_FLOOR, ADMIN_ROLE, PUBLIC_BOT_CHANNEL, UPDATE_NICKNAMES, SEND_JOIN_MESSAGE, IGN_TRACKER_SWITCH
 from mojang import MojangAPI
 from asyncio import sleep as async_sleep
 from discord.errors import Forbidden
@@ -353,6 +353,8 @@ class RegistrationCommands(Cog, name="User Registration"):
 
     @tasks.loop(hours=IGN_TRACKER_INTERVAL_HOURS)
     async def update_usernames(self):
+        if not IGN_TRACKER_SWITCH:
+            return
         server = self.bot_channel.guild
         changes_list = []
         for player in Player.fetch_players_list():
