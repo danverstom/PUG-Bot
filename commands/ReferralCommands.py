@@ -56,11 +56,3 @@ class ReferralCommands(Cog, name="Referral Commands"):
         for invite in invite_list:
             if invite.code == code:
                 return invite
-
-
-    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS)
-    async def examine_invites(self, ctx):
-        invites = await ctx.guild.invites()
-        for invite in invites:
-            print(invite)
-            await ctx.send(invite.inviter.mention)
