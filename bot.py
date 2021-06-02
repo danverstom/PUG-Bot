@@ -22,6 +22,7 @@ from commands.HelpCommand import HelpCommand
 from commands.AdminCommands import AdminCommands
 from commands.GameCommands import GameCommands
 from commands.StrikeCommands import StrikeCommands
+from commands.ReferralCommands import ReferralCommands
 
 
 # Importing Quart app for web dashboard
@@ -36,6 +37,7 @@ bot.add_cog(HelpCommand(bot, slash))
 bot.add_cog(AdminCommands(bot, slash, bot_token))
 bot.add_cog(GameCommands(bot))
 bot.add_cog(StrikeCommands(bot))
+bot.add_cog(ReferralCommands(bot))
 
 
 @bot.event

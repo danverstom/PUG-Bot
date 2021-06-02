@@ -16,6 +16,7 @@ from utils.utils import response_embed, error_embed, success_embed, has_permissi
 from database.Event import Event, EventDoesNotExistError
 from database.Signup import Signup
 from database.Player import Player, PlayerDoesNotExistError
+from database.referrals import *
 from asyncio import TimeoutError
 from random import shuffle, seed
 import logging
@@ -177,6 +178,16 @@ class EventCommands(Cog, name="Event Commands"):
                     signups = Signup.fetch_signups_list(event.event_id)
                 signups = list(filter(lambda sign: sign.can_play, signups))
                 if signups:
+
+                    # Process referrals
+                    signed_ids = [signup.user_id for signup in signups]
+                    new_referrals = get_filtered_referrals("has_user_played", False)
+                    for referral in new_referrals:
+                        if referral[2] in signed_ids:
+                            update_referral(referral[0], "has_user_played", True)
+                            logging.info(f"User id {referral[2]} has signed for their first event, logged to referrals table")
+
+
                     await self.bot.get_channel(event.signup_channel).send(embed=generate_signups_embed(self.bot,
                                                                                                        signups, event))
                     await self.bot.get_channel(event.announcement_channel).send(f"_Signups for **{event.title}** are now closed_")
