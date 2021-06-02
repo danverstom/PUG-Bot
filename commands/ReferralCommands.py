@@ -40,11 +40,17 @@ class ReferralCommands(Cog, name="Referral Commands"):
         for invite in invites_before_join:
             if invite.uses < self.find_invite_by_code(invites_after_join, invite.code).uses:
                 self.invite_cache[member.guild.id] = invites_after_join
-                log_referral(invite.code, member.id, invite.inviter.id)
-                info(f"Member {member.name} joined using invite code {invite.code} created by {invite.inviter.name}")
-                await self.bot_channel.send(
-                    f"Member {member.mention} joined using invite code {invite.code} created by {invite.inviter.mention}"
-                )
+                if log_referral(invite.code, member.id, invite.inviter.id):
+                    info(f"Logged new referral of member '{member.name}' who was referred by '{invite.inviter.name}'")
+                    await self.bot_channel.send(
+                        f"Logged new referral of member {member.mention} who was referred by {invite.inviter.mention}"
+                    )
+                else:
+                    info(f"{member.name} joined the server, but was already referred")
+                    await self.bot_channel.send(
+                        f"{member.mention} joined using invite code {invite.code} created by {invite.inviter.name}. "
+                        f"No referral logged - they have been referred before."
+                    )
 
     @Cog.listener()
     async def on_member_remove(self, member):
