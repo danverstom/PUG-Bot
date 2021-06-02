@@ -246,8 +246,11 @@ class GameCommands(Cog, name="CTF Commands"):
         manage_commands.create_option(name="bullet", description="Race against time",
                                       required=False, option_type=5),
         manage_commands.create_option(name="solo", description="Start a solo run without people messing up your run",
-                                      required=False, option_type=5)])
-    async def gameofstats(self, ctx, streak=False, bullet=False, solo=False):
+                                      required=False, option_type=5),
+        manage_commands.create_option(name="hints", description="Get first letter hints",
+                                      required=False, option_type=5)
+    ])
+    async def gameofstats(self, ctx, streak=False, bullet=False, solo=False, hints=False):
         """Compete with other members to guess the player from their stats"""
         if self.in_progress:
             await error_embed(ctx, "There is already a game in progress")
@@ -263,8 +266,21 @@ class GameCommands(Cog, name="CTF Commands"):
         self.in_progress = True
         winners = []
         attempts = 0
+
+        # Activated modes string constructor
+        activated_modes = []
+        if solo:
+            activated_modes.append("Solo")
+        if bullet:
+            activated_modes.append("Bullet")
+        if streak:
+            activated_modes.append("Streak")
+        if hints:
+            activated_modes.append("Hints")
+        modes_str = f"Current game modes: **{', '.join(activated_modes[:-1])} & {activated_modes[-1]}**"
+
         await ctx.send(f"Welcome to Game of Stats! Respond with `>[IGN]` to guess the player. Old names work too."
-                       f"\n{'Current Modes:' if solo or bullet or streak else ''} {'**Streak**' if streak else ''} {'**Solo**' if solo else ''} {'**Bullet**' if bullet else ''}")
+                       f"\n{modes_str if activated_modes else ''}")
 
         for round_num in range(1, (6 if not streak else 999999)):  # If streak=True, then range becomes from 1 to inf
             while True:
@@ -276,8 +292,8 @@ class GameCommands(Cog, name="CTF Commands"):
                 pie_file = await self.comp_playtime_pie(random_ign)
                 if pie_file:
                     round_message = await ctx.channel.send(content=f"Round {round_num}:"
-                                                                   f" ({'You have **' + str(self.bullet_timeout) + 's**' if bullet else ''})"  # Shows remaining time if bullet
-                                                                   f"\n{'Current IGN starts with: `' + random_ign[0] + '`' if not (streak or bullet or solo) else ''}",  # First letter hint if vanilla mode
+                                                                   f" {'(You have **' + str(self.bullet_timeout) + 's**)' if bullet else ''}"  # Shows remaining time if bullet
+                                                                   f"\n{'Current IGN starts with: `' + random_ign[0] + '`' if hints else ''}",  # First letter hint if hints mode
                                                            file=pie_file)
 
                     if bullet:  # Start countdown timer after pie chart is sent
