@@ -67,5 +67,14 @@ def mark_all_referrals_awarded(inviter_id):
     conn.commit()
 
 
+def get_inviters_list_has_played():
+    c.execute(f"SELECT inviter_id FROM referrals WHERE has_user_played = True")
+    return [item[0] for item in c.fetchall()]
+
+def get_inviters_list():
+    c.execute(f"SELECT inviter_id FROM referrals WHERE has_user_played = True")
+    return [item[0] for item in c.fetchall()]
+
+
 def is_user_referred(user_joined_id):
     return bool(get_filtered_referrals("user_joined_id", user_joined_id))
