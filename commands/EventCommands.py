@@ -16,6 +16,7 @@ from utils.utils import response_embed, error_embed, success_embed, has_permissi
 from database.Event import Event, EventDoesNotExistError
 from database.Signup import Signup
 from database.Player import Player, PlayerDoesNotExistError
+from database.referrals import *
 from asyncio import TimeoutError
 from random import shuffle, seed
 import logging
@@ -177,6 +178,16 @@ class EventCommands(Cog, name="Event Commands"):
                     signups = Signup.fetch_signups_list(event.event_id)
                 signups = list(filter(lambda sign: sign.can_play, signups))
                 if signups:
+
+                    # Process referrals
+                    signed_ids = [signup.user_id for signup in signups]
+                    new_referrals = get_filtered_referrals("has_user_played", False)
+                    for referral in new_referrals:
+                        if referral[2] in signed_ids:
+                            update_referral(referral[0], "has_user_played", True)
+                            logging.info(f"User id {referral[2]} has signed for their first event, logged to referrals table")
+
+
                     await self.bot.get_channel(event.signup_channel).send(embed=generate_signups_embed(self.bot,
                                                                                                        signups, event))
                     await self.bot.get_channel(event.announcement_channel).send(f"_Signups for **{event.title}** are now closed_")
@@ -236,6 +247,7 @@ class EventCommands(Cog, name="Event Commands"):
                 can_sub = [user for user in signups if user.can_sub]
                 guild = self.bot.get_guild(event.guild_id)
                 signup_role = guild.get_role(event.signup_role)
+                prospect_role = get(guild.roles, name=PROSPECT_ROLE)
                 for member in signup_role.members:
                     if member.id not in can_play_users:
                         await member.remove_roles(signup_role)
@@ -252,7 +264,7 @@ class EventCommands(Cog, name="Event Commands"):
                 if event.is_active:
                     embed = signup_message.embeds[0]
                     if can_play:
-                        value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
+                        value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''} {'🚀' if prospect_role in guild.get_member(user.user_id).roles else ''}"
                                 for index, user in enumerate(can_play)]
                         embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value="\n".join(value),
                                         inline=False)

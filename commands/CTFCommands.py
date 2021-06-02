@@ -22,8 +22,8 @@ import os
 import gspread
 import pandas as pd
 from dateutil import parser
+from dateutil.tz import gettz
 from datetime import datetime
-from pytz import timezone
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
@@ -39,6 +39,19 @@ class Match:
     def date(self):
         return f"{self.datetime.date()}"
 
+    def human_times(self):
+        return f"{self.start_time()} - {self.end_time()} EST"
+
+    def human_date(self):
+        if os.name == "nt":
+            return f"{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%#d')}"
+        return f"{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%-d')}"
+
+    def human_datetime(self):
+        if os.name == "nt":
+            return f"{self.name}\n{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%#d')}\n{self.start_time()} - {self.end_time()} EST\n"
+        return f"{self.name}\n{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%-d')}\n{self.start_time()} - {self.end_time()} EST\n"
+
     def start_time(self):
         if os.name == "nt":
             return self.datetime.strftime("%#I:%M%p")
@@ -50,10 +63,8 @@ class Match:
         return self.end.strftime("%-I:%M%p")
 
     def __str__(self):
-        if os.name == "nt":
-            return f"{self.name}\n{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%#d')}\n{self.start_time()} - {self.end_time()} EST\n"
-        return f"{self.name}\n{self.datetime.strftime('%A')}, {self.datetime.strftime('%B')} {self.datetime.strftime('%-d')}\n{self.start_time()} - {self.end_time()} EST\n"
-
+        return f"{self.name}, {self.datetime}, {self.end}"
+    
     def __lt__(self, other):
         return self.datetime < other.datetime
 
@@ -359,13 +370,13 @@ class CTFCommands(Cog, name="CTF Commands"):
             df = pd.DataFrame.from_records(values)
             row = df.loc[0]
             res = None
-            tz = timezone(TIMEZONE)
+            tz = gettz(TIMEZONE)
             datetime_now = datetime.now(tz)
             if os.name == "nt":
                 res = row[row == (datetime_now.strftime("%#m/%#d/%Y"))].index
             else:
                 res = row[row == (datetime_now.strftime("%-m/%-d/%Y"))].index
-            if res.empty: # That is if SS is outdated and needs updating
+            if res.empty: #todays date not found. spreadsheet admins need to add the days
                 return await error_embed(ctx, "Spreadsheet needs to be updated, contact a mod.")
             days = df.iloc[0:2, res[0]:22] #if we wanted to make SS past, it would be here
             df2 = df.iloc[2:, res[0]:22] #and here
@@ -402,7 +413,16 @@ class CTFCommands(Cog, name="CTF Commands"):
         matches.sort()
 
         matches = list(filter(lambda x: datetime_now.time() < x.end.time() or datetime_now.date() != x.end.date(), matches))
-        return await create_list_pages(self.bot, ctx, f"Matches Found", list(map(lambda x: str(x), matches)), "No matches found :(", "\n", 5)  # lambda
+        string_list = []
+        for match in matches:
+            if match.datetime < datetime_now < match.end:
+                string_list.append(f"> {match.name} ***(Ongoing)***\n> {match.human_date()}\n> {match.human_times()}\n")
+            #maybe add func to match to see duration
+            #then add time until the match to matches under 12/24h away
+            else:
+                string_list.append(f"{match.name}\n{match.human_date()}\n{match.human_times()}\n")
+
+        return await create_list_pages(self.bot, ctx, f"Matches Found", string_list, "No matches found :(", "\n", 5)  # lambda
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[
         manage_commands.create_option(name="ign", description="The ign of the player you would like to search for",
