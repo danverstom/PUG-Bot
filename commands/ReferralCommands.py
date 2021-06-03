@@ -43,6 +43,7 @@ class ReferralCommands(Cog, name="Referral Commands"):
                 inviter_member = get(member.guild.members, id=invite.inviter.id)
                 if not inviter_member:
                     info(f"Member '{member.name}' joined but a referral was not logged because the referrer is not in the server")
+                    return
                 if inviter_member.top_role.position >= admin_role.position:
                     info(f"Member '{member.name}' joined but a referral was not logged because the referrer is an admin+")
                     return
