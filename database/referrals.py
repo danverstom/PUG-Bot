@@ -83,7 +83,7 @@ def get_inviters_list_has_played():
     return [item[0] for item in c.fetchall()]
 
 def get_inviters_list():
-    c.execute(f"SELECT inviter_id FROM referrals WHERE has_user_played = True")
+    c.execute(f"SELECT inviter_id FROM referrals WHERE has_user_played = False")
     return [item[0] for item in c.fetchall()]
 
 

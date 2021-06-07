@@ -97,6 +97,7 @@ class ReferralCommands(Cog, name="Referral Commands"):
         for user_id in count.keys():
             member = ctx.guild.get_member(user_id)
             if not member:
+                info(f"[REFERRALS LEADERBOARD] member id {user_id} not found, skipping")
                 continue  # If the user is not in the server then don't include them in the leaderboard
             results.append((member, count[user_id]))
         results = list(sorted(results, key=lambda result: result[1], reverse=True))
