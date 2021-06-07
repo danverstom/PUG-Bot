@@ -41,6 +41,9 @@ class ReferralCommands(Cog, name="Referral Commands"):
                 self.invite_cache[member.guild.id] = invites_after_join
                 admin_role = get(member.guild.roles, name=ADMIN_ROLE)
                 inviter_member = get(member.guild.members, id=invite.inviter.id)
+                if has_user_left(member.id, member.guild.id):
+                    info(f"Member '{member.name}' joined but a referral was not logged because the user was previously in the server")
+                    return
                 if not inviter_member:
                     info(f"Member '{member.name}' joined but a referral was not logged because the referrer is not in the server")
                     return
@@ -62,6 +65,7 @@ class ReferralCommands(Cog, name="Referral Commands"):
     @Cog.listener()
     async def on_member_remove(self, member):
         self.invite_cache[member.guild.id] = await member.guild.invites()
+        log_user_leave(member.id, member.guild.id)
 
     
     @staticmethod

@@ -2,6 +2,7 @@ from database.database import conn
 from datetime import datetime
 from pytz import timezone
 from utils.config import *
+from logging import info
 
 conn.execute(
     '''
@@ -13,6 +14,16 @@ conn.execute(
         joined_at blob,
         has_user_played bool,
         reward_given bool
+    )
+    '''
+)
+
+conn.execute(
+    '''
+    create table if not exists user_leaves (
+        user_id integer,
+        guild_id integer,
+        date blob
     )
     '''
 )
@@ -78,3 +89,30 @@ def get_inviters_list():
 
 def is_user_referred(user_joined_id):
     return bool(get_filtered_referrals("user_joined_id", user_joined_id))
+
+
+def has_user_left(user_id, guild_id):
+    c.execute("SELECT * FROM user_leaves WHERE user_id = ? and guild_id = ?", (user_id, guild_id))
+    return bool(c.fetchall())
+
+def log_user_leave(user_id, guild_id):
+    if not has_user_left(user_id, guild_id):
+        c.execute(
+            """
+            INSERT INTO user_leaves (
+                user_id,
+                guild_id,
+                date
+            ) VALUES (?,?,?)
+            """,
+            (
+                user_id,
+                guild_id,
+                datetime.now(timezone(TIMEZONE)).isoformat()
+            )
+        )
+        conn.commit()
+        info(f"[REFERRALS] User {user_id} left guild {guild_id}, logged to leavers table")
+
+    else:
+        info(f"[REFERRALS] User {user_id} left guild {guild_id} but nothing was logged as they have left before")
