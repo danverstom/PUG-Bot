@@ -12,11 +12,6 @@
     <div class="container">
         <div class="box">
             <h4 class="title is-4">{{event.title}}</h4>
-            {% if signed %}
-            <div class="notification is-primary">
-                You are signed up for this event
-            </div>
-            {% endif %}
             <p><strong>Start Time:</strong> <code>{{event.time_est}}</code></p>
             <p><strong>Signup Deadline:</strong> <code>{{event.signup_deadline}}</code></p>
             <p><strong>ID:</strong> <code>{{event.event_id}}</code></p>
