@@ -1,5 +1,22 @@
 {% extends 'page_template.html' %}
 {% block title %}{{event.title}} - Winston{% endblock %}
+{% block head %}
+<meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{event.title}} - Winston</title>
+    <link rel="stylesheet" href="{{url_for('static', filename='bulma-css/css/main.css')}}">
+    <script type="text/javascript" src="{{url_for('static', filename='js/anime.min.js')}}"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='js/functions.js')}}"></script>
+    <meta property="og:title" content="{{event.title}}"/>
+    <meta content="Start Time: {{event.time_est}}"
+          property="og:description">
+    <meta content="{{url_for('.event', event_id=event.event_id)}}" property="og:url">
+    <meta content="{{url_for('static', filename='images/winston-small.jpg')}}" property="og:image">
+    <meta content="#71368a" data-react-helmet="true" name="theme-color">
+{% endblock %}
+
+
 {% block content %}
 <section class="hero is-primary">
     <div class="hero-body">
