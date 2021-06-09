@@ -13,6 +13,7 @@ from database.Signup import Signup
 from utils.utils import error_embed
 from random import shuffle, seed
 from dateutil import parser
+from logging import info
 
 
 
@@ -161,7 +162,11 @@ async def check_if_cancel(ctx, response):
 
 def save_signups(db_signups, signups):
     [signup.update_db() for signup in signups]
-    [signup.delete() for signup in db_signups if signup not in signups]
+    # [signup.delete() for signup in db_signups if signup not in signups]
+    for signup in db_signups:
+        if signup not in signups:
+            signup.delete()
+            info(f"Deleting signup {signup.user_id} from event {signup.event_id}")
 
 
 def reaction_changes(signups, can_play, is_muted, can_sub, event_id):
