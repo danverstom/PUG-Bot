@@ -47,7 +47,7 @@ SEND_JOIN_MESSAGE = True
 
 WEB_SERVER_HOSTNAME = "localhost"
 WEB_SERVER_PORT = 8080
-WEB_URL = "http://localhost:8080/"
+WEB_URL = "http://localhost:8080"
 
 
 debug = False

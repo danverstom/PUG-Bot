@@ -4,7 +4,7 @@ from re import fullmatch
 
 from discord import Embed, Colour
 from pytz import timezone
-from utils.config import TIMEZONE
+from utils.config import TIMEZONE, WEB_URL
 import os
 
 
@@ -201,6 +201,7 @@ async def announce_event(title, description, announcement_channel, signup_list_c
         mention_role = ""
     announcement_message = await announcement_channel.send(content=f"{mention_role}", embed=embed)
     embed.set_footer(text=f"Event ID: {announcement_message.id}")
+    embed.description += f"\n[View the event online]({WEB_URL}/event/{announcement_message.id})"
     await announcement_message.edit(embed=embed)
     description = f"{title}\n\n**Time:**\n{event_time}\n\n**Signup Deadline:**\n{signup_deadline}\n\n{description}"
     embed = Embed(title="Signups", description=description, color=Colour.dark_purple())

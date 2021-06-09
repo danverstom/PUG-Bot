@@ -18,28 +18,47 @@
             <hr>
             {{event.description|safe}}
             <hr>
+            {% if signups %}
             <h4 class="title is-4">Signups:</h4>
             <div class="columns">
                 <div class="column is-one-third">
+                    <h2 class="subtitle">Can Play</h2>
                     {% for signup in signups %}
+                    {% if signup.can_play %}
                     <div>
                         <span>{{signup.user}}</span>
                         {% if signup.player %}
                         <span> ({{ signup.player.minecraft_username }})</span>
                         {% endif %}
                     </div>
+                    {% endif %}
                     {% endfor %}
                 </div>
                 <div class="column">
+                    <h2 class="subtitle">Can Sub</h2>
                     {% for signup in signups %}
-                    {% if signup.player %}
-                    <span>
-                        <img src="https://cravatar.eu/helmavatar/{{ signup.player.minecraft_username }}/64.png" alt="">
-                    </span>
+                    {% if signup.can_sub %}
+                    <div>
+                        <span>{{signup.user}}</span>
+                        {% if signup.player %}
+                        <span> ({{ signup.player.minecraft_username }})</span>
+                        {% endif %}
+                    </div>
                     {% endif %}
                     {% endfor %}
                 </div>
             </div>
+            {% for signup in signups %}
+                {% if signup.player and ( signup.can_play or signup.can_sub ) %}
+                <span>
+                    <img src="https://cravatar.eu/helmavatar/{{ signup.player.minecraft_username }}/64.png" alt="">
+                </span>
+                {% endif %}
+                {% endfor %}
+            {% else %}
+            <h4 class="title is-4">No signups ;(</h4>
+            <p>Try refreshing this page!</p>
+            {% endif %}
         </div>
     </div>
 </section>
