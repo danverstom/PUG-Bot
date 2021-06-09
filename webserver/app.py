@@ -159,11 +159,15 @@ async def event(event_id: int):
     except EventDoesNotExistError:
         return await render_template("page_not_found.html"), 404
     else:
+        signups = Signup.fetch_signups_list(event_id)
+        for signup in signups:
+            signup.user = bot.get_user(signup.user_id)
+            signup.player = Player.exists_discord_id(signup.user_id)
         event_from_id.time_est = get_embed_time_string(datetime.fromisoformat(event_from_id.time_est))
         event_from_id.signup_deadline = get_embed_time_string(datetime.fromisoformat(event_from_id.signup_deadline))
         event_from_id.description = markdown(event_from_id.description)\
             if event_from_id.description else "No Description"
-        return await render_template("event.html", event=event_from_id)
+        return await render_template("event.html", event=event_from_id, signups=signups)
 
 
 @app.route("/login/")

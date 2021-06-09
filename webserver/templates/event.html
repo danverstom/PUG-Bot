@@ -17,6 +17,29 @@
             <p><strong>ID:</strong> <code>{{event.event_id}}</code></p>
             <hr>
             {{event.description|safe}}
+            <hr>
+            <h4 class="title is-4">Signups:</h4>
+            <div class="columns">
+                <div class="column is-one-third">
+                    {% for signup in signups %}
+                    <div>
+                        <span>{{signup.user}}</span>
+                        {% if signup.player %}
+                        <span> ({{ signup.player.minecraft_username }})</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="column">
+                    {% for signup in signups %}
+                    {% if signup.player %}
+                    <span>
+                        <img src="https://cravatar.eu/helmavatar/{{ signup.player.minecraft_username }}/64.png" alt="">
+                    </span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
         </div>
     </div>
 </section>
