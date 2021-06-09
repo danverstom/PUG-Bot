@@ -87,6 +87,24 @@ class CTFCommands(Cog, name="CTF Commands"):
         self.general_chat = self.bot.get_channel(GENERAL_CHAT)
         self.threads_update.start()
 
+    @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
+    async def brawl(self, ctx):
+        """
+        Returns info about the players online on brawl.com
+        """
+        url = "https://www.brawl.com/data/playerCount.json"
+        result = await request_async_json(url, content_type="application/json")
+        if not result: 
+            await error_embed(ctx, "Error getting data from brawl")
+            return
+        await response_embed(
+            ctx, 
+            "Brawl Player Info", 
+            "\n".join(f"**{server_name.replace('_', '.')}** - {count}" 
+            for server_name, count in result[1].items())
+        )
+        
+
     @cog_slash(name="rngmap", description="Picks a random map out of a preset map pool",
                guild_ids=SLASH_COMMANDS_GUILDS, options=[])
     async def rngmap(self, ctx):
