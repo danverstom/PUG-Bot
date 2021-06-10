@@ -1,0 +1,110 @@
+{% extends 'page_template.html' %}
+{% block title %}Strikes{% endblock %}
+{% block content %}
+<section class="hero is-primary">
+    <div class="hero-body">
+        <p class="title">
+            Strikes
+        </p>
+        <p class="subtitle">
+            There are currently {{total_active_strikes}} players striked
+        </p>
+        {% if not user %}
+        <a href="{{url_for('login')}}">Are you a PPM host looking to use this dashboard? Log in here!</a>
+        {% endif %}
+    </div>
+</section>
+<section class="section">
+    <div class="container">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        {% for message in messages %}
+        <div class="notification is-success">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+        <div class="box">
+            {% if not (active_strikes or inactive_strikes) %}
+            <p>Nobody is striked!</p>
+            {% endif %}
+            {% if active_strikes %}
+            <h1 class="title">Active Strikes</h1>
+            <p>Active strikes prevent players from signing up to events.</p>
+            <hr>
+            {% for strike in active_strikes %}
+            <div class="box">
+                <h2 class="subtitle">{{ strike["user"] }}</h2>
+                <nav class="level">
+                    <div class="level-left">
+                        <div>
+                            <p>Strike ID: <code>{{ strike["id"] }}</code></p>
+                            <p>Issued: {{ strike["issued"] }}</p>
+                            <p>Expiry: {{ strike["expiry"] }}</p>
+                            <p>Reason: {{ strike["reason"] }}</p>
+                            {% if user["is_mod"] %}
+                            <p>Striked by: {{ strike["striked_by"] }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if user["is_mod"] %}
+                    <div class="level-right">
+                        <div class="block">
+                            <a class="button is-warning"
+                                href="{{ url_for('strikes.set_strike_inactive') }}?strike_id={{ strike['id'] }}">
+                                Set Inactive
+                            </a>
+                            <a class="button is-danger"
+                                href="{{ url_for('strikes.remove_strike_endpoint') }}?strike_id={{ strike['id'] }}">
+                                Delete
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </nav>
+
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% if inactive_strikes %}
+            <h1 class="title">Inactive Strikes</h1>
+            <p>Inactive strikes remain on a user's record for 3 months and count towards the duration of new strikes.
+            </p>
+            <hr>
+            {% for strike in inactive_strikes %}
+            <div class="box">
+                <h2 class="subtitle">{{ strike["user"] }}</h2>
+                <nav class="level">
+                    <div class="level-left">
+                        <div>
+                            <p>Strike ID: <code>{{ strike["id"] }}</code></p>
+                            <p>Issued: {{ strike["issued"] }}</p>
+                            <p>Expiry: {{ strike["expiry"] }}</p>
+                            <p>Reason: {{ strike["reason"] }}</p>
+                            {% if user["is_mod"] %}
+                            <p>Striked by: {{ strike["striked_by"] }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if user["is_mod"] %}
+                    <div class="level-right">
+                        <div class="block">
+                            <a class="button is-danger"
+                                href="{{ url_for('strikes.remove_strike_endpoint') }}?strike_id={{ strike['id'] }}">
+                                Delete
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </nav>
+
+            </div>
+            {% endfor %}
+
+            {% endif %}
+        </div>
+    </div>
+    </div>
+</section>
+{% endblock %}
