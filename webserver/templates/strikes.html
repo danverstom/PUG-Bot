@@ -1,0 +1,59 @@
+{% extends 'page_template.html' %}
+{% block title %}Strikes{% endblock %}
+{% block content %}
+<section class="hero is-primary">
+    <div class="hero-body">
+        <p class="title">
+            Strikes
+        </p>
+        <p class="subtitle">
+            There are currently {{total_active_strikes}} players striked
+        </p>
+    </div>
+</section>
+<section class="section">
+    <div class="container">
+
+        <div class="box">
+            <div class="columns">
+                <div class="column is-half">
+                    <h1 class="title">Active Strikes</h1>
+                    <p>Active strikes prevent players from signing up to events</p>
+                    {% if active_strikes %}
+                    <hr>
+                    {% for strike in active_strikes %}
+                    <div class="box">
+                        <h2 class="subtitle">{{ strike["user"] }}</h2>
+                        <p>Strike ID: <code>{{ strike["id"] }}</code></p>
+                        <p>Issued: <code>{{ strike["issued"] }}</code></p>
+                        <p>Expiry: <code>{{ strike["expiry"] }}</code></p>
+                        <p>Reason: {{ strike["reason"] }}</p>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p>There are no active strikes</p>
+                    {% endif %}
+                </div>
+                <div class="column is-half">
+                    <h1 class="title">Inactive Strikes</h1>
+                    <p>Inactive strikes remain on a player's record for 3 months and count towards new punishments</p>
+                    {% if inactive_strikes %}
+                    <hr>
+                    {% for strike in inactive_strikes %}
+                    <div class="box">
+                        <h2 class="subtitle">{{ strike["user"] }}</h2>
+                        <p>Strike ID: <code>{{ strike["id"] }}</code></p>
+                        <p>Issued: <code>{{ strike["issued"] }}</code></p>
+                        <p>Expiry: <code>{{ strike["expiry"] }}</code></p>
+                        <p>Reason: {{ strike["reason"] }}</p>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p>There are no inactive strikes</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -33,6 +33,14 @@ def get_all_strikes():
     c.execute("SELECT * FROM strikes")
     return c.fetchall()
 
+def get_all_active_strikes():
+    c.execute("SELECT * FROM strikes WHERE is_active = 1")
+    return c.fetchall()
+
+def get_all_inactive_strikes():
+    c.execute("SELECT * FROM strikes WHERE is_active = 0")
+    return c.fetchall()
+
 def get_strike(id):
     c.execute("SELECT * FROM strikes WHERE strike_id = ?", (id,))
     return c.fetchone()

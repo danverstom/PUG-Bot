@@ -12,9 +12,12 @@ from pytz import timezone
 from discord.errors import Forbidden
 from discord.ext import tasks
 
-# TODO: Allocate + maintain "Striked" role to striked players (task loop)
 # TODO: Make commands / command names more intuitive
 # TODO: Make view strikes embed use fields
+
+# Strikes web page
+from webserver.app import *
+
 
 def calculate_new_strike_duration(user_id):
     default_strike_days = 1
@@ -26,18 +29,53 @@ def calculate_new_strike_duration(user_id):
 
 
 def get_strike_info_string(strike, user):
-        return (
-            f"ID: `{strike[0]}`\n"
-            f"User: {user.mention}\n"
-            f"Issued: `{get_embed_time_string(datetime.fromisoformat(strike[3]))}`\n"
-            f"Expiry: `{get_embed_time_string(datetime.fromisoformat(strike[4]))}`\n"
-            f"Reason: {strike[5]}\n"
-        )
+    return (
+        f"ID: `{strike[0]}`\n"
+        f"User: {user.mention}\n"
+        f"Issued: `{get_embed_time_string(datetime.fromisoformat(strike[3]))}`\n"
+        f"Expiry: `{get_embed_time_string(datetime.fromisoformat(strike[4]))}`\n"
+        f"Reason: {strike[5]}\n"
+    )
+
+
+def get_strike_info_dict(strike, user):
+    return {
+        "id": strike[0],
+        "user": user,
+        "issued": get_embed_time_string(datetime.fromisoformat(strike[3])),
+        "expiry": get_embed_time_string(datetime.fromisoformat(strike[4])),
+        "reason": strike[5]
+    }
 
 
 class StrikeCommands(Cog, name="Strike Commands"):
     def __init__(self, bot):
         self.bot = bot
+
+        @app.route("/strikes")
+        async def strikes():
+            active_strikes = get_all_active_strikes()
+            inactive_strikes = get_all_inactive_strikes()
+
+            active_strikes = [
+                get_strike_info_dict(
+                    strike, self.bot.get_user(strike[1])
+                )
+                for strike in active_strikes
+            ]
+            inactive_strikes = [
+                get_strike_info_dict(
+                    strike, self.bot.get_user(strike[1])
+                )
+                for strike in inactive_strikes
+            ]
+
+            return await render_template(
+                "strikes.html",
+                active_strikes=active_strikes,
+                inactive_strikes=inactive_strikes,
+                total_active_strikes=len(active_strikes)
+            )
 
     @Cog.listener()
     async def on_ready(self):
@@ -54,16 +92,16 @@ class StrikeCommands(Cog, name="Strike Commands"):
                         name="user",
                         description="The user to be striked",
                         option_type=6, required=True
-                   ),
+                    ),
                    mc.create_option(
                         name="reason",
                         description="The reason why the user is striked",
-                        option_type=3, 
+                        option_type=3,
                         required=True,
                         choices=[
                             mc.create_choice(value=reason, name=reason) for reason in STRIKE_REASONS
-                            ]
-                   ),
+                        ]
+                    ),
                ], guild_ids=SLASH_COMMANDS_GUILDS)
     async def strike(self, ctx, user: User, reason: str):
         if not has_permissions(ctx, MOD_ROLE):
@@ -74,15 +112,15 @@ class StrikeCommands(Cog, name="Strike Commands"):
         expiry_date = time_now + timedelta(days=duration_days)
         total_strikes = len(get_all_user_strikes(user.id))
         add_strike(
-            user_id=user.id, 
-            striked_by=ctx.author.id, 
-            striked_at=time_now.isoformat(), 
-            expiry_date=expiry_date.isoformat(), 
+            user_id=user.id,
+            striked_by=ctx.author.id,
+            striked_at=time_now.isoformat(),
+            expiry_date=expiry_date.isoformat(),
             strike_reason=reason
         )
         try:
             await response_embed(
-                user, 
+                user,
                 f"You were striked in {ctx.guild.name}",
                 f"Since you were striked {total_strikes} time{'s' if total_strikes != 1 else ''} before, this strike will last {duration_days} days.\n"
                 f"Reason: `{reason}`"
@@ -91,19 +129,19 @@ class StrikeCommands(Cog, name="Strike Commands"):
             # This means the bot can't DM the user
             await ctx.send("This user has PMs off, failed to send DM.")
         await success_embed(
-            ctx, 
+            ctx,
             f"Striked {user.mention} for {duration_days} days with reason `{reason}`\n"
         )
-    
+
     @cog_slash(description="View the strikes of yourself or someone else",
                options=[
-                    mc.create_option(
-                        name="user",
-                        description="Some other user",
-                        option_type=6, required=False
+                   mc.create_option(
+                       name="user",
+                       description="Some other user",
+                       option_type=6, required=False
                    )
                ], guild_ids=SLASH_COMMANDS_GUILDS)
-    async def strike_view(self, ctx, user = False):
+    async def strike_view(self, ctx, user=False):
         if not user:
             user = ctx.author
         active_strikes = get_active_user_strikes(user.id)
@@ -132,17 +170,17 @@ class StrikeCommands(Cog, name="Strike Commands"):
                 ]
             )
         await response_embed(
-            ctx, 
+            ctx,
             f"Strikes - {user.name}",
             content
         )
 
     @cog_slash(description="Remove a strike from a player",
                options=[
-                    mc.create_option(
-                        name="strike_id",
-                        description="The strike ID to remove",
-                        option_type=4, required=True
+                   mc.create_option(
+                       name="strike_id",
+                       description="The strike ID to remove",
+                       option_type=4, required=True
                    )
                ], guild_ids=SLASH_COMMANDS_GUILDS)
     async def strike_remove(self, ctx, strike_id: int):
@@ -156,7 +194,7 @@ class StrikeCommands(Cog, name="Strike Commands"):
         member = ctx.guild.get_member(strike[1])
         member_mention = member.mention if member else "`Not In Server`"
         await response_embed(
-            ctx, 
+            ctx,
             "Confirm Strike Deletion (y/n)",
             f"Member: {member_mention}\n"
             f"ID: `{strike[0]}`\n"
@@ -172,10 +210,9 @@ class StrikeCommands(Cog, name="Strike Commands"):
         if response.content.lower() not in ["yes", "y", "confirm", "go", "continue"]:
             await response_embed(ctx, "Cancelled", "Strike deletion was cancelled")
             return
-        
+
         remove_strike(strike_id)
         await success_embed(ctx, "Removed strike")
-
 
     @tasks.loop(minutes=1)
     async def update_strikes(self):
@@ -184,38 +221,42 @@ class StrikeCommands(Cog, name="Strike Commands"):
         for strike in all_strikes:
             strike_expiry_date = datetime.fromisoformat(strike[4])
             strike_date = datetime.fromisoformat(strike[3])
-            if strike[6] and strike_expiry_date <= time_now:  # If the strike is active and due to expire
+            # If the strike is active and due to expire
+            if strike[6] and strike_expiry_date <= time_now:
                 change_active_status(strike[0], False)
                 user = self.bot.get_user(strike[1])
                 await response_embed(
-                    self.bot_channel, 
-                    "Strike Expired", 
+                    self.bot_channel,
+                    "Strike Expired",
                     get_strike_info_string(strike, user)
                 )
                 try:
                     await response_embed(
-                        user, 
-                        "Strike no longer active", 
-                        get_strike_info_string(strike, user) + 
+                        user,
+                        "Strike no longer active",
+                        get_strike_info_string(strike, user) +
                         "_if you have other strikes active, you may not be able to sign up for events_"
                     )
                 except Forbidden:
-                    logging.info(f"Could not send DM to {user.name} about their strike")
-            elif strike_expiry_date + timedelta(days=30) <= time_now:  # Strikes get deleted 30 days after expiry date
+                    logging.info(
+                        f"Could not send DM to {user.name} about their strike")
+            # Strikes get deleted 30 days after expiry date
+            elif strike_expiry_date + timedelta(days=30) <= time_now:
                 remove_strike(strike[0])
                 user = self.bot.get_user(strike[1])
                 await response_embed(
-                    self.bot_channel, 
-                    "Strike Deleted", 
-                    get_strike_info_string(strike, user) + 
+                    self.bot_channel,
+                    "Strike Deleted",
+                    get_strike_info_string(strike, user) +
                     f"_this strike will no longer count towards the length of {user.mention}'s new strikes_"
                 )
                 try:
                     await response_embed(
-                        user, 
-                        "Strike deleted from your record", 
-                        get_strike_info_string(strike, user) + 
+                        user,
+                        "Strike deleted from your record",
+                        get_strike_info_string(strike, user) +
                         "_this strike will no longer count towards the length of new strikes_"
                     )
                 except Forbidden:
-                    logging.info(f"Could not send DM to {user.name} about their strike")
+                    logging.info(
+                        f"Could not send DM to {user.name} about their strike")
