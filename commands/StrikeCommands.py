@@ -15,9 +15,6 @@ from discord.ext import tasks
 # TODO: Make commands / command names more intuitive
 # TODO: Make view strikes embed use fields
 
-# Strikes web page
-from webserver.app import *
-
 
 def calculate_new_strike_duration(user_id):
     default_strike_days = 1
@@ -37,45 +34,9 @@ def get_strike_info_string(strike, user):
         f"Reason: {strike[5]}\n"
     )
 
-
-def get_strike_info_dict(strike, user):
-    return {
-        "id": strike[0],
-        "user": user,
-        "issued": get_embed_time_string(datetime.fromisoformat(strike[3])),
-        "expiry": get_embed_time_string(datetime.fromisoformat(strike[4])),
-        "reason": strike[5]
-    }
-
-
 class StrikeCommands(Cog, name="Strike Commands"):
     def __init__(self, bot):
-        self.bot = bot
-
-        @app.route("/strikes")
-        async def strikes():
-            active_strikes = get_all_active_strikes()
-            inactive_strikes = get_all_inactive_strikes()
-
-            active_strikes = [
-                get_strike_info_dict(
-                    strike, self.bot.get_user(strike[1])
-                )
-                for strike in active_strikes
-            ]
-            inactive_strikes = [
-                get_strike_info_dict(
-                    strike, self.bot.get_user(strike[1])
-                )
-                for strike in inactive_strikes
-            ]
-
-            return await render_template(
-                "strikes.html",
-                active_strikes=active_strikes,
-                inactive_strikes=inactive_strikes,
-                total_active_strikes=len(active_strikes)
-            )
+        self.bot = bot   
 
     @Cog.listener()
     async def on_ready(self):

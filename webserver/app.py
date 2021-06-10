@@ -212,5 +212,7 @@ async def me():
     return user.to_json()
 
 from webserver.blueprints.mod_tools import mod_tools_blueprint
+from webserver.blueprints.strikes_page import strikes_blueprint
 
 app.register_blueprint(mod_tools_blueprint)
+app.register_blueprint(strikes_blueprint)
