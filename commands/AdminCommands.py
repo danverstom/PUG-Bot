@@ -15,7 +15,7 @@ from datetime import datetime
 
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
-from utils.config import SLASH_COMMANDS_GUILDS, ADMIN_ROLE, MOD_ROLE, WEB_SERVER_HOSTNAME, WEB_SERVER_PORT
+from utils.config import *
 
 # Web Server
 from hypercorn.asyncio import serve
@@ -69,6 +69,9 @@ class AdminCommands(Cog, name="Admin Commands"):
         if not has_permissions(ctx, ADMIN_ROLE):
             await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
             return False
+        if (ctx.author.id != BOT_OWNER_ID) and pull_changes:
+                await ctx.send("You must be the bot owner to use this option", hidden=True)
+                return False
         msg = await ctx.send("`Bot is restarting`")
         if remove_commands:
             await msg.edit(content=msg.content + "\n`Removing commands - please wait, this process can take a while`")

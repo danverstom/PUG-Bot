@@ -704,8 +704,8 @@ class EventCommands(Cog, name="Event Commands"):
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
     async def removeevents(self, ctx):
         """Removes all events that are currently inactive"""
-        if not has_permissions(ctx, MOD_ROLE):
-            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+        if ctx.author.id != BOT_OWNER_ID:
+            await ctx.send("You must be the bot owner to use this", hidden=True)
             return False
         events = Event.fetch_events_list()
         info_embed = Embed(title="Deleted Events", description="Here is a list of **deleted events** and their details",
