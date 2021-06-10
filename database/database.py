@@ -270,6 +270,19 @@ def add_signup(user_id, event_id, can_play=0, is_muted=0, can_sub=0):
     return True
 
 
+def get_active_signed_users():
+    # This is so that we only remove the signed role from players who aren't 
+    # currently signed for any event
+    active_event_ids = fetch_active_events_list_event_id()
+    active_signups_list = []
+    for event_id in active_event_ids:
+        c.execute("SELECT user_id FROM signups WHERE event_id = ? AND can_play = 1", event_id)
+        result = c.fetchall()
+        active_signups = [item[0] for item in result]
+        active_signups_list += active_signups
+    return active_signups_list
+
+
 def delete_signup(user_id, event_id):
     if check_signups_user_event(user_id, event_id):
         c.execute("DELETE FROM signups WHERE user_id = ? AND event_id = ?", (user_id, event_id))

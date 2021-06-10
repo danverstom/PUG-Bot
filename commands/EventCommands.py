@@ -16,6 +16,7 @@ from utils.utils import response_embed, error_embed, success_embed, has_permissi
 from database.Event import Event, EventDoesNotExistError
 from database.Signup import Signup
 from database.Player import Player, PlayerDoesNotExistError
+from database.database import get_active_signed_users
 from database.referrals import *
 from asyncio import TimeoutError
 from random import shuffle, seed
@@ -148,7 +149,7 @@ class EventCommands(Cog, name="Event Commands"):
         for event in list(self.events.values()):
             event.update()
             # print(f"Event: \n{event.title} Active: {event.is_active}\nTime: {event.time_est}\nDeadline: {event.signup_deadline}")
-            if datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.time_est) + timedelta(hours=3) and event.is_active:
+            if datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.time_est) + timedelta(seconds=10) and event.is_active:
                 event.set_is_active(False)
                 await success_embed(self.bot.get_channel(event.signup_channel),
                                     f"Set event {event.event_id} / {event.title} to **inactive**")
@@ -169,6 +170,18 @@ class EventCommands(Cog, name="Event Commands"):
                 for member in spectator_role.members:
                     await member.remove_roles(spectator_role, reason=f"Removing spectator role after {event.title}")
                     logging.info(f"{event.title}: Removed spectator role from {member}")
+                
+                signed_role = get(message.guild.roles, id=event.signup_role)
+                signed_user_ids = get_active_signed_users()
+                logging.info(f"Currently signed users (all active events): {signed_user_ids}")
+                for member in signed_role.members:
+                    if member.id not in signed_user_ids:
+                        await member.remove_roles(spectator_role, reason=f"Removing signed role after {event.title}")
+                        logging.info(f"{event.title}: Removed {signed_role.name} role from {member}")
+                    else:
+                        logging.info(f"{event.title}: {member} is signed for other events - skipping role removal")
+                del self.events[event.event_id]
+                continue
             elif not event.is_signups_active:
                 continue
             elif datetime.now(timezone(TIMEZONE)) >= datetime.fromisoformat(event.signup_deadline):
