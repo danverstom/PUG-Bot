@@ -176,7 +176,7 @@ class EventCommands(Cog, name="Event Commands"):
                 logging.info(f"Currently signed users (all active events): {signed_user_ids}")
                 for member in signed_role.members:
                     if member.id not in signed_user_ids:
-                        await member.remove_roles(spectator_role, reason=f"Removing signed role after {event.title}")
+                        await member.remove_roles(signed_role, reason=f"Removing signed role after {event.title}")
                         logging.info(f"{event.title}: Removed {signed_role.name} role from {member}")
                     else:
                         logging.info(f"{event.title}: {member} is signed for other events - skipping role removal")
