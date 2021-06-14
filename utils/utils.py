@@ -82,9 +82,9 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
 
 
     message = await ctx.send(embed=embed)
-
-    await message.add_reaction("◀")
-    await message.add_reaction("▶")
+    if num_pages != 1:
+        await message.add_reaction("◀")
+        await message.add_reaction("▶")
     if can_be_reversed:
         await message.add_reaction("🔃")
     await message.add_reaction("✅")
@@ -112,7 +112,7 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                 embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
                 await message.edit(embed=embed)
                 await message.remove_reaction(reaction, user)
-            elif str(reaction.emoji) == "▶" and current_page == num_pages: #Jump from last page to first page
+            elif str(reaction.emoji) == "▶" and current_page == num_pages and num_pages != 1: #Jump from last page to first page
                 current_page = 1
                 embed = Embed(title=title, description=contents[current_page - 1],
                               colour=Colour.dark_purple())
@@ -125,7 +125,7 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                 embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
                 await message.edit(embed=embed)
                 await message.remove_reaction(reaction, user)
-            elif str(reaction.emoji) == "◀" and current_page == 1: #Jump from first page to last page
+            elif str(reaction.emoji) == "◀" and current_page == 1 and num_pages != 1: #Jump from first page to last page
                 current_page = num_pages
                 embed = Embed(title=title, description=contents[current_page - 1],
                               colour=Colour.dark_purple())
