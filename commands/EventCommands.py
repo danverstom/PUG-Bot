@@ -296,7 +296,7 @@ class EventCommands(Cog, name="Event Commands"):
                             embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub)}", value="\n".join(value), inline=False)
                             logging.info(f"{event.title}: Generated new can_sub field")
                         except HTTPException:
-                            embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value=f"[View subs here]({WEB_URL}/event/{event.event_id})",
+                            embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub)}", value=f"[View subs here]({WEB_URL}/event/{event.event_id})",
                                             inline=False)
                             logging.info(f"{event.title}: Too many subs for embed - sent website link")
                     else:
@@ -848,7 +848,20 @@ class EventCommands(Cog, name="Event Commands"):
             await message.edit(embed=embed)
             await message.clear_reactions()
             signup_role = ctx.guild.get_role(event.signup_role)
+
+            
+
             await announcement_channel.send(f"{signup_role.mention} **{event.title}** has been **cancelled**")
             await success_embed(ctx, "Event has been successfully set to inactive.")
+            
+            signed_user_ids = get_active_signed_users()
+            logging.info(f"Currently signed users (all active events): {signed_user_ids}")
+            for member in signup_role.members:
+                if member.id not in signed_user_ids:
+                    await member.remove_roles(signup_role, reason=f"Removing signed role after {event.title}")
+                    logging.info(f"{event.title}: Removed {signup_role.name} role from {member}")
+                else:
+                    logging.info(f"{event.title}: {member} is signed for other events - skipping role removal")
+            del self.events[event.event_id]
         else:
             await error_embed(ctx, "This event is not active")
