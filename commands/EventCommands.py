@@ -296,7 +296,7 @@ class EventCommands(Cog, name="Event Commands"):
                             embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub)}", value="\n".join(value), inline=False)
                             logging.info(f"{event.title}: Generated new can_sub field")
                         except HTTPException:
-                            embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value=f"[View subs here]({WEB_URL}/event/{event.event_id})",
+                            embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub)}", value=f"[View subs here]({WEB_URL}/event/{event.event_id})",
                                             inline=False)
                             logging.info(f"{event.title}: Too many subs for embed - sent website link")
                     else:
