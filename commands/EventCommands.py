@@ -279,29 +279,27 @@ class EventCommands(Cog, name="Event Commands"):
                     if can_play:
                         value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''} {'🚀' if prospect_role in guild.get_member(user.user_id).roles else ''}"
                                 for index, user in enumerate(can_play)]
-                        try:
-                            embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value="\n".join(value),
-                                            inline=False)
-                            logging.info(f"{event.title}: Generated new can_play field")
-                        except HTTPException:
-                            embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value=f"[View signups here]({WEB_URL}/event/{event.event_id})",
-                                            inline=False)
-                            logging.info(f"{event.title}: Too many signups for embed - sent website link")
+                        embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value="\n".join(value),
+                                        inline=False)
+                        logging.info(f"{event.title}: Generated new can_play field")
                     else:
                         embed.set_field_at(index=0, name=f"✅ Players: 0", value="No one :(", inline=False)
                     if can_sub:
                         value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''}"
                                 for index, user in enumerate(can_sub)]
-                        try:
-                            embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub)}", value="\n".join(value), inline=False)
-                            logging.info(f"{event.title}: Generated new can_sub field")
-                        except HTTPException:
-                            embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub)}", value=f"[View subs here]({WEB_URL}/event/{event.event_id})",
-                                            inline=False)
-                            logging.info(f"{event.title}: Too many subs for embed - sent website link")
+                        embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub)}", value="\n".join(value), inline=False)
+                        logging.info(f"{event.title}: Generated new can_sub field")
                     else:
                         embed.set_field_at(index=1, name=f"🛗 Subs: 0", value="No one :(", inline=False)
-                    await signup_message.edit(embed=embed)
+                    try:
+                        await signup_message.edit(embed=embed)
+                    except HTTPException:
+                        embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value=f"[View signups here]({WEB_URL}/event/{event.event_id})",
+                                            inline=False)
+                        embed.set_field_at(index=1, name=f"🛗 Subs: {len(can_sub)}", value=f"[View subs here]({WEB_URL}/event/{event.event_id})",
+                                            inline=False)
+                        await signup_message.edit(embed=embed)
+
                     logging.info(f"{event.title}: Finished editing signup message")
 
             if not event.is_active:
