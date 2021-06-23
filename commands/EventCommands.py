@@ -102,6 +102,10 @@ class EventCommands(Cog, name="Event Commands"):
                 await error_embed(ctx, f"Given mention role {mention_role} is not a valid role")
                 return
 
+        if signup_role.name not in PPM_ROLES:
+            await error_embed(ctx, f"You can only select the following roles for an event: {', '.join(PPM_ROLES)}")
+            return
+
         event_time_package = await get_event_time(ctx, event_time, event_date, signup_deadline)
         if not event_time_package:
             return
