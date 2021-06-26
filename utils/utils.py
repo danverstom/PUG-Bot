@@ -101,12 +101,13 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
         action_row
     ])
     
-    def check(button_context):
-        return button_context.author.id == ctx.author.id
 
     while True:
         try:
-            button_context: ComponentContext = await manage_components.wait_for_component(bot, timeout=120, check=check, components=action_row)
+            button_context: ComponentContext = await manage_components.wait_for_component(bot, timeout=120, components=action_row)
+            if button_context.author.id != ctx.author.id:
+                await button_context.send("These buttons belong to someone else - try using the command yourself", hidden=True)
+                continue
         except TimeoutError:
             embed.set_footer(text=f"Page {current_page}/{num_pages} (Timed Out)")
             await message.edit(embed=embed, components=None)
