@@ -106,7 +106,7 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
 
     while True:
         try:
-            button_context: ComponentContext = await manage_components.wait_for_component(bot, timeout=5, check=check, components=action_row)
+            button_context: ComponentContext = await manage_components.wait_for_component(bot, timeout=120, check=check, components=action_row)
         except TimeoutError:
             embed.set_footer(text=f"Page {current_page}/{num_pages} (Timed Out)")
             await message.edit(embed=embed, components=None)
