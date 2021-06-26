@@ -5,6 +5,9 @@ from asyncio import TimeoutError
 from json import load, dump
 import aiohttp
 from random import choice
+from discord_slash.utils import manage_components
+from discord_slash.model import ButtonStyle
+from discord_slash.context import ComponentContext
 
 
 async def request_async_json(url, content_type):
@@ -72,7 +75,7 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
     contents.append(page)
 
     embed = Embed(title=title, description=contents[current_page - 1], colour=Colour.dark_purple())
-    embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
+    embed.set_footer(text=f"Page {current_page}/{num_pages}")
 
     if thumbnails:
         if len(thumbnails) == 1:
@@ -80,85 +83,62 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
         else:
             embed.set_thumbnail(url=thumbnails[current_page - 1])
 
+    buttons = []
 
-    message = await ctx.send(embed=embed)
     if num_pages != 1:
-        await message.add_reaction("◀")
-        await message.add_reaction("▶")
+        buttons.append(manage_components.create_button(ButtonStyle.primary, emoji="◀"))
+        buttons.append(manage_components.create_button(ButtonStyle.primary, emoji="▶"))
     if can_be_reversed:
-        await message.add_reaction("🔃")
-    await message.add_reaction("✅")
-    await message.add_reaction("❌")
+        buttons.append(manage_components.create_button(ButtonStyle.secondary, label="Reverse"))
     if random_item:
-        await message.add_reaction("🔀")
+        buttons.append(manage_components.create_button(ButtonStyle.secondary, label="Shuffle"))
 
-    def check(r, u):
-        return r.message.id == message.id and u == ctx.author and str(r.emoji) in ["◀", "▶", "✅", "❌", "🔃", "🔀"]
+    buttons.append(manage_components.create_button(ButtonStyle.danger, label="Close"))
+
+    action_row = manage_components.create_actionrow(*buttons)
+
+    message = await ctx.send(embed=embed, components=[
+        action_row
+    ])
+    
+    def check(button_context):
+        return button_context.author.id == ctx.author.id
 
     while True:
         try:
-            reaction, user = await bot.wait_for("reaction_add", timeout=60, check=check)
-            if str(reaction.emoji) == "▶" and current_page != num_pages:
-                current_page += 1
-                embed = Embed(title=title, description=contents[current_page - 1],
-                              colour=Colour.dark_purple())
-
-                if thumbnails:
+            button_context: ComponentContext = await manage_components.wait_for_component(bot, timeout=5, check=check, components=action_row)
+        except TimeoutError:
+            embed.set_footer(text=f"Page {current_page}/{num_pages} (Timed Out)")
+            await message.edit(embed=embed, components=None)
+            break
+        if "emoji" in button_context.component.keys():
+            if button_context.component["emoji"]["name"] == "▶":
+                if  current_page != num_pages:
+                    current_page += 1
+                    embed = Embed(title=title, description=contents[current_page - 1],
+                                colour=Colour.dark_purple())
+                elif current_page == num_pages and num_pages != 1:  # Jump from last page to first page
+                    current_page = 1
+                    embed = Embed(title=title, description=contents[current_page - 1],
+                                colour=Colour.dark_purple())
+            elif button_context.component["emoji"]["name"] == "◀":
+                if current_page == 1 and num_pages != 1:  # Jump from first page to last page
+                    current_page = num_pages
+                    embed = Embed(title=title, description=contents[current_page - 1],
+                                colour=Colour.dark_purple())
+                elif current_page > 1:
+                    current_page -= 1
+                    embed = Embed(title=title, description=contents[current_page - 1],
+                                colour=Colour.dark_purple())
+            if thumbnails:
                     if len(thumbnails) == 1:
                         embed.set_thumbnail(url=thumbnails[0])
                     else:
                         embed.set_thumbnail(url=thumbnails[current_page - 1])
-
-                embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
-                await message.edit(embed=embed)
-                await message.remove_reaction(reaction, user)
-            elif str(reaction.emoji) == "▶" and current_page == num_pages and num_pages != 1: #Jump from last page to first page
-                current_page = 1
-                embed = Embed(title=title, description=contents[current_page - 1],
-                              colour=Colour.dark_purple())
-
-                if thumbnails:
-                    if len(thumbnails) == 1:
-                        embed.set_thumbnail(url=thumbnails[0])
-                    else:
-                        embed.set_thumbnail(url=thumbnails[current_page - 1])
-                embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
-                await message.edit(embed=embed)
-                await message.remove_reaction(reaction, user)
-            elif str(reaction.emoji) == "◀" and current_page == 1 and num_pages != 1: #Jump from first page to last page
-                current_page = num_pages
-                embed = Embed(title=title, description=contents[current_page - 1],
-                              colour=Colour.dark_purple())
-
-                if thumbnails:
-                    if len(thumbnails) == 1:
-                        embed.set_thumbnail(url=thumbnails[0])
-                    else:
-                        embed.set_thumbnail(url=thumbnails[current_page - 1])
-                embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
-                await message.edit(embed=embed)
-                await message.remove_reaction(reaction, user)
-            elif str(reaction.emoji) == "◀" and current_page > 1:
-                current_page -= 1
-                embed = Embed(title=title, description=contents[current_page - 1],
-                              colour=Colour.dark_purple())
-
-                if thumbnails:
-                    if len(thumbnails) == 1:
-                        embed.set_thumbnail(url=thumbnails[0])
-                    else:
-                        embed.set_thumbnail(url=thumbnails[current_page - 1])
-
-                embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
-                await message.edit(embed=embed)
-                await message.remove_reaction(reaction, user)
-            elif str(reaction.emoji) == "✅":
-                await message.clear_reactions()
-                embed.title = embed.title + " (Saved)"
-                embed.set_footer(text=f"Page {current_page}/{num_pages} (Saved)")
-                await message.edit(embed=embed)
-                break
-            elif str(reaction.emoji) == "🔃" and can_be_reversed:
+            embed.set_footer(text=f"Page {current_page}/{num_pages}")
+            await button_context.edit_origin(embed=embed)
+        elif "label" in button_context.component.keys():
+            if button_context.component["label"] == "Reverse" and can_be_reversed:
                 info.reverse()
                 contents = []
                 num_pages = ceil(len(info) / elements_per_page)
@@ -172,7 +152,7 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
 
                 current_page = 1
                 embed = Embed(title=title, description=contents[current_page - 1],
-                              colour=Colour.dark_purple())
+                            colour=Colour.dark_purple())
 
                 if thumbnails:
                     if len(thumbnails) == 1:
@@ -180,23 +160,16 @@ async def create_list_pages(bot, ctx, title: str, info: list, if_empty: str = "E
                     else:
                         embed.set_thumbnail(url=thumbnails[current_page - 1])
 
-                embed.set_footer(text=f"Page {current_page}/{num_pages}\n✅ to save results\n❌ to close this panel")
-                await message.edit(embed=embed)
-                await message.remove_reaction(reaction, user)
-            elif str(reaction.emoji) == "🔀" and random_item:
+                embed.set_footer(text=f"Page {current_page}/{num_pages}")
+                await button_context.edit_origin(embed=embed)
+            elif button_context.component["label"] == "Shuffle" and random_item:
                 embed = Embed(title=title, description=choice(info),
-                              colour=Colour.dark_purple())
-                await message.edit(embed=embed)
-                await message.remove_reaction(reaction, user)
-            elif str(reaction.emoji) == "❌":
-                await message.edit(content="Message Expired", embed=None)
-                await message.clear_reactions()
+                            colour=Colour.dark_purple())
+                await button_context.edit_origin(embed=embed)
+            elif button_context.component["label"] == "Close":
+                await message.edit(content="Closing message..", embed=None, components=None)
+                await button_context.edit_origin(content="List Pages Closed")
+                # This requires 2 requests, one to actually clear the embed and components and another to show to discord the interaction succeeded
+                # Hopefully a change is made to the slash lib so it supports removing the embed/components
                 break
-            else:
-                await message.remove_reaction(reaction, user)
-        except TimeoutError:
-            await message.clear_reactions()
-            embed.title = embed.title + " (Saved)"
-            embed.set_footer(text=f"Page {current_page}/{num_pages} (Saved)")
-            await message.edit(embed=embed)
-            break
+        
