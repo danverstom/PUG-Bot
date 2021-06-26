@@ -4,7 +4,7 @@ requests
 pytz
 pandas
 discord.py==1.7.1
-discord_py_slash_command==1.1.2
+discord_py_slash_command==2.0.4
 beautifulsoup4
 lxml
 gspread
