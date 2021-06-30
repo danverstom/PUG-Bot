@@ -380,12 +380,17 @@ class CTFCommands(Cog, name="CTF Commands"):
     async def ss(self, ctx):
         await ctx.defer()
         gc = gspread.service_account(filename='utils/service_account.json')
-        value1 = gc.open_by_key("1CrQOxzaXC6iSjwZwQvu6DNIYsCDg-uQ4x5UiaWLHzxg").worksheet("Upcoming Matches").get("c10:w59")
-        value2 = gc.open_by_key("1CrQOxzaXC6iSjwZwQvu6DNIYsCDg-uQ4x5UiaWLHzxg").worksheet("Upcoming Matches (Server 2)").get("c10:w59")
-        matchservers = {"1": value1, "2": value2} 
+        worksheet1 = gc.open_by_key("1CrQOxzaXC6iSjwZwQvu6DNIYsCDg-uQ4x5UiaWLHzxg").worksheet("Upcoming Matches")
+        worksheet2 = gc.open_by_key("1CrQOxzaXC6iSjwZwQvu6DNIYsCDg-uQ4x5UiaWLHzxg").worksheet("Upcoming Matches (Server 2)")
+        matchservers = {"1": worksheet1, "2": worksheet2} 
         matches = []
+        string_list = []
+        tbd_list = []
         for match, values in matchservers.items():
-            df = pd.DataFrame.from_records(values)
+            df = pd.DataFrame.from_records(values.get("c10:x59"))
+            tbd_column = df.iloc[2:, -1]
+            [tbd_list.append(f"**{x}** *(Match {match})*") for x in tbd_column if (x != None) and (x != "")]
+
             row = df.loc[0]
             res = None
             tz = gettz(TIMEZONE)
@@ -395,9 +400,10 @@ class CTFCommands(Cog, name="CTF Commands"):
             else:
                 res = row[row == (datetime_now.strftime("%-m/%-d/%Y"))].index
             if res.empty: #todays date not found. spreadsheet admins need to add the days
-                return await error_embed(ctx, "Spreadsheet needs to be updated, contact a mod.")
-            days = df.iloc[0:2, res[0]:22] #if we wanted to make SS past, it would be here
-            df2 = df.iloc[2:, res[0]:22] #and here
+                string_list.append(f"**!! Match {match} Spreadsheet needs updating, contact a mod !!**\n")
+                continue
+            days = df.iloc[0:2, res[0]:21] #if we wanted to make SS past, it would be here
+            df2 = df.iloc[2:, res[0]:21] #and here
 
             days.iloc[0, :] = days.iloc[0, :] + " " + days.iloc[1, :] #combine days and dates into one row
             days = days.iloc[0] #change dataframe into just that one row with days/dates
@@ -431,7 +437,6 @@ class CTFCommands(Cog, name="CTF Commands"):
         matches.sort()
 
         matches = list(filter(lambda x: datetime_now.time() < x.end.time() or datetime_now.date() != x.end.date(), matches))
-        string_list = []
         for match in matches:
             if match.datetime < datetime_now < match.end:
                 string_list.append(f"> {match.name} ***(Ongoing)***\n> {match.human_date()}\n> {match.human_times()}\n")
@@ -439,7 +444,9 @@ class CTFCommands(Cog, name="CTF Commands"):
             #then add time until the match to matches under 12/24h away
             else:
                 string_list.append(f"{match.name}\n{match.human_date()}\n{match.human_times()}\n")
-
+        if tbd_list:
+            tbd_list = ["**TBD Section**"]
+            [string_list.append(x) for x in tbd_list]
         return await create_list_pages(self.bot, ctx, f"Matches Found", string_list, "No matches found :(", "\n", 5)  # lambda
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[
