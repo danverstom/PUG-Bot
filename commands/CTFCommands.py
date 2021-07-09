@@ -387,23 +387,33 @@ class CTFCommands(Cog, name="CTF Commands"):
         string_list = []
         tbd_list = []
         for match, values in matchservers.items():
-            df = pd.DataFrame.from_records(values.get("c10:x59"))
-            tbd_column = df.iloc[2:, -1]
-            [tbd_list.append(f"**{x}** *(Match {match})*") for x in tbd_column if (x != None) and (x != "")]
+            df = pd.DataFrame.from_records(values.get()) 
+            df = df.iloc[9:, 2:].reset_index(drop=True) 
+            df.columns = range(df.shape[1]) #reset column index
 
             row = df.loc[0]
-            res = None
+            end_index = row[row == "TBD"].index #find the end index (either TBD or latest date). incase 
+                                                #mods decide to just add days to the ss instead of replacing dates
+            if end_index.empty: #no tbd section, u never know 
+                end_date = [x for x in reversed(list(row.array)) if len(x.split("/")) == 3] #it works
+                end_index = row[row == end_date[0]].index +1 
+            else:
+                tbd_column = df.iloc[2:, end_index[0]] 
+                [tbd_list.append(f"**{x}** *(Match {match})*") for x in tbd_column if (x != None) and (x != "")]
+
             tz = gettz(TIMEZONE)
             datetime_now = datetime.now(tz)
+            start_index = None
+            no_pad = "-"
             if os.name == "nt":
-                res = row[row == (datetime_now.strftime("%#m/%#d/%Y"))].index
-            else:
-                res = row[row == (datetime_now.strftime("%-m/%-d/%Y"))].index
-            if res.empty: #todays date not found. spreadsheet admins need to add the days
+                no_pad = "#"
+            start_index = row[row == (datetime_now.strftime(f"%{no_pad}m/%{no_pad}d/%Y"))].index
+            if start_index.empty: #todays date not found. spreadsheet admins need to add the days
                 string_list.append(f"**!! Match {match} Spreadsheet needs updating, contact a mod !!**\n")
                 continue
-            days = df.iloc[0:2, res[0]:21] #if we wanted to make SS past, it would be here
-            df2 = df.iloc[2:, res[0]:21] #and here
+
+            days = df.iloc[0:2, start_index[0]:end_index[0]] 
+            df2 = df.iloc[2:, start_index[0]:end_index[0]] 
 
             days.iloc[0, :] = days.iloc[0, :] + " " + days.iloc[1, :] #combine days and dates into one row
             days = days.iloc[0] #change dataframe into just that one row with days/dates
@@ -445,7 +455,7 @@ class CTFCommands(Cog, name="CTF Commands"):
             else:
                 string_list.append(f"{match.name}\n{match.human_date()}\n{match.human_times()}\n")
         if tbd_list:
-            tbd_list = ["**TBD Section**"]
+            tbd_list.insert(0, "**TBD Section**")
             [string_list.append(x) for x in tbd_list]
         return await create_list_pages(self.bot, ctx, f"Matches Found", string_list, "No matches found :(", "\n", 5)  # lambda
 
