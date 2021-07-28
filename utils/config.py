@@ -22,7 +22,7 @@ GENERAL_CHAT = 753663185093132309
 TIMEZONE = "US/Eastern"
 PUG_INVITE_LINK = "https://discord.gg/Gqpv5yUhAd"
 TEAMS_ROLES = ["Team 1 [Red]", "Team 2 [Blue]"]
-PPM_ROLES = ["Team 1 [Red]", "Team 2 [Blue]", "Green Team", "Yellow Team", "Signed", "Spectator"]
+PPM_ROLES = ["Red Team", "Blue Team", "Green Team", "Yellow Team", "Signed", "Spectator"]
 STRIKE_REASONS = [
     "Late",
     "No Show",

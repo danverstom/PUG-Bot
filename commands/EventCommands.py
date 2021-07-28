@@ -641,6 +641,28 @@ class EventCommands(Cog, name="Event Commands"):
                     await error_embed(ctx, "You did not mention any members")
             await info_message.delete()
 
+    @cog_slash(options=[mc.create_option(name="discord_tag", description="User to give PPM role to",
+                                         option_type=6, required=True),
+                        mc.create_option(name="role", description="The PPM role to give",
+                                         option_type=8, required=True)],
+                guild_ids=SLASH_COMMANDS_GUILDS)
+    async def giverole(self, ctx, discord_tag, role):
+        """Allows PPM hosts to give PPM related roles"""
+
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+
+        member = ctx.guild.get_member(discord_tag.id)
+
+        if role.name not in PPM_ROLES:
+            await ctx.send("This is **not** a PPM role", hidden=True)
+            return False
+
+        await member.add_roles(role, reason=f"role added by {ctx.author.name} with giverole"
+                                            f" command")
+        await success_embed(ctx, f"{role.mention} has been successfully given to {member.mention}")
+
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS,
                options=[mc.create_option(name="event_id",
                                          description="The message ID of the event announcement",
