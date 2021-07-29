@@ -1,4 +1,4 @@
-from discord import Embed, Colour
+from discord import Embed, Colour, User, Role
 import re
 from discord.channel import TextChannel
 from discord.ext import tasks
@@ -662,6 +662,30 @@ class EventCommands(Cog, name="Event Commands"):
         await member.add_roles(role, reason=f"role added by {ctx.author.name} with giverole"
                                             f" command")
         await success_embed(ctx, f"{role.mention} has been successfully given to {member.mention}")
+
+    @cog_slash(options=[mc.create_option(name="discord_tag", description="User to take PPM role from",
+                                         option_type=6, required=True),
+                        mc.create_option(name="role", description="The PPM role to remove",
+                                         option_type=8, required=True)],
+               guild_ids=SLASH_COMMANDS_GUILDS)
+    async def takerole(self, ctx, discord_tag: User, role: Role):
+        """Allows PPM hosts to remove PPM related roles"""
+
+        if not has_permissions(ctx, MOD_ROLE):
+            await ctx.send("You do not have sufficient permissions to perform this command", hidden=True)
+            return False
+
+        member = ctx.guild.get_member(discord_tag.id)
+
+        if role.name not in PPM_ROLES:
+            return await ctx.send("This is **not** a PPM role", hidden=True)
+
+        if role not in member.roles:
+            return await ctx.send(f"User {discord_tag.mention} does not have role `{role.name}`", hidden=True)
+
+        await member.remove_roles(role, reason=f"role removed by {ctx.author.name} with takerole"
+                                               f" command")
+        await success_embed(ctx, f"{role.mention} has been successfully removed from {member.mention}")
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS,
                options=[mc.create_option(name="event_id",
