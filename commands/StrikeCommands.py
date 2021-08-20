@@ -194,7 +194,7 @@ class StrikeCommands(Cog, name="Strike Commands"):
                 )
                 try:
                     if not user:
-                        raise Forbidden
+                        continue
                     await response_embed(
                         user,
                         "Strike no longer active",
@@ -217,7 +217,7 @@ class StrikeCommands(Cog, name="Strike Commands"):
                 )
                 try:
                     if not user:
-                        raise Forbidden
+                        continue
                     await response_embed(
                         user,
                         "Strike deleted from your record",
