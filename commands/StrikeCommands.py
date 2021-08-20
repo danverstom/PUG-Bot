@@ -214,6 +214,8 @@ class StrikeCommands(Cog, name="Strike Commands"):
                     f"new strikes_"
                 )
                 try:
+                    if not user:
+                        raise Forbidden
                     await response_embed(
                         user,
                         "Strike deleted from your record",
