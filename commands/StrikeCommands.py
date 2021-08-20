@@ -193,6 +193,8 @@ class StrikeCommands(Cog, name="Strike Commands"):
                     get_strike_info_string(strike, user)
                 )
                 try:
+                    if not user:
+                        raise Forbidden
                     await response_embed(
                         user,
                         "Strike no longer active",
