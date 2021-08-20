@@ -28,11 +28,12 @@ def calculate_new_strike_duration(user_id):
 def get_strike_info_string(strike, user):
     return (
         f"ID: `{strike[0]}`\n"
-        f"User: {user.mention}\n"
+        f"User: {user.mention if user else strike[1]}\n"  # Replace with user ID if they aren't in the server
         f"Issued: `{get_embed_time_string(datetime.fromisoformat(strike[3]))}`\n"
         f"Expiry: `{get_embed_time_string(datetime.fromisoformat(strike[4]))}`\n"
         f"Reason: {strike[5]}\n"
     )
+
 
 class StrikeCommands(Cog, name="Strike Commands"):
     def __init__(self, bot):
