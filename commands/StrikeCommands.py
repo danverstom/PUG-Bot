@@ -201,7 +201,7 @@ class StrikeCommands(Cog, name="Strike Commands"):
                     )
                 except Forbidden:
                     logging.info(
-                        f"Could not send DM to {user.name} about their strike")
+                        f"Could not send DM to {user.mention if user else strike[1]} about their strike")
             # Strikes get deleted 30 days after expiry date
             elif strike_expiry_date + timedelta(days=30) <= time_now:
                 remove_strike(strike[0])
@@ -210,7 +210,8 @@ class StrikeCommands(Cog, name="Strike Commands"):
                     self.bot_channel,
                     "Strike Deleted",
                     get_strike_info_string(strike, user) +
-                    f"_this strike will no longer count towards the length of {user.mention}'s new strikes_"
+                    f"_this strike will no longer count towards the length of {user.mention if user else strike[1]}'s "
+                    f"new strikes_"
                 )
                 try:
                     await response_embed(
@@ -221,4 +222,4 @@ class StrikeCommands(Cog, name="Strike Commands"):
                     )
                 except Forbidden:
                     logging.info(
-                        f"Could not send DM to {user.name} about their strike")
+                        f"Could not send DM to {user.mention if user else strike[1]} about their strike")
