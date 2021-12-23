@@ -4,7 +4,7 @@ from discord import File, Embed, Colour
 from utils.stat_util import *
 from utils.plot_utils import *
 from utils.utils import *
-from utils.config import ADMIN_ROLE
+from utils.config import ADMIN_ROLE, BOT_OWNER_ID
 import logging
 from mojang import MojangAPI
 from asyncio import TimeoutError
@@ -240,6 +240,26 @@ class GameCommands(Cog, name="CTF Commands"):
                                 await round_message.reply(content=round_message.attachments[0].url)
                                 n_guesses = 0
                             n_guesses += 1
+                        elif content.startswith(">>quit"):
+                            if response.author != ctx.author:
+                                await ctx.channel.send(
+                                    f"You didn't start the game. Only {ctx.author.mention} can quit.")
+                                continue
+                            self.in_progress = False
+
+                            if response.author.id != BOT_OWNER_ID:
+                                failure_gifs = [
+                                    "https://media.tenor.co/videos/d8c517c1a4d88ae2a34c286ba3154c2c/mp4",
+                                    "https://media.tenor.co/videos/dba9a9609ce3de71304a08598ecaa16b/mp4",
+                                    "https://media.tenor.co/videos/e6b1dc3e8cf4c0b68c069841e1673355/mp4",
+                                    "https://media.tenor.co/videos/b04c55584accd21db66962a3d6ce297c/mp4"
+                                ]
+                                gif = choice(failure_gifs)
+                                await ctx.channel.send(gif)
+                            if winners:
+                                await ctx.channel.send("Thanks for playing " +
+                                                       " ".join(list(set(winner.mention for winner in winners))))
+                            return
                     break
                 else:
                     if attempts > 5:
