@@ -90,6 +90,10 @@ class EventCommands(Cog, name="Event Commands"):
             await error_embed(ctx, f"Signups list channel {signup_channel.mention} is not a text channel")
             return
 
+        if signup_deadline < 0:
+            await error_embed(ctx, f"You can't set a signup deadline after the event (thanks for this ppm hosts)")
+            return
+
         if mention_role.lower() == "everyone":
             mention_role = "@everyone"
         elif mention_role.lower() == "none":
