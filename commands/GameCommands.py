@@ -244,6 +244,8 @@ class GameCommands(Cog, name="CTF Commands"):
                                 ]
                                 gif = choice(failure_gifs)
                                 await ctx.channel.send(gif)
+                            else:
+                                await ctx.channel.send("You quit the game")
                             if winners:
                                 await ctx.channel.send("Thanks for playing " +
                                                        " ".join(list(set(winner.mention for winner in winners))))
