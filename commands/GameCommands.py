@@ -228,19 +228,7 @@ class GameCommands(Cog, name="CTF Commands"):
                                                       "Start a new game to play again.")
                             return
                         content = response.content.lower()
-                        if content.startswith(">"):
-                            if content.strip(">") in all_names:
-                                await response.add_reaction("✅")
-                                await response.reply(f"You guessed correctly! ({random_ign})")
-                                winners.append(response.author)
-                                guessed = True
-                            else:
-                                await response.add_reaction("❌")
-                            if n_guesses >= self.repost_guesses:
-                                await round_message.reply(content=round_message.attachments[0].url)
-                                n_guesses = 0
-                            n_guesses += 1
-                        elif content.startswith(">>quit"):
+                        if content.startswith(">>quit"):
                             if response.author != ctx.author:
                                 await ctx.channel.send(
                                     f"You didn't start the game. Only {ctx.author.mention} can quit.")
@@ -260,6 +248,18 @@ class GameCommands(Cog, name="CTF Commands"):
                                 await ctx.channel.send("Thanks for playing " +
                                                        " ".join(list(set(winner.mention for winner in winners))))
                             return
+                        elif content.startswith(">"):
+                            if content.strip(">") in all_names:
+                                await response.add_reaction("✅")
+                                await response.reply(f"You guessed correctly! ({random_ign})")
+                                winners.append(response.author)
+                                guessed = True
+                            else:
+                                await response.add_reaction("❌")
+                            if n_guesses >= self.repost_guesses:
+                                await round_message.reply(content=round_message.attachments[0].url)
+                                n_guesses = 0
+                            n_guesses += 1
                     break
                 else:
                     if attempts > 5:
