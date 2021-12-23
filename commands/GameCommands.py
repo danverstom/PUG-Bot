@@ -236,14 +236,7 @@ class GameCommands(Cog, name="CTF Commands"):
                             self.in_progress = False
 
                             if response.author.id != BOT_OWNER_ID:
-                                failure_gifs = [
-                                    "https://media.tenor.co/videos/d8c517c1a4d88ae2a34c286ba3154c2c/mp4",
-                                    "https://media.tenor.co/videos/dba9a9609ce3de71304a08598ecaa16b/mp4",
-                                    "https://media.tenor.co/videos/e6b1dc3e8cf4c0b68c069841e1673355/mp4",
-                                    "https://media.tenor.co/videos/b04c55584accd21db66962a3d6ce297c/mp4"
-                                ]
-                                gif = choice(failure_gifs)
-                                await ctx.channel.send(gif)
+                                await ctx.channel.send(get_failure_gif())
                             else:
                                 await ctx.channel.send("You quit the game")
                             if winners:
@@ -275,5 +268,6 @@ class GameCommands(Cog, name="CTF Commands"):
         else:
             await ctx.channel.send("Game of Stats finished!")
         self.in_progress = False
+
 
 
