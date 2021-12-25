@@ -408,8 +408,24 @@ class CTFCommands(Cog, name="CTF Commands"):
             if os.name == "nt":
                 no_pad = "#"
             start_index = row[row == (datetime_now.strftime(f"%{no_pad}m/%{no_pad}d/%Y"))].index
+
+            #IMPROVE
             if start_index.empty: #todays date not found. spreadsheet admins need to add the days
-                string_list.append(f"**!! Match {match} Spreadsheet needs updating, contact a mod !!**\n")
+                                  #or we do it ourselves! lazy staff dont have 5 min every 20 days 
+                new_datetimes = pd.date_range(start=datetime_now, periods=20, freq="D")
+                new_dates = [d.strftime(f"%{no_pad}m/%{no_pad}d/%{no_pad}Y") for d in new_datetimes] #"mm/dd/yy" no padding
+                new_days = [d.strftime("%A") for d in new_datetimes] #%A is date full name E.g "Sunday"
+
+                cell_list = values.range("D10:W59")
+                for cell in cell_list:
+                    if cell.row == 10:
+                        cell.value = new_dates[cell.col -4] #this'll break if they ever fix the
+                    elif cell.row == 11: #hidden columns A and B
+                        cell.value = new_days[cell.col -4] 
+                    else:
+                        cell.value = ""
+                values.update_cells(cell_list)
+                values.format('D12:W59', {'backgroundColor': {"red": 1.0, "green": 1.0, "blue": 1.0} }) #have to do 2 requests.. sad times
                 continue
 
             days = df.iloc[0:2, start_index[0]:end_index[0]] 
