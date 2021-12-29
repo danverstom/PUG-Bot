@@ -396,7 +396,7 @@ class CTFCommands(Cog, name="CTF Commands"):
                                                 #mods decide to just add days to the ss instead of replacing dates
             if end_index.empty: #no tbd section, u never know 
                 end_date = [x for x in reversed(list(row.array)) if len(x.split("/")) == 3] #it works
-                end_index = row[row == end_date[0]].index +1 
+                end_index = row[row == end_date[0]].index +1 #maybe TBD is renamed? if deleted this breaks
             else:
                 tbd_column = df.iloc[2:, end_index[0]] 
                 [tbd_list.append(f"**{x}** *(Match {match})*") for x in tbd_column if (x != None) and (x != "")]
@@ -409,23 +409,24 @@ class CTFCommands(Cog, name="CTF Commands"):
                 no_pad = "#"
             start_index = row[row == (datetime_now.strftime(f"%{no_pad}m/%{no_pad}d/%Y"))].index
 
-            #IMPROVE
-            if start_index.empty: #todays date not found. spreadsheet admins need to add the days
-                                  #or we do it ourselves! lazy staff dont have 5 min every 20 days 
-                new_datetimes = pd.date_range(start=datetime_now, periods=20, freq="D")
+            
+            if start_index.empty: #todays date not found. We need to add new days
+                number_of_days = len([x for x in row.array if len(x.split("/")) == 3]) 
+                excel_col_name = lambda n: '' if n <= 0 else excel_col_name((n - 1) // 26) + chr((n - 1) % 26 + ord('A')) #google solution TY devon
+                new_datetimes = pd.date_range(start=datetime_now, periods=number_of_days, freq="D")
                 new_dates = [d.strftime(f"%{no_pad}m/%{no_pad}d/%{no_pad}Y") for d in new_datetimes] #"mm/dd/yy" no padding
                 new_days = [d.strftime("%A") for d in new_datetimes] #%A is date full name E.g "Sunday"
-
-                cell_list = values.range("D10:W59")
+                last_letter = excel_col_name(number_of_days+3) #+3 to account for starting at D
+                cell_list = values.range(f"D10:{last_letter}59")
                 for cell in cell_list:
-                    if cell.row == 10:
-                        cell.value = new_dates[cell.col -4] #this'll break if they ever fix the
-                    elif cell.row == 11: #hidden columns A and B
-                        cell.value = new_days[cell.col -4] 
+                    if cell.row == 10: 
+                        cell.value = new_dates[cell.col -4] #this'll break if they ever remove the
+                    elif cell.row == 11: 
+                        cell.value = new_days[cell.col -4] #hidden columns A and B
                     else:
                         cell.value = ""
                 values.update_cells(cell_list)
-                values.format('D12:W59', {'backgroundColor': {"red": 1.0, "green": 1.0, "blue": 1.0} }) #have to do 2 requests.. sad times
+                values.format(f"D12:{last_letter}59", {'backgroundColor': {"red": 1.0, "green": 1.0, "blue": 1.0} })
                 continue
 
             days = df.iloc[0:2, start_index[0]:end_index[0]] 
