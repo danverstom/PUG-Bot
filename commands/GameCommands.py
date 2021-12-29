@@ -4,7 +4,7 @@ from discord import File, Embed, Colour
 from utils.stat_util import *
 from utils.plot_utils import *
 from utils.utils import *
-from utils.config import ADMIN_ROLE
+from utils.config import ADMIN_ROLE, BOT_OWNER_ID
 import logging
 from mojang import MojangAPI
 from asyncio import TimeoutError
@@ -228,7 +228,22 @@ class GameCommands(Cog, name="CTF Commands"):
                                                       "Start a new game to play again.")
                             return
                         content = response.content.lower()
-                        if content.startswith(">"):
+                        if content.startswith(">>quit"):
+                            if response.author != ctx.author:
+                                await ctx.channel.send(
+                                    f"You didn't start the game. Only {ctx.author.mention} can quit.")
+                                continue
+                            self.in_progress = False
+
+                            if response.author.id != BOT_OWNER_ID:
+                                await ctx.channel.send(get_failure_gif())
+                            else:
+                                await ctx.channel.send("You quit the game")
+                            if winners:
+                                await ctx.channel.send("Thanks for playing " +
+                                                       " ".join(list(set(winner.mention for winner in winners))))
+                            return
+                        elif content.startswith(">"):
                             if content.strip(">") in all_names:
                                 await response.add_reaction("✅")
                                 await response.reply(f"You guessed correctly! ({random_ign})")
@@ -253,5 +268,6 @@ class GameCommands(Cog, name="CTF Commands"):
         else:
             await ctx.channel.send("Game of Stats finished!")
         self.in_progress = False
+
 
 

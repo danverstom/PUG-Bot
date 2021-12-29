@@ -10,6 +10,19 @@ from discord_slash.model import ButtonStyle
 from discord_slash.context import ComponentContext
 
 
+def get_failure_gif() -> str:
+    failure_gifs = [
+        "https://c.tenor.com/ciNDyf6AgH0AAAAd/disappointed-disappointed-fan.gif",
+        "https://c.tenor.com/gW49QSTtYBUAAAAC/facepalm-seriously.gif",
+        "https://c.tenor.com/ZFc20z8DItkAAAAd/facepalm-really.gif",
+        "https://c.tenor.com/ibwfTRYbgocAAAAC/facepalm.gif",
+        "https://c.tenor.com/nkYPXkAUs3oAAAAC/the-office-rainn-wilson.gif"
+
+    ]
+    gif = choice(failure_gifs)
+    return gif
+
+
 async def request_async_json(url, content_type):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as r:
