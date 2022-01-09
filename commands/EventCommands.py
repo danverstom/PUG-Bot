@@ -208,9 +208,11 @@ class EventCommands(Cog, name="Event Commands"):
                             update_referral(referral[0], "has_user_played", True)
                             logging.info(f"User id {referral[2]} has signed for their first event, logged to referrals table")
 
-
-                    await self.bot.get_channel(event.signup_channel).send(embed=generate_signups_embed(self.bot,
-                                                                                                       signups, event))
+                    try:
+                        await self.bot.get_channel(event.signup_channel).send(embed=generate_signups_embed(self.bot,
+                                                                                                           signups, event))
+                    except Forbidden:
+                        pass
                     await self.bot.get_channel(event.announcement_channel).send(f"_Signups for **{event.title}** are now closed_")
                 else:
                     await error_embed(self.bot.get_channel(event.signup_channel), "No signups on signup deadline :(\n"
