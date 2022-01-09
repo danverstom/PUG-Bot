@@ -211,7 +211,7 @@ class EventCommands(Cog, name="Event Commands"):
                     try:
                         await self.bot.get_channel(event.signup_channel).send(embed=generate_signups_embed(self.bot,
                                                                                                            signups, event))
-                    except Forbidden:
+                    except HTTPException:
                         pass
                     await self.bot.get_channel(event.announcement_channel).send(f"_Signups for **{event.title}** are now closed_")
                 else:
