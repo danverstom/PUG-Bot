@@ -285,6 +285,7 @@ class EventCommands(Cog, name="Event Commands"):
                 if event.is_active:
                     embed = signup_message.embeds[0]
                     if can_play:
+                        can_play = list(filter(lambda x: guild.get_member(x.user_id), can_play))
                         value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''} {'🚀' if prospect_role in guild.get_member(user.user_id).roles else ''}"
                                 for index, user in enumerate(can_play)]
                         embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value="\n".join(value),
