@@ -315,6 +315,23 @@ class EventCommands(Cog, name="Event Commands"):
                 del self.events[event.event_id]
                 del self.signups[event.event_id]
 
+    @Cog.listener()  # Set map reaction check
+    async def on_raw_reaction_add(self, payload):
+        try:
+            # Initial objects
+            event = Event.from_event_id(payload.message_id)
+            server = self.bot.get_guild(payload.guild_id)
+            channel = await self.bot.fetch_channel(payload.channel_id)
+            msg = await channel.fetch_message(payload.message_id)
+            mod_role = get(server.roles, name=ADMIN_ROLE)
+
+            # Remove map emoji if it's a non-mod member or bot
+            if str(payload.emoji) == "🗺️" and not mod_role.position <= payload.member.top_role.position and not payload.member.bot:
+                await msg.remove_reaction(payload.emoji, payload.member)
+
+        except EventDoesNotExistError:
+            return
+
     @cog_slash(name="removeroles", options=[mc.create_option(name="roles_list",
                                                              description="Tag roles to remove from all members",
                                                              option_type=3, required=False)],

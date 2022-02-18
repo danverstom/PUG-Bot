@@ -212,5 +212,6 @@ async def announce_event(title, description, announcement_channel, signup_list_c
     await announcement_message.add_reaction("✅")
     await announcement_message.add_reaction("🔇")
     await announcement_message.add_reaction("🛗")
+    await announcement_message.add_reaction("🗺️")  # For Mods to react to set up maps
 
     return [announcement_message.id, signup_list_message.id]
