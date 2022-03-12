@@ -194,7 +194,7 @@ def reaction_changes(signups, can_play, is_muted, can_sub, event_id):
 
 async def announce_event(title, description, announcement_channel, signup_list_channel, mention_role, event_time,
                          signup_deadline):
-    embed_description = f"**Time:**\n{event_time}\n\n**Signup Deadline:**\n{signup_deadline}\n\n{description}\n\n" \
+    embed_description = f"**Time:**\n{event_time[0][1]} (<t:{int(event_time[0][0].timestamp())}:R>)\n\n**Signup Deadline:**\n{signup_deadline}\n\n{description}\n\n" \
                         f"React with ✅ to play\nReact with 🔇 if you cannot speak\nReact with 🛗 if you are able to sub"
     embed = Embed(title=title, description=embed_description, color=Colour.dark_purple())
     if mention_role.lower() == "none":
@@ -203,7 +203,7 @@ async def announce_event(title, description, announcement_channel, signup_list_c
     embed.set_footer(text=f"Event ID: {announcement_message.id}")
     embed.description += f"\n[View the event online]({WEB_URL}/event/{announcement_message.id})"
     await announcement_message.edit(embed=embed)
-    description = f"{title}\n\n**Time:**\n{event_time}\n\n**Signup Deadline:**\n{signup_deadline}\n\n{description}"
+    description = f"{title}\n\n**Time:**\n{event_time[0][1]}  (<t:{int(event_time[0][0].timestamp())}:R>)\n\n**Signup Deadline:**\n{signup_deadline}\n\n{description}"
     embed = Embed(title="Signups", description=description, color=Colour.dark_purple())
     embed.add_field(name="✅ Players: 0", value="No one :(", inline=False)
     embed.add_field(name="🛗 Subs: 0", value="No one :(", inline=False)

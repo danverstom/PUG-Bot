@@ -143,7 +143,7 @@ class EventCommands(Cog, name="Event Commands"):
             return
         await response_embed(ctx, "Confirmed", "✅ Creating event")
         event_message_ids = await announce_event(title, description, announcement_channel, signup_channel,
-                                                 mention_role, event_time_package[0][1], event_time_package[1][1])
+                                                 mention_role, event_time_package, event_time_package[1][1])
 
         new_event = Event.add_event(event_message_ids[0], title, description, event_time_package[0][0].isoformat(),
                                     datetime.now(timezone(TIMEZONE)).isoformat(), ctx.author.id, ctx.guild.id,
