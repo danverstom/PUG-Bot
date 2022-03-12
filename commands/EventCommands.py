@@ -143,7 +143,7 @@ class EventCommands(Cog, name="Event Commands"):
             return
         await response_embed(ctx, "Confirmed", "✅ Creating event")
         event_message_ids = await announce_event(title, description, announcement_channel, signup_channel,
-                                                 mention_role, event_time_package[0][1], event_time_package[1][1])
+                                                 mention_role, event_time_package, event_time_package[1][1])
 
         new_event = Event.add_event(event_message_ids[0], title, description, event_time_package[0][0].isoformat(),
                                     datetime.now(timezone(TIMEZONE)).isoformat(), ctx.author.id, ctx.guild.id,
@@ -287,6 +287,7 @@ class EventCommands(Cog, name="Event Commands"):
                 if event.is_active:
                     embed = signup_message.embeds[0]
                     if can_play:
+                        can_play = list(filter(lambda x: guild.get_member(x.user_id), can_play))
                         value = [f"{index + 1}: <@{user.user_id}> {'🔇' if user.is_muted else ''} {'🚀' if prospect_role in guild.get_member(user.user_id).roles else ''}"
                                 for index, user in enumerate(can_play)]
                         embed.set_field_at(index=0, name=f"✅ Players: {len(can_play)}", value="\n".join(value),
@@ -315,6 +316,23 @@ class EventCommands(Cog, name="Event Commands"):
             if not event.is_active:
                 del self.events[event.event_id]
                 del self.signups[event.event_id]
+
+    @Cog.listener()  # Set map reaction check
+    async def on_raw_reaction_add(self, payload):
+        try:
+            # Initial objects
+            event = Event.from_event_id(payload.message_id)
+            server = self.bot.get_guild(payload.guild_id)
+            channel = await self.bot.fetch_channel(payload.channel_id)
+            msg = await channel.fetch_message(payload.message_id)
+            mod_role = get(server.roles, name=ADMIN_ROLE)
+
+            # Remove map emoji if it's a non-mod member or bot
+            if str(payload.emoji) == "🗺️" and not mod_role.position <= payload.member.top_role.position and not payload.member.bot:
+                await msg.remove_reaction(payload.emoji, payload.member)
+
+        except EventDoesNotExistError:
+            return
 
     @cog_slash(name="removeroles", options=[mc.create_option(name="roles_list",
                                                              description="Tag roles to remove from all members",

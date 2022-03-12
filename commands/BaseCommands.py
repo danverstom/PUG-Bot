@@ -27,11 +27,11 @@ class BaseCommands(Cog, name="Base Commands"):
         """
         await ctx.send("Pong! Bot latency: {}ms".format(round(self.bot.latency * 1000, 1)))
 
-    @cog_slash(name="time", description="Show system time", options=[], guild_ids=SLASH_COMMANDS_GUILDS)
+    @cog_slash(name="time", description="Show time", options=[], guild_ids=SLASH_COMMANDS_GUILDS)
     async def time(self, ctx):
         tz = gettz(TIMEZONE) 
         time = datetime.now(tz)
-        await ctx.send(f"The time is {time.strftime('%H:%M:%S')}")
+        await ctx.send(f"System time is {time.strftime('%H:%M:%S')}. Your time is <t:{int(time.timestamp())}:T>")
 
     @cog_slash(name="coinflip", description="a coinflip",
                options=[], guild_ids=SLASH_COMMANDS_GUILDS)
