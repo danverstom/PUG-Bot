@@ -14,7 +14,6 @@ from json import load
 from difflib import get_close_matches
 from re import match
 
-
 # Slash commands support
 from discord_slash.cog_ext import cog_slash, manage_commands
 from utils.config import SLASH_COMMANDS_GUILDS
@@ -24,6 +23,7 @@ class GameCommands(Cog, name="CTF Commands"):
     """
     A game where you guess the player from plots of the stats
     """
+
     def __init__(self, bot):
         self.bot = bot
         self.bot_channel = None
@@ -52,7 +52,8 @@ class GameCommands(Cog, name="CTF Commands"):
                 return False
             sizes = [int(data[mode][key]["playtime"]) for key in data[mode].keys()]
             avg_size = sum(sizes) / len(sizes)
-            labels = [(key.title() if float(data[mode][key]["playtime"]) > avg_size else "") for key in data[mode].keys()]
+            labels = [(key.title() if float(data[mode][key]["playtime"]) > avg_size else "") for key in
+                      data[mode].keys()]
             print(sizes, labels)
 
             ##Sorting lists as tuples
@@ -78,6 +79,7 @@ class GameCommands(Cog, name="CTF Commands"):
         if self.in_progress:
             await error_embed(ctx, "There is already a game in progress")
             return
+
         def check(message):
             return message.content.startswith(">") and message.channel == ctx.channel
 
@@ -90,7 +92,8 @@ class GameCommands(Cog, name="CTF Commands"):
 
         if streak:
             round_num = 0
-            await ctx.send("Welcome to Game of Maps **Streak**! Respond with `>[map_name]` to guess the map, and get as many consecutive right guesses as possible.")
+            await ctx.send(
+                "Welcome to Game of Maps **Streak**! Respond with `>[map_name]` to guess the map, and get as many consecutive right guesses as possible.")
             while True:
                 map_name = choice(list(map_names))
                 map_id = maps[map_name]
@@ -98,8 +101,9 @@ class GameCommands(Cog, name="CTF Commands"):
 
                 if not list(filter(lambda v: match(expr, v), listdir(self.maps_dir))):  # Skip maps without screenshots
                     continue
-                round_num+=1
-                all_imgs = list(filter(lambda v: match(expr, v), listdir(self.maps_dir)))  # Returns list with all regex matches
+                round_num += 1
+                all_imgs = list(
+                    filter(lambda v: match(expr, v), listdir(self.maps_dir)))  # Returns list with all regex matches
                 map_img_path = self.maps_dir + choice(all_imgs)
 
                 file = File(map_img_path, filename="random_map.jpg")
@@ -123,22 +127,22 @@ class GameCommands(Cog, name="CTF Commands"):
                         else:
                             await response.add_reaction("❌")
                             self.in_progress = False
-                            await ctx.channel.send (f"Wrong guess. Game finished. "
-                                            f"Map was {map_name}. "
-                                            f"You lost at **Round {round_num}.**")
+                            await ctx.channel.send(f"Wrong guess. Game finished. "
+                                                   f"Map was {map_name}. "
+                                                   f"You lost at **Round {round_num}.**")
                             if winners:
                                 await ctx.channel.send("Thanks for playing " +
-                                               " ".join(list(set(winner.mention for winner in winners))))
+                                                       " ".join(list(set(winner.mention for winner in winners))))
                             return
                     else:
                         await response.add_reaction("❌")
                         self.in_progress = False
                         await ctx.channel.send(f"Wrong guess. Game finished. "
-                                            f"Map was {map_name}. "
-                                            f"You lost at **Round {round_num}.**")
+                                               f"Map was {map_name}. "
+                                               f"You lost at **Round {round_num}.**")
                         if winners:
                             await ctx.channel.send("Thanks for playing " +
-                                           " ".join(list(set(winner.mention for winner in winners))))
+                                                   " ".join(list(set(winner.mention for winner in winners))))
                         return
 
         await ctx.send("Welcome to Game of Maps! Respond with `>[map_name]` to guess the map.")
@@ -146,12 +150,13 @@ class GameCommands(Cog, name="CTF Commands"):
             while True:
                 map_name = choice(list(map_names))
                 map_id = maps[map_name]
-                expr = rf"^({map_id} \(\d{{1,2}}\).jpg)"  #Regex for dupe screenshots
+                expr = rf"^({map_id} \(\d{{1,2}}\).jpg)"  # Regex for dupe screenshots
 
-                if not list(filter(lambda v: match(expr, v), listdir(self.maps_dir))): #Skip maps without screenshots
+                if not list(filter(lambda v: match(expr, v), listdir(self.maps_dir))):  # Skip maps without screenshots
                     continue
 
-                all_imgs = list(filter(lambda v: match(expr, v), listdir(self.maps_dir))) #Returns list with all regex matches
+                all_imgs = list(
+                    filter(lambda v: match(expr, v), listdir(self.maps_dir)))  # Returns list with all regex matches
                 map_img_path = self.maps_dir + choice(all_imgs)
 
                 file = File(map_img_path, filename="random_map.jpg")
@@ -187,7 +192,7 @@ class GameCommands(Cog, name="CTF Commands"):
                 break
         if winners:
             await ctx.channel.send("Game finished! Congratulations to the winners - " +
-                           " ".join(list(set(winner.mention for winner in winners))))
+                                   " ".join(list(set(winner.mention for winner in winners))))
         else:
             await ctx.channel.send("Game of Stats finished!")
         self.in_progress = False
@@ -235,6 +240,7 @@ class GameCommands(Cog, name="CTF Commands"):
                                 continue
                             self.in_progress = False
 
+                            await ctx.send(f"The player was **{random_ign}**.")
                             if response.author.id != BOT_OWNER_ID:
                                 await ctx.channel.send(get_failure_gif())
                             else:
@@ -264,10 +270,7 @@ class GameCommands(Cog, name="CTF Commands"):
                     continue
         if winners:
             await ctx.channel.send("Game finished! Congratulations to the winners - " +
-                           " ".join(list(set(winner.mention for winner in winners))))
+                                   " ".join(list(set(winner.mention for winner in winners))))
         else:
             await ctx.channel.send("Game of Stats finished!")
         self.in_progress = False
-
-
-
