@@ -325,7 +325,7 @@ class EventCommands(Cog, name="Event Commands"):
             server = self.bot.get_guild(payload.guild_id)
             channel = await self.bot.fetch_channel(payload.channel_id)
             msg = await channel.fetch_message(payload.message_id)
-            mod_role = get(server.roles, name=ADMIN_ROLE)
+            mod_role = get(server.roles, name=MOD_ROLE)
 
             # Remove map emoji if it's a non-mod member or bot
             if str(payload.emoji) == "🗺️" and not mod_role.position <= payload.member.top_role.position and not payload.member.bot:
