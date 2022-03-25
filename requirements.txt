@@ -1,5 +1,3 @@
-jinja2==2.11.3
-markupsafe==2.0.1
 hypercorn
 mojang
 requests
@@ -17,6 +15,6 @@ python-dateutil
 matplotlib
 discord
 Pillow
-Quart
+Quart==0.14.1
 quart_discord
 Markdown
