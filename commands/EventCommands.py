@@ -762,16 +762,16 @@ class EventCommands(Cog, name="Event Commands"):
         event.update()
         embed = announcement_message.embeds[0]
         new_time_string = get_embed_time_string(new_event_time)
-        embed.description = f"**Time:**\n{new_time_string}\n\n**Signup Deadline:**" \
+        embed.description = f"**Time:**\n{new_time_string} (<t:{int(new_event_time.timestamp())}:R>)\n\n**Signup Deadline:**" \
                             f"\n{get_embed_time_string(new_signup_deadline)}\n\n{event.description}\n\nReact with ✅ to play" \
                             f"\nReact with 🔇 if you cannot speak\nReact with 🛗 if you are able to sub"
         embed.title += " (POSTPONED)" if "(POSTPONED)" not in embed.title else ""
         signup_role = ctx.guild.get_role(event.signup_role)
         await announcement_message.edit(embed=embed)
         await announcement_channel.send(f"{signup_role.mention} **{event.title}** has been **postponed** to"
-                                        f" **{new_time_string} (EST)**")
+                                        f" **{new_time_string} (EST)** (<t:{int(new_event_time.timestamp())}:R>)")
         await success_embed(ctx, f"**{event.title}** has been **postponed** to **{new_time_string}"
-                                 f" (EST)**")
+                                 f" (EST)** (<t:{int(new_event_time.timestamp())}:R>)")
 
     @cog_slash(guild_ids=SLASH_COMMANDS_GUILDS, options=[])
     async def removeevents(self, ctx):
