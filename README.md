@@ -57,6 +57,9 @@ Set the callback to `http://localhost:8080/callback`
 
 In order to start the application, run `python init.py`
 
+To use the spreadsheet commands, [get a service account](https://cloud.google.com/iam/docs/creating-managing-service-accounts)
+Download the json generated, and place it in `utils/` named as service_account.json 
+
 ## Support/Donate
 
 Winston costs money to host every month, and time to develop.

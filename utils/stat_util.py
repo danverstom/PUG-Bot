@@ -22,6 +22,9 @@ async def get_lifetime_stats(username):
     else:
         return False
     stats_response = await request_async_json(stats_from_id_url.format(player_id), 'text/plain')
+    if not stats_response:
+        logging.info("Request failed")
+        return False
     json_response = stats_response[1]
     if json_response["data"]:
         data = json_response["data"]
