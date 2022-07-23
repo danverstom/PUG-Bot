@@ -657,6 +657,8 @@ class EventCommands(Cog, name="Event Commands"):
                                                    "different role.")
                         elif ctx.author.top_role.position <= role.position:
                             await error_embed(ctx, "You cannot give others this role")
+                        elif role.name not in PPM_ROLES:
+                            await error_embed(ctx, f"{role.mention} is not an eligible PPM role.")
                         else:
                             roles_dict[role] = members
                     else:
